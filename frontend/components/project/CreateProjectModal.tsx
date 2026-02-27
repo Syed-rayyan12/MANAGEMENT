@@ -1,3 +1,4 @@
+import { API_BASE_URL } from '@/lib/api-service';
 'use client';
 
 import React, { useState } from 'react';
@@ -108,7 +109,6 @@ export function CreateProjectModal({ onClose, initialStatus, initialWorkspace }:
         image: imageUrl.trim() || undefined
       };
 
-      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
       const response = await fetch(`${API_BASE_URL}/projects`, {
         method: 'POST',
         headers: {

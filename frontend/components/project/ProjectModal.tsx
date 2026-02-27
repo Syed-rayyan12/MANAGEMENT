@@ -1,3 +1,4 @@
+import { API_BASE_URL } from '@/lib/api-service';
 'use client';
 
 import React, { useState } from 'react';
@@ -96,7 +97,6 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
     // Update backend
     try {
       const token = localStorage.getItem('token');
-      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
       await fetch(`${API_BASE_URL}/projects/${project.id}`, {
         method: 'PUT',
         headers: {
@@ -297,7 +297,6 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
     // Update backend
     try {
       const token = localStorage.getItem('token');
-      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
       await fetch(`${API_BASE_URL}/projects/${project.id}`, {
         method: 'PUT',
         headers: {

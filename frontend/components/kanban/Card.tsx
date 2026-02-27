@@ -67,7 +67,9 @@ export function ProjectCard({ project, onCardClick }: ProjectCardProps) {
     if (user.id.startsWith('dev')) {
       // Update developer in backend
       const token = localStorage.getItem('token');
-      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
+      // Use shared API_BASE_URL
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const { API_BASE_URL } = require('@/lib/api-service');
       fetch(`${API_BASE_URL}/projects/${project.id}`, {
         method: 'PUT',
         headers: {

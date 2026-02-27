@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { API_BASE_URL } from '@/lib/api-service';
 import { useRouter } from 'next/navigation';
 import { useApp } from '@/contexts/useApp';
 import { Button } from '@/components/ui/button';
@@ -24,7 +25,6 @@ export function LoginForm() {
 
     try {
       // Use environment variable for API URL
-      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
       const response = await fetch(`${API_BASE_URL}/auth/login`, {
         method: 'POST',
         headers: {

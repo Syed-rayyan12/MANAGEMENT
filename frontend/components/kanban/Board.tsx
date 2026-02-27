@@ -1,6 +1,7 @@
-// Use API_BASE_URL from env
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
+
+
 'use client';
+import { API_BASE_URL } from '@/lib/api-service';
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';

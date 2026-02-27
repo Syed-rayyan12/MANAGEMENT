@@ -1,3 +1,4 @@
+import { API_BASE_URL } from '@/lib/api-service';
 'use client';
 
 import React, { useState, useMemo } from 'react';
@@ -32,7 +33,6 @@ export function Navbar({ searchQuery, onSearchChange }: NavbarProps) {
     // Optionally call backend logout endpoint
     if (typeof window !== 'undefined') {
       const token = localStorage.getItem('token');
-      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
       if (token) {
         try {
           await fetch(`${API_BASE_URL}/auth/logout`, {
