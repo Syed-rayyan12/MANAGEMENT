@@ -67,7 +67,8 @@ export function ProjectCard({ project, onCardClick }: ProjectCardProps) {
     if (user.id.startsWith('dev')) {
       // Update developer in backend
       const token = localStorage.getItem('token');
-      fetch(`http://localhost:5000/api/projects/${project.id}`, {
+      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
+      fetch(`${API_BASE_URL}/projects/${project.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

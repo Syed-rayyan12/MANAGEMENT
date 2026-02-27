@@ -32,9 +32,10 @@ export function Navbar({ searchQuery, onSearchChange }: NavbarProps) {
     // Optionally call backend logout endpoint
     if (typeof window !== 'undefined') {
       const token = localStorage.getItem('token');
+      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
       if (token) {
         try {
-          await fetch('http://localhost:5000/api/auth/logout', {
+          await fetch(`${API_BASE_URL}/auth/logout`, {
             method: 'POST',
             headers: {
               'Authorization': `Bearer ${token}`,

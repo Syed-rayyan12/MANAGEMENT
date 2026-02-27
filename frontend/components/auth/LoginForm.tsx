@@ -23,8 +23,9 @@ export function LoginForm() {
     setIsLoading(true);
 
     try {
-      // Call backend API
-      const response = await fetch('http://localhost:5000/api/auth/login', {
+      // Use environment variable for API URL
+      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
+      const response = await fetch(`${API_BASE_URL}/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -68,7 +68,7 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
       // Update backend
       try {
         const token = localStorage.getItem('token');
-        await fetch(`http://localhost:5000/api/projects/${project.id}`, {
+        await fetch(`http://localhost:3000/api/projects/${project.id}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
@@ -96,7 +96,8 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
     // Update backend
     try {
       const token = localStorage.getItem('token');
-      await fetch(`http://localhost:5000/api/projects/${project.id}`, {
+      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
+      await fetch(`${API_BASE_URL}/projects/${project.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -296,7 +297,8 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
     // Update backend
     try {
       const token = localStorage.getItem('token');
-      await fetch(`http://localhost:5000/api/projects/${project.id}`, {
+      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
+      await fetch(`${API_BASE_URL}/projects/${project.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -322,7 +324,7 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
     // Update backend
     try {
       const token = localStorage.getItem('token');
-      await fetch(`http://localhost:5000/api/projects/${project.id}`, {
+      await fetch(`http://localhost:3000/api/projects/${project.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -354,7 +356,7 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
         'Completed': 'COMPLETED',
         'Revisons': 'REVISIONS'
       };
-      await fetch(`http://localhost:5000/api/projects/${project.id}`, {
+      await fetch(`http://localhost:3000/api/projects/${project.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -386,7 +388,7 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
         'high': 'HIGH',
         'critical': 'CRITICAL'
       };
-      await fetch(`http://localhost:5000/api/projects/${project.id}`, {
+      await fetch(`http://localhost:3000/api/projects/${project.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

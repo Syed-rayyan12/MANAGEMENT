@@ -108,7 +108,8 @@ export function CreateProjectModal({ onClose, initialStatus, initialWorkspace }:
         image: imageUrl.trim() || undefined
       };
 
-      const response = await fetch('http://localhost:5000/api/projects', {
+      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
+      const response = await fetch(`${API_BASE_URL}/projects`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

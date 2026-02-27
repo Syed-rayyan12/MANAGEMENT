@@ -1,3 +1,5 @@
+// Use API_BASE_URL from env
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
 'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
@@ -126,7 +128,7 @@ export function Board({ searchQuery = '', filterPriority = 'all', sortBy = 'date
           'Revisons': 'REVISIONS'
         };
 
-        await fetch(`http://localhost:5000/api/projects/${projectId}`, {
+        await fetch(`http://localhost:3000/api/projects/${projectId}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
