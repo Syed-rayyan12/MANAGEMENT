@@ -1,4 +1,6 @@
+
 'use client';
+import { API_BASE_URL } from '@/lib/api-service';
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -24,7 +26,7 @@ export default function DashboardPage() {
   const fetchDashboardStats = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:5000/api/dashboard/overview', {
+      const response = await fetch(`${API_BASE_URL}/dashboard/overview`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }

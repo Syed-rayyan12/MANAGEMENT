@@ -129,7 +129,7 @@ export function Board({ searchQuery = '', filterPriority = 'all', sortBy = 'date
           'Revisons': 'REVISIONS'
         };
 
-        await fetch(`http://localhost:3000/api/projects/${projectId}`, {
+        await fetch(`${API_BASE_URL}/projects/${projectId}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
