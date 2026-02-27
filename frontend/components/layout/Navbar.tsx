@@ -1,5 +1,6 @@
-import { API_BASE_URL } from '@/lib/api-service';
 'use client';
+import { API_BASE_URL } from '@/lib/api-service';
+
 
 import React, { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
