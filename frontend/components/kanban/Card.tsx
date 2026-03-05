@@ -8,6 +8,7 @@ import { Card } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useApp } from '@/contexts/useApp';
 import { PRIORITY_STYLES } from '@/lib/constants';
+import { API_BASE_URL, projectAPI } from '@/lib/api-service';
 import { Calendar, MessageSquare, Paperclip, Clock, Plus, X } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -59,17 +60,14 @@ export function ProjectCard({ project, onCardClick }: ProjectCardProps) {
     setShowTagModal(true);
   };
 
-  const handleTagUser = (userId: string) => {
+  const handleTagUser = async (userId: string) => {
     const user = allUsers.find(u => u.id === userId);
     if (!user) return;
 
-    // If user is a developer, assign them to the project
-    if (user.id.startsWith('dev')) {
+    // If user is a developer/production worker, assign them to the project
+    if (user.role === 'PRODUCTION' || user.role === 'TL') {
       // Update developer in backend
       const token = localStorage.getItem('token');
-      // Use shared API_BASE_URL
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
-      const { API_BASE_URL } = require('@/lib/api-service');
       fetch(`${API_BASE_URL}/projects/${project.id}`, {
         method: 'PUT',
         headers: {
@@ -97,30 +95,44 @@ export function ProjectCard({ project, onCardClick }: ProjectCardProps) {
     }
 
     // Otherwise, add as label
-    const newLabel = {
-      id: `label_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      name: user.name,
-      color: '#ff6600'
-    };
+    try {
+      const result = await projectAPI.addLabel(project.id, user.name, '#ff6600');
+      if (result.success) {
+        const savedLabel = result.data.label || result.data;
+        const newLabel = {
+          id: savedLabel.id || `label_${Date.now()}`,
+          name: user.name,
+          color: '#ff6600'
+        };
 
-    const updatedProject = {
-      ...project,
-      labels: [...project.labels, newLabel],
-      updatedAt: new Date()
-    };
+        const updatedProject = {
+          ...project,
+          labels: [...project.labels, newLabel],
+          updatedAt: new Date()
+        };
 
-    dispatch({
-      type: 'UPDATE_PROJECT',
-      payload: updatedProject
-    });
+        dispatch({
+          type: 'UPDATE_PROJECT',
+          payload: updatedProject
+        });
+      }
+    } catch (error) {
+      console.error('Error adding label:', error);
+    }
 
     setShowTagModal(false);
     setSearchQuery('');
   };
 
-  const handleRemoveTag = (e: React.MouseEvent, labelId: string) => {
+  const handleRemoveTag = async (e: React.MouseEvent, labelId: string) => {
     e.stopPropagation();
     
+    try {
+      await projectAPI.removeLabel(project.id, labelId);
+    } catch (error) {
+      console.error('Error removing label:', error);
+    }
+
     const updatedProject = {
       ...project,
       labels: project.labels.filter(l => l.id !== labelId),
@@ -295,14 +307,19 @@ export function ProjectCard({ project, onCardClick }: ProjectCardProps) {
                   <div className="flex-1 text-left">
                     <div className="flex items-center gap-2">
                       <p className="text-sm font-medium text-gray-900 dark:text-white">{user.name}</p>
-                      {user.id.startsWith('dev') && (
+                      {(user.role === 'PRODUCTION' || user.role === 'TL') && (
                         <span className="text-[10px] px-1.5 py-0.5 rounded bg-green-500 text-white font-bold">
-                          DEV
+                          {user.role === 'TL' ? 'TL' : 'DEV'}
                         </span>
                       )}
-                      {user.id.startsWith('pm') && (
+                      {user.role === 'PM' && (
                         <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500 text-white font-bold">
                           PM
+                        </span>
+                      )}
+                      {user.role === 'EXECUTIVE' && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-500 text-white font-bold">
+                          EXEC
                         </span>
                       )}
                     </div>

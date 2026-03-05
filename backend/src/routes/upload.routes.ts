@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { getPresignedUrl, deleteUpload } from '../controllers/upload.controller';
 import { authenticate } from '../middlewares/auth.middleware';
+import { validate, presignSchema } from '../utils/validators';
 
 const router = Router();
 
@@ -12,7 +13,7 @@ router.use(authenticate);
  * @desc    Get a presigned PUT URL for uploading a file directly to R2
  * @access  Private
  */
-router.post('/presign', getPresignedUrl);
+router.post('/presign', validate(presignSchema), getPresignedUrl);
 
 /**
  * @route   DELETE /api/upload

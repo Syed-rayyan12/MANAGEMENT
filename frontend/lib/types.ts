@@ -16,6 +16,7 @@ export interface ProjectManager {
   name: string;
   email: string;
   avatar?: string;
+  role?: string;
 }
 
 export interface ChecklistItem {

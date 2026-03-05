@@ -62,7 +62,7 @@ export function CreateProjectModal({ onClose, initialStatus, initialWorkspace }:
   const [imageUrl, setImageUrl] = useState('');
 
   const allUsers = getAllUsers();
-  const developers = allUsers.filter((u) => u.id.startsWith('dev'));
+  const developers = allUsers.filter((u) => u.role === 'PRODUCTION' || u.role === 'TL');
 
   const handleCreate = async () => {
     if (!name.trim()) {

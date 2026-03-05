@@ -29,9 +29,15 @@ export const login = async (
     // Normalize username: remove spaces and convert to lowercase
     const normalizedUsername = username.replace(/\s+/g, '').toLowerCase();
 
-    // Find user by username (case-insensitive)
-    const users = await prisma.user.findMany();
-    const user = users.find(u => u.username.toLowerCase() === normalizedUsername);
+    // Find user by username (case-insensitive, efficient single-row query)
+    const user = await prisma.user.findFirst({
+      where: {
+        username: {
+          equals: normalizedUsername,
+          mode: 'insensitive',
+        },
+      },
+    });
 
     if (!user) {
       res.status(401).json({

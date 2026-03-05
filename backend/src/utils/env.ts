@@ -1,0 +1,35 @@
+/**
+ * Validate that all required environment variables are set before the server starts.
+ * Fail-fast: the process exits immediately if anything critical is missing.
+ */
+
+const REQUIRED_VARS = [
+  'DATABASE_URL',
+  'JWT_SECRET',
+  'R2_ACCOUNT_ID',
+  'R2_ACCESS_KEY_ID',
+  'R2_SECRET_ACCESS_KEY',
+  'R2_BUCKET_NAME',
+  'R2_PUBLIC_URL',
+] as const;
+
+export function validateEnv(): void {
+  // dotenv is already loaded by app.ts, but server.ts calls us first
+  // so we load it here as well to be safe
+  require('dotenv').config();
+
+  const missing = REQUIRED_VARS.filter((key) => !process.env[key]);
+
+  if (missing.length > 0) {
+    console.error(`❌ Missing required environment variables:\n   ${missing.join('\n   ')}`);
+    process.exit(1);
+  }
+
+  // Enforce minimum JWT secret length
+  if (process.env.JWT_SECRET!.length < 32) {
+    console.error('❌ JWT_SECRET must be at least 32 characters for production safety');
+    process.exit(1);
+  }
+
+  console.log('✅ Environment variables validated');
+}

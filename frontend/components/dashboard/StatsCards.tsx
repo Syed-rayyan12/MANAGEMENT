@@ -7,7 +7,8 @@ import { Project } from '@/lib/types';
 import { Folder, AlertCircle, Code, Zap, CheckCircle2, AlertTriangle } from 'lucide-react';
 
 function calculateStats(projects: Project[], userId: string) {
-  const userProjects = projects.filter((p) => p.pm === userId);
+  // Backend already filters projects by user role, so use all projects from state
+  const userProjects = projects;
 
   const totalProjects = userProjects.length;
 

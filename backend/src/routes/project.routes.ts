@@ -19,6 +19,16 @@ import {
   removeAttachment,
 } from '../controllers/project.controller';
 import { authenticate, authorizeRoles } from '../middlewares/auth.middleware';
+import {
+  validate,
+  createProjectSchema,
+  updateProjectSchema,
+  addCommentSchema,
+  updateCommentSchema,
+  updateChecklistSchema,
+  addLabelSchema,
+  addAttachmentSchema,
+} from '../utils/validators';
 
 const router = Router();
 
@@ -65,7 +75,7 @@ router.get('/', getAllProjects);
  * @desc    Create a new project
  * @access  Private (PM only)
  */
-router.post('/', authorizeRoles('PM'), createProject);
+router.post('/', authorizeRoles('PM'), validate(createProjectSchema), createProject);
 
 /**
  * @route   GET /api/projects/:id
@@ -79,7 +89,7 @@ router.get('/:id', getProjectById);
  * @desc    Update a project
  * @access  Private (PM, TL only)
  */
-router.put('/:id', authorizeRoles('PM', 'TL'), updateProject);
+router.put('/:id', authorizeRoles('PM', 'TL'), validate(updateProjectSchema), updateProject);
 
 /**
  * @route   DELETE /api/projects/:id
@@ -89,19 +99,19 @@ router.put('/:id', authorizeRoles('PM', 'TL'), updateProject);
 router.delete('/:id', authorizeRoles('PM'), deleteProject);
 
 // ─── Comments ──────────────────────────────────────
-router.post('/:id/comments', addComment);
-router.put('/:id/comments/:commentId', updateComment);
+router.post('/:id/comments', validate(addCommentSchema), addComment);
+router.put('/:id/comments/:commentId', validate(updateCommentSchema), updateComment);
 router.delete('/:id/comments/:commentId', deleteComment);
 
 // ─── Checklist ─────────────────────────────────────
-router.put('/:id/checklist', updateChecklist);
+router.put('/:id/checklist', validate(updateChecklistSchema), updateChecklist);
 
 // ─── Labels ────────────────────────────────────────
-router.post('/:id/labels', addLabel);
+router.post('/:id/labels', validate(addLabelSchema), addLabel);
 router.delete('/:id/labels/:labelId', removeLabel);
 
 // ─── Attachments ───────────────────────────────────
-router.post('/:id/attachments', addAttachment);
+router.post('/:id/attachments', validate(addAttachmentSchema), addAttachment);
 router.delete('/:id/attachments/:attachmentId', removeAttachment);
 
 export default router;

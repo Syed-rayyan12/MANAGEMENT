@@ -1,6 +1,6 @@
 
 'use client';
-import { API_BASE_URL } from '@/lib/api-service';
+import { API_BASE_URL, projectAPI, uploadAPI } from '@/lib/api-service';
 
 import React, { useState } from 'react';
 import { Project } from '@/lib/types';
@@ -54,7 +54,7 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
   const coverPhotoInputRef = React.useRef<HTMLInputElement>(null);
 
   const allUsers = getAllUsers();
-  const developers = allUsers.filter((u) => u.id.startsWith('dev'));
+  const developers = allUsers.filter((u) => u.role === 'PRODUCTION' || u.role === 'TL');
 
   const handleSaveName = async () => {
     if (editingTitle.trim()) {
@@ -113,23 +113,34 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
     setEditingDescription(false);
   };
 
-  const handleAddComment = () => {
+  const handleAddComment = async () => {
     if (newComment.trim() && state.currentUser) {
-      const comment = {
-        id: Math.random().toString(36),
-        userId: state.currentUser.id,
-        content: newComment,
-        timestamp: new Date(),
-      };
-      
-      dispatch({
-        type: 'ADD_COMMENT',
-        payload: {
-          projectId: project.id,
-          comment,
-          userId: state.currentUser.id,
-        },
-      });
+      // Persist comment to backend first
+      try {
+        const result = await projectAPI.addComment(project.id, newComment);
+        if (result.success) {
+          const savedComment = result.data.comment;
+          const comment = {
+            id: savedComment.id,
+            userId: savedComment.userId,
+            content: savedComment.content,
+            timestamp: new Date(savedComment.createdAt),
+          };
+          
+          dispatch({
+            type: 'ADD_COMMENT',
+            payload: {
+              projectId: project.id,
+              comment,
+              userId: state.currentUser.id,
+            },
+          });
+        } else {
+          console.error('Error adding comment:', result.message);
+        }
+      } catch (error) {
+        console.error('Error adding comment:', error);
+      }
 
       // Extract mentioned users and create notifications
       const mentionedUserIds = extractMentionedUsers(newComment);
@@ -171,8 +182,15 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
     }
   };
 
-  const handleUpdateComment = (commentId: string) => {
+  const handleUpdateComment = async (commentId: string) => {
     if (editCommentContent.trim() && state.currentUser) {
+      // Persist to backend
+      try {
+        await projectAPI.updateComment(project.id, commentId, editCommentContent);
+      } catch (error) {
+        console.error('Error updating comment:', error);
+      }
+
       dispatch({
         type: 'UPDATE_COMMENT',
         payload: {
@@ -401,7 +419,13 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
     }
   };
 
-  const handleDeleteProject = () => {
+  const handleDeleteProject = async () => {
+    try {
+      await projectAPI.delete(project.id);
+    } catch (error) {
+      console.error('Error deleting project:', error);
+    }
+
     dispatch({
       type: 'DELETE_PROJECT',
       payload: {
@@ -419,25 +443,46 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
     }
   };
 
-  const handleAddAttachment = () => {
+  const handleAddAttachment = async () => {
     if (selectedFile) {
-      // Create a blob URL for the file
-      const fileUrl = URL.createObjectURL(selectedFile);
-      
-      dispatch({
-        type: 'ADD_ATTACHMENT',
-        payload: {
-          projectId: project.id,
-          attachment: {
-            id: Math.random().toString(36),
-            filename: selectedFile.name,
-            type: selectedFile.type.includes('pdf') ? 'pdf' : 'image',
-            url: fileUrl,
-            uploadedAt: new Date(),
-          },
-          userId: project.pm,
-        },
-      });
+      try {
+        // Upload to R2 CDN
+        const uploadResult = await uploadAPI.uploadFile(selectedFile, 'attachments');
+        if (!uploadResult) {
+          console.error('File upload failed');
+          return;
+        }
+
+        // Persist attachment to backend
+        const result = await projectAPI.addAttachment(project.id, {
+          filename: selectedFile.name,
+          url: uploadResult.publicUrl,
+          key: uploadResult.key,
+          type: selectedFile.type.includes('pdf') ? 'pdf' : 'image',
+          size: selectedFile.size,
+        });
+
+        if (result.success) {
+          const savedAttachment = result.data.attachment;
+          dispatch({
+            type: 'ADD_ATTACHMENT',
+            payload: {
+              projectId: project.id,
+              attachment: {
+                id: savedAttachment.id,
+                filename: savedAttachment.filename,
+                type: savedAttachment.type?.includes('pdf') ? 'pdf' : 'image',
+                url: savedAttachment.url,
+                uploadedAt: new Date(savedAttachment.createdAt),
+              },
+              userId: project.pm,
+            },
+          });
+        }
+      } catch (error) {
+        console.error('Error uploading attachment:', error);
+      }
+
       setSelectedFile(null);
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
@@ -445,7 +490,13 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
     }
   };
 
-  const handleRemoveAttachment = (attachmentId: string) => {
+  const handleRemoveAttachment = async (attachmentId: string) => {
+    try {
+      await projectAPI.removeAttachment(project.id, attachmentId);
+    } catch (error) {
+      console.error('Error removing attachment:', error);
+    }
+
     dispatch({
       type: 'REMOVE_ATTACHMENT',
       payload: {
@@ -472,17 +523,40 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
     }
   };
 
-  const handleUpdateCoverPhoto = () => {
+  const handleUpdateCoverPhoto = async () => {
     if (coverPhotoFile) {
-      const imageUrl = URL.createObjectURL(coverPhotoFile);
-      dispatch({
-        type: 'UPDATE_IMAGE',
-        payload: {
-          projectId: project.id,
-          image: imageUrl,
-          userId: project.pm,
-        },
-      });
+      try {
+        // Upload to R2 CDN
+        const uploadResult = await uploadAPI.uploadFile(coverPhotoFile, 'covers');
+        if (!uploadResult) {
+          console.error('Cover photo upload failed');
+          return;
+        }
+
+        const imageUrl = uploadResult.publicUrl;
+
+        // Update backend
+        await fetch(`${API_BASE_URL}/projects/${project.id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          },
+          body: JSON.stringify({ image: imageUrl })
+        });
+
+        dispatch({
+          type: 'UPDATE_IMAGE',
+          payload: {
+            projectId: project.id,
+            image: imageUrl,
+            userId: project.pm,
+          },
+        });
+      } catch (error) {
+        console.error('Error uploading cover photo:', error);
+      }
+
       setCoverPhotoFile(null);
       setShowCoverPhotoModal(false);
       if (coverPhotoInputRef.current) {

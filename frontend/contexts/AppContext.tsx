@@ -609,6 +609,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
               name: u.name,
               email: u.email,
               avatar: u.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${u.name}`,
+              role: u.role,
             }))
           );
         }
