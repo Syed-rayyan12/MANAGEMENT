@@ -10,6 +10,8 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ─── ENUMS ──────────────────────────────────────────
+
 enum UserRole {
   PM          // Project Manager
   TL          // Team Lead
@@ -38,6 +40,8 @@ enum ProjectPriority {
   CRITICAL
 }
 
+// ─── USERS ──────────────────────────────────────────
+
 model User {
   id        String   @id @default(uuid())
   username  String   @unique
@@ -45,72 +49,126 @@ model User {
   password  String
   role      UserRole
   name      String
+  avatar    String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  // Relations
+  managedProjects  Project[]       @relation("ProjectManager")
+  assignedProjects Project[]       @relation("ProjectDeveloper")
+  comments         Comment[]
+  activities       ActivityLog[]
 
   @@map("users")
 }
 
-model LogoDesignProject {
+// ─── PROJECTS (single unified table) ────────────────
+
+model Project {
   id          String          @id @default(uuid())
   name        String
+  workspace   WorkspaceType
   status      ProjectStatus   @default(TODO)
   priority    ProjectPriority @default(MEDIUM)
   description String?
   dueDate     DateTime?
   image       String?
+
+  // Relations to users
   pmId        String
+  pm          User            @relation("ProjectManager", fields: [pmId], references: [id])
   developerId String?
+  developer   User?           @relation("ProjectDeveloper", fields: [developerId], references: [id])
+
+  // Child relations
+  comments    Comment[]
+  checklist   ChecklistItem[]
+  labels      ProjectLabel[]
+  attachments Attachment[]
+  activities  ActivityLog[]
+
   createdAt   DateTime        @default(now())
   updatedAt   DateTime        @updatedAt
 
-  @@map("logo_design_projects")
+  @@map("projects")
 }
 
-model WebDesignProject {
-  id          String          @id @default(uuid())
-  name        String
-  status      ProjectStatus   @default(TODO)
-  priority    ProjectPriority @default(MEDIUM)
-  description String?
-  dueDate     DateTime?
-  image       String?
-  pmId        String
-  developerId String?
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
+// ─── COMMENTS ───────────────────────────────────────
 
-  @@map("web_design_projects")
+model Comment {
+  id        String   @id @default(uuid())
+  content   String
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("comments")
 }
 
-model WebDevelopmentProject {
-  id          String          @id @default(uuid())
-  name        String
-  status      ProjectStatus   @default(TODO)
-  priority    ProjectPriority @default(MEDIUM)
-  description String?
-  dueDate     DateTime?
-  image       String?
-  pmId        String
-  developerId String?
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
+// ─── CHECKLIST ──────────────────────────────────────
 
-  @@map("web_development_projects")
+model ChecklistItem {
+  id        String  @id @default(uuid())
+  title     String
+  completed Boolean @default(false)
+  position  Int     @default(0)
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@map("checklist_items")
 }
 
-model ContentWriterProject {
-  id          String          @id @default(uuid())
-  name        String
-  status      ProjectStatus   @default(TODO)
-  priority    ProjectPriority @default(MEDIUM)
-  description String?
-  dueDate     DateTime?
-  image       String?
-  pmId        String
-  developerId String?
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
+// ─── LABELS ─────────────────────────────────────────
 
-  @@map("content_writer_projects")
+model Label {
+  id       String         @id @default(uuid())
+  name     String         @unique
+  color    String
+  projects ProjectLabel[]
+
+  @@map("labels")
+}
+
+model ProjectLabel {
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  labelId   String
+  label     Label   @relation(fields: [labelId], references: [id], onDelete: Cascade)
+
+  @@id([projectId, labelId])
+  @@map("project_labels")
+}
+
+// ─── ATTACHMENTS ────────────────────────────────────
+
+model Attachment {
+  id         String   @id @default(uuid())
+  filename   String
+  url        String
+  key        String?  // R2 object key for deletion
+  type       String   // mime type or category: image, pdf, etc.
+  size       Int?     // file size in bytes
+  projectId  String
+  project    Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  uploadedAt DateTime @default(now())
+
+  @@map("attachments")
+}
+
+// ─── ACTIVITY LOG ───────────────────────────────────
+
+model ActivityLog {
+  id        String   @id @default(uuid())
+  action    String
+  details   Json?
+  projectId String?
+  project   Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@map("activity_logs")
 }

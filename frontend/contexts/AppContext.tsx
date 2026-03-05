@@ -1,9 +1,8 @@
 'use client';
 
-import React, { createContext, useReducer, ReactNode, useCallback, useEffect } from 'react';
-import { AppState, Project, CurrentUser, Notification, ActivityLog, ChecklistItem, Comment, Attachment, Label } from '@/lib/types';
-import { SAMPLE_PROJECTS, HARDCODED_USERS } from '@/lib/initial-data';
-import { projectAPI } from '@/lib/api-service';
+import React, { createContext, useReducer, ReactNode, useCallback, useEffect, useState } from 'react';
+import { AppState, Project, CurrentUser, Notification, ActivityLog, ChecklistItem, Comment, Attachment, Label, ProjectManager } from '@/lib/types';
+import { projectAPI, usersAPI } from '@/lib/api-service';
 
 export type AppAction =
   | { type: 'SET_USER'; payload: CurrentUser }
@@ -513,71 +512,124 @@ function appReducer(state: AppState, action: AppAction): AppState {
 export const AppContext = createContext<{
   state: AppState;
   dispatch: React.Dispatch<AppAction>;
-  getAllUsers: () => typeof HARDCODED_USERS;
+  users: ProjectManager[];
+  getAllUsers: () => ProjectManager[];
   getUserName: (userId: string) => string;
   getUserAvatar: (userId: string) => string | undefined;
 } | null>(null);
 
+// ─── Map backend project to frontend Project shape ────────
+const workspaceMap: Record<string, Project['workspace']> = {
+  'LOGO': 'logo',
+  'WEB_DESIGN': 'web-design',
+  'WEB_DEVELOPMENT': 'web-development',
+  'CONTENT': 'content',
+};
+
+const statusMap: Record<string, Project['status']> = {
+  'TODO': 'Todo',
+  'IN_PROGRESS': 'in-progress',
+  'COMPLETED': 'Completed',
+  'REVISIONS': 'Revisons',
+};
+
+function mapApiProject(p: any): Project {
+  return {
+    id: p.id,
+    name: p.name,
+    description: p.description || '',
+    status: statusMap[p.status as string] || 'Todo',
+    priority: (p.priority?.toLowerCase() || 'medium') as Project['priority'],
+    dueDate: p.dueDate ? new Date(p.dueDate) : null,
+    pm: p.pmId || p.pm?.id || '',
+    developer: p.developerId || p.developer?.id || null,
+    workspace: workspaceMap[p.workspace as string] || 'logo',
+    image: p.image || null,
+    labels: (p.labels || []).map((pl: any) => {
+      // Handle both { label: { id, name, color } } (ProjectLabel join) and { id, name, color } (direct)
+      const l = pl.label || pl;
+      return { id: l.id, name: l.name, color: l.color };
+    }),
+    checklist: (p.checklist || []).map((ci: any) => ({
+      id: ci.id,
+      title: ci.title,
+      completed: ci.completed,
+    })),
+    comments: (p.comments || []).map((c: any) => ({
+      id: c.id,
+      userId: c.userId,
+      content: c.content,
+      timestamp: new Date(c.createdAt || c.timestamp),
+    })),
+    attachments: (p.attachments || []).map((a: any) => ({
+      id: a.id,
+      filename: a.filename,
+      type: a.type as any,
+      url: a.url,
+      uploadedAt: new Date(a.uploadedAt),
+    })),
+    activityLog: (p.activities || p.activityLog || []).map((al: any) => ({
+      id: al.id,
+      userId: al.userId,
+      action: al.action,
+      timestamp: new Date(al.createdAt || al.timestamp),
+      details: al.details || undefined,
+    })),
+    createdAt: new Date(p.createdAt),
+    updatedAt: new Date(p.updatedAt),
+  };
+}
+
 export function AppProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(appReducer, initialState);
+  const [users, setUsers] = useState<ProjectManager[]>([]);
 
-  const getAllUsers = useCallback(() => HARDCODED_USERS, []);
+  const getAllUsers = useCallback(() => users, [users]);
 
   const getUserName = useCallback((userId: string) => {
-    const user = HARDCODED_USERS.find((u) => u.id === userId);
+    const user = users.find((u) => u.id === userId);
     return user?.name || 'Unknown User';
-  }, []);
+  }, [users]);
 
   const getUserAvatar = useCallback((userId: string) => {
-    const user = HARDCODED_USERS.find((u) => u.id === userId);
+    const user = users.find((u) => u.id === userId);
     return user?.avatar;
-  }, []);
+  }, [users]);
+
+  // Fetch users from backend
+  useEffect(() => {
+    const fetchUsers = async () => {
+      if (!state.currentUser || typeof window === 'undefined') return;
+      try {
+        const result = await usersAPI.getAll();
+        if (result.success) {
+          setUsers(
+            result.data.users.map((u: any) => ({
+              id: u.id,
+              name: u.name,
+              email: u.email,
+              avatar: u.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${u.name}`,
+            }))
+          );
+        }
+      } catch (error) {
+        console.error('Error fetching users:', error);
+      }
+    };
+
+    fetchUsers();
+  }, [state.currentUser]);
 
   // Fetch all projects on mount if user is logged in
   useEffect(() => {
     const fetchProjects = async () => {
-      // Only fetch if user is logged in
       if (!state.currentUser || typeof window === 'undefined') return;
 
       try {
         const result = await projectAPI.getAll();
         
         if (result.success) {
-          // Map API projects to local format
-          const workspaceMap: Record<string, Project['workspace']> = {
-            'LOGO': 'logo',
-            'WEB_DESIGN': 'web-design',
-            'WEB_DEVELOPMENT': 'web-development',
-            'CONTENT': 'content'
-          };
-
-          const statusMap: Record<string, Project['status']> = {
-            'TODO': 'Todo',
-            'IN_PROGRESS': 'in-progress',
-            'COMPLETED': 'Completed',
-            'REVISIONS': 'Revisons'
-          };
-
-          const projects = result.data.projects.map((p: any) => ({
-            id: p.id,
-            name: p.name,
-            description: p.description || '',
-            status: statusMap[p.status as keyof typeof statusMap] || 'Todo',
-            priority: p.priority.toLowerCase() as Project['priority'],
-            dueDate: p.dueDate ? new Date(p.dueDate) : null,
-            pm: p.pmId,
-            developer: p.developerId || null,
-            workspace: workspaceMap[p.workspace as keyof typeof workspaceMap] || 'logo',
-            image: p.image || null,
-            labels: [],
-            checklist: [],
-            comments: [],
-            attachments: [],
-            activityLog: [],
-            createdAt: new Date(p.createdAt),
-            updatedAt: new Date(p.updatedAt),
-          }));
-
+          const projects = result.data.projects.map(mapApiProject);
           dispatch({ type: 'SET_PROJECTS', payload: projects });
         }
       } catch (error) {
@@ -589,7 +641,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [state.currentUser]);
 
   return (
-    <AppContext.Provider value={{ state, dispatch, getAllUsers, getUserName, getUserAvatar }}>
+    <AppContext.Provider value={{ state, dispatch, users, getAllUsers, getUserName, getUserAvatar }}>
       {children}
     </AppContext.Provider>
   );

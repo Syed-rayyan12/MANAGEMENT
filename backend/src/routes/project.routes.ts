@@ -9,6 +9,14 @@ import {
   getProjectById,
   updateProject,
   deleteProject,
+  addComment,
+  updateComment,
+  deleteComment,
+  updateChecklist,
+  addLabel,
+  removeLabel,
+  addAttachment,
+  removeAttachment,
 } from '../controllers/project.controller';
 import { authenticate, authorizeRoles } from '../middlewares/auth.middleware';
 
@@ -79,5 +87,21 @@ router.put('/:id', authorizeRoles('PM', 'TL'), updateProject);
  * @access  Private (PM only)
  */
 router.delete('/:id', authorizeRoles('PM'), deleteProject);
+
+// ─── Comments ──────────────────────────────────────
+router.post('/:id/comments', addComment);
+router.put('/:id/comments/:commentId', updateComment);
+router.delete('/:id/comments/:commentId', deleteComment);
+
+// ─── Checklist ─────────────────────────────────────
+router.put('/:id/checklist', updateChecklist);
+
+// ─── Labels ────────────────────────────────────────
+router.post('/:id/labels', addLabel);
+router.delete('/:id/labels/:labelId', removeLabel);
+
+// ─── Attachments ───────────────────────────────────
+router.post('/:id/attachments', addAttachment);
+router.delete('/:id/attachments/:attachmentId', removeAttachment);
 
 export default router;

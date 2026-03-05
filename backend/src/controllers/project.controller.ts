@@ -1,547 +1,439 @@
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, WorkspaceType } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-/**
- * Get Logo Design projects
- * GET /api/projects/logo-design
- */
-export const getLogoDesignProjects = async (req: Request, res: Response): Promise<void> => {
-  try {
-    const user = req.user;
-    
-    // Build filter based on user role
-    let whereClause: any = {};
-    
-    if (user?.role === 'PM') {
-      // PM can only see their own projects
-      whereClause.pmId = user.id;
-    } else if (user?.role === 'TL' || user?.role === 'PRODUCTION') {
-      // TL and Production see projects they're assigned to
-      whereClause.developerId = user.id;
-    }
-    // Executive sees all projects (no filter)
-    
-    const projects = await prisma.logoDesignProject.findMany({
-      where: whereClause,
-      orderBy: { createdAt: 'desc' },
-    });
-
-    res.status(200).json({
-      success: true,
-      message: 'Logo design projects retrieved successfully',
-      data: { projects },
-    });
-  } catch (error) {
-    console.error('Get logo design projects error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Internal server error',
-    });
-  }
+// Shared include for loading project relations
+const projectIncludes = {
+  pm: { select: { id: true, name: true, email: true, avatar: true, role: true } },
+  developer: { select: { id: true, name: true, email: true, avatar: true, role: true } },
+  comments: {
+    include: { user: { select: { id: true, name: true, avatar: true } } },
+    orderBy: { createdAt: 'asc' as const },
+  },
+  checklist: { orderBy: { position: 'asc' as const } },
+  labels: { include: { label: true } },
+  attachments: { orderBy: { uploadedAt: 'desc' as const } },
+  activities: {
+    include: { user: { select: { id: true, name: true } } },
+    orderBy: { createdAt: 'desc' as const },
+    take: 20,
+  },
 };
 
 /**
- * Get Web Design projects
- * GET /api/projects/web-design
+ * Build a role-based where clause for project queries.
  */
-export const getWebDesignProjects = async (req: Request, res: Response): Promise<void> => {
-  try {
-    const user = req.user;
-    
-    let whereClause: any = {};
-    
-    if (user?.role === 'PM') {
-      whereClause.pmId = user.id;
-    } else if (user?.role === 'TL' || user?.role === 'PRODUCTION') {
-      whereClause.developerId = user.id;
-    }
-    
-    const projects = await prisma.webDesignProject.findMany({
-      where: whereClause,
-      orderBy: { createdAt: 'desc' },
-    });
+function buildWhereClause(user: Request['user']) {
+  if (!user) return {};
+  if (user.role === 'PM') return { pmId: user.id };
+  if (user.role === 'TL' || user.role === 'PRODUCTION') return { developerId: user.id };
+  return {}; // EXECUTIVE sees all
+}
 
-    res.status(200).json({
-      success: true,
-      message: 'Web design projects retrieved successfully',
-      data: { projects },
-    });
-  } catch (error) {
-    console.error('Get web design projects error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Internal server error',
-    });
-  }
+// ─── Workspace-specific getters (backward-compatible routes) ────
+
+const workspaceGetter = (workspace: WorkspaceType) => {
+  return async (req: Request, res: Response): Promise<void> => {
+    try {
+      const where = { ...buildWhereClause(req.user), workspace };
+      const projects = await prisma.project.findMany({
+        where,
+        include: projectIncludes,
+        orderBy: { createdAt: 'desc' },
+      });
+
+      res.status(200).json({
+        success: true,
+        message: `${workspace} projects retrieved successfully`,
+        data: { projects },
+      });
+    } catch (error) {
+      console.error(`Get ${workspace} projects error:`, error);
+      res.status(500).json({ success: false, message: 'Internal server error' });
+    }
+  };
 };
 
-/**
- * Get Web Development projects
- * GET /api/projects/web-development
- */
-export const getWebDevelopmentProjects = async (req: Request, res: Response): Promise<void> => {
-  try {
-    const user = req.user;
-    
-    let whereClause: any = {};
-    
-    if (user?.role === 'PM') {
-      whereClause.pmId = user.id;
-    } else if (user?.role === 'TL' || user?.role === 'PRODUCTION') {
-      whereClause.developerId = user.id;
-    }
-    
-    const projects = await prisma.webDevelopmentProject.findMany({
-      where: whereClause,
-      orderBy: { createdAt: 'desc' },
-    });
+export const getLogoDesignProjects = workspaceGetter('LOGO');
+export const getWebDesignProjects = workspaceGetter('WEB_DESIGN');
+export const getWebDevelopmentProjects = workspaceGetter('WEB_DEVELOPMENT');
+export const getContentWriterProjects = workspaceGetter('CONTENT');
 
-    res.status(200).json({
-      success: true,
-      message: 'Web development projects retrieved successfully',
-      data: { projects },
-    });
-  } catch (error) {
-    console.error('Get web development projects error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Internal server error',
-    });
-  }
-};
+// ─── Get all projects ───────────────────────────────
 
-/**
- * Get Content Writer projects
- * GET /api/projects/content-writer
- */
-export const getContentWriterProjects = async (req: Request, res: Response): Promise<void> => {
-  try {
-    const user = req.user;
-    
-    let whereClause: any = {};
-    
-    if (user?.role === 'PM') {
-      whereClause.pmId = user.id;
-    } else if (user?.role === 'TL' || user?.role === 'PRODUCTION') {
-      whereClause.developerId = user.id;
-    }
-    
-    const projects = await prisma.contentWriterProject.findMany({
-      where: whereClause,
-      orderBy: { createdAt: 'desc' },
-    });
-
-    res.status(200).json({
-      success: true,
-      message: 'Content writer projects retrieved successfully',
-      data: { projects },
-    });
-  } catch (error) {
-    console.error('Get content writer projects error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Internal server error',
-    });
-  }
-};
-
-/**
- * Create new project
- * POST /api/projects
- */
-export const createProject = async (req: Request, res: Response): Promise<void> => {
-  try {
-    const { name, workspace, description, priority, dueDate, pmId, developerId, image } = req.body;
-
-    // Use authenticated user's ID as PM if not provided
-    const projectPmId = pmId || req.user?.id;
-
-    // Validate required fields
-    if (!name || !workspace || !projectPmId) {
-      res.status(400).json({
-        success: false,
-        message: 'Name, workspace, and PM ID are required',
-      });
-      return;
-    }
-
-    // Validate workspace type
-    const validWorkspaces = ['LOGO', 'WEB_DESIGN', 'WEB_DEVELOPMENT', 'CONTENT'];
-    if (!validWorkspaces.includes(workspace)) {
-      res.status(400).json({
-        success: false,
-        message: 'Invalid workspace type. Must be one of: LOGO, WEB_DESIGN, WEB_DEVELOPMENT, CONTENT',
-      });
-      return;
-    }
-
-    // Verify PM exists and has PM role
-    const pm = await prisma.user.findUnique({
-      where: { id: projectPmId },
-    });
-
-    if (!pm) {
-      res.status(404).json({
-        success: false,
-        message: 'Project Manager not found',
-      });
-      return;
-    }
-
-    if (pm.role !== 'PM') {
-      res.status(403).json({
-        success: false,
-        message: 'Only users with PM role can be assigned as Project Managers',
-      });
-      return;
-    }
-
-    // Verify developer exists if provided
-    if (developerId) {
-      const developer = await prisma.user.findUnique({
-        where: { id: developerId },
-      });
-
-      if (!developer) {
-        res.status(404).json({
-          success: false,
-          message: 'Developer not found',
-        });
-        return;
-      }
-    }
-
-    const projectData = {
-      name,
-      description,
-      priority: priority || 'MEDIUM',
-      dueDate: dueDate ? new Date(dueDate) : null,
-      pmId: projectPmId,
-      developerId: developerId || null,
-      image: image || null,
-    };
-
-    let project;
-
-    // Create project in the appropriate workspace table
-    switch (workspace) {
-      case 'LOGO':
-        project = await prisma.logoDesignProject.create({
-          data: projectData,
-        });
-        break;
-      case 'WEB_DESIGN':
-        project = await prisma.webDesignProject.create({
-          data: projectData,
-        });
-        break;
-      case 'WEB_DEVELOPMENT':
-        project = await prisma.webDevelopmentProject.create({
-          data: projectData,
-        });
-        break;
-      case 'CONTENT':
-        project = await prisma.contentWriterProject.create({
-          data: projectData,
-        });
-        break;
-      default:
-        res.status(400).json({
-          success: false,
-          message: 'Invalid workspace type',
-        });
-        return;
-    }
-
-    res.status(201).json({
-      success: true,
-      message: `Project created successfully in ${workspace} workspace`,
-      data: { project },
-    });
-  } catch (error) {
-    console.error('Create project error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Internal server error',
-    });
-  }
-};
-
-/**
- * Get all projects (from all workspaces)
- * GET /api/projects
- */
 export const getAllProjects = async (req: Request, res: Response): Promise<void> => {
   try {
-    const user = req.user;
-    
-    // Build filter based on user role
-    let whereClause: any = {};
-    
-    if (user?.role === 'PM') {
-      // PM can only see their own projects
-      whereClause.pmId = user.id;
-    } else if (user?.role === 'TL' || user?.role === 'PRODUCTION') {
-      // TL and Production see projects they're assigned to
-      whereClause.developerId = user.id;
-    }
-    // Executive sees all projects (no filter)
-    
-    const [logoProjects, webDesignProjects, webDevProjects, contentProjects] = await Promise.all([
-      prisma.logoDesignProject.findMany({ where: whereClause, orderBy: { createdAt: 'desc' } }),
-      prisma.webDesignProject.findMany({ where: whereClause, orderBy: { createdAt: 'desc' } }),
-      prisma.webDevelopmentProject.findMany({ where: whereClause, orderBy: { createdAt: 'desc' } }),
-      prisma.contentWriterProject.findMany({ where: whereClause, orderBy: { createdAt: 'desc' } }),
-    ]);
-
-    const allProjects = [
-      ...logoProjects.map(p => ({ ...p, workspace: 'LOGO' })),
-      ...webDesignProjects.map(p => ({ ...p, workspace: 'WEB_DESIGN' })),
-      ...webDevProjects.map(p => ({ ...p, workspace: 'WEB_DEVELOPMENT' })),
-      ...contentProjects.map(p => ({ ...p, workspace: 'CONTENT' })),
-    ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    const where = buildWhereClause(req.user);
+    const projects = await prisma.project.findMany({
+      where,
+      include: projectIncludes,
+      orderBy: { createdAt: 'desc' },
+    });
 
     res.status(200).json({
       success: true,
       message: 'All projects retrieved successfully',
-      data: { projects: allProjects },
+      data: { projects },
     });
   } catch (error) {
     console.error('Get all projects error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Internal server error',
-    });
+    res.status(500).json({ success: false, message: 'Internal server error' });
   }
 };
 
-/**
- * Get project by ID (searches all workspace tables)
- * GET /api/projects/:id
- */
-export const getProjectById = async (req: Request, res: Response): Promise<void> => {
+// ─── Create project ────────────────────────────────
+
+export const createProject = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { id } = req.params;
+    const { name, workspace, description, priority, dueDate, pmId, developerId, image } = req.body;
 
-    // Search in all workspace tables
-    const [logoProject, webDesignProject, webDevProject, contentProject] = await Promise.all([
-      prisma.logoDesignProject.findUnique({ where: { id } }),
-      prisma.webDesignProject.findUnique({ where: { id } }),
-      prisma.webDevelopmentProject.findUnique({ where: { id } }),
-      prisma.contentWriterProject.findUnique({ where: { id } }),
-    ]);
+    const projectPmId = pmId || req.user?.id;
 
-    const project = logoProject || webDesignProject || webDevProject || contentProject;
-
-    if (!project) {
-      res.status(404).json({
-        success: false,
-        message: 'Project not found',
-      });
+    if (!name || !workspace || !projectPmId) {
+      res.status(400).json({ success: false, message: 'Name, workspace, and PM ID are required' });
       return;
     }
 
-    // Add workspace type to response
-    let workspace = 'LOGO';
-    if (webDesignProject) workspace = 'WEB_DESIGN';
-    else if (webDevProject) workspace = 'WEB_DEVELOPMENT';
-    else if (contentProject) workspace = 'CONTENT';
+    const validWorkspaces: WorkspaceType[] = ['LOGO', 'WEB_DESIGN', 'WEB_DEVELOPMENT', 'CONTENT'];
+    if (!validWorkspaces.includes(workspace)) {
+      res.status(400).json({ success: false, message: 'Invalid workspace type' });
+      return;
+    }
 
-    res.status(200).json({
+    // Verify PM
+    const pm = await prisma.user.findUnique({ where: { id: projectPmId } });
+    if (!pm) { res.status(404).json({ success: false, message: 'PM not found' }); return; }
+    if (pm.role !== 'PM') { res.status(403).json({ success: false, message: 'Only PM role users can be assigned as PM' }); return; }
+
+    // Verify developer if provided
+    if (developerId) {
+      const dev = await prisma.user.findUnique({ where: { id: developerId } });
+      if (!dev) { res.status(404).json({ success: false, message: 'Developer not found' }); return; }
+    }
+
+    const project = await prisma.project.create({
+      data: {
+        name,
+        workspace,
+        description,
+        priority: priority || 'MEDIUM',
+        dueDate: dueDate ? new Date(dueDate) : null,
+        pmId: projectPmId,
+        developerId: developerId || null,
+        image: image || null,
+      },
+      include: projectIncludes,
+    });
+
+    // Log activity
+    await prisma.activityLog.create({
+      data: { action: `Created project: ${name}`, projectId: project.id, userId: projectPmId },
+    });
+
+    res.status(201).json({
       success: true,
-      message: 'Project retrieved successfully',
-      data: { project: { ...project, workspace } },
+      message: `Project created in ${workspace} workspace`,
+      data: { project },
     });
   } catch (error) {
-    console.error('Get project by ID error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Internal server error',
-    });
+    console.error('Create project error:', error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
   }
 };
 
-/**
- * Update project
- * PUT /api/projects/:id
- */
+// ─── Get project by ID ─────────────────────────────
+
+export const getProjectById = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const project = await prisma.project.findUnique({
+      where: { id: req.params.id },
+      include: projectIncludes,
+    });
+
+    if (!project) {
+      res.status(404).json({ success: false, message: 'Project not found' });
+      return;
+    }
+
+    res.status(200).json({ success: true, data: { project } });
+  } catch (error) {
+    console.error('Get project by ID error:', error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+};
+
+// ─── Update project ────────────────────────────────
+
 export const updateProject = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
     const { workspace, ...updateData } = req.body;
 
-    // Search for project in all tables
-    const [logoProject, webDesignProject, webDevProject, contentProject] = await Promise.all([
-      prisma.logoDesignProject.findUnique({ where: { id } }),
-      prisma.webDesignProject.findUnique({ where: { id } }),
-      prisma.webDevelopmentProject.findUnique({ where: { id } }),
-      prisma.contentWriterProject.findUnique({ where: { id } }),
-    ]);
-
-    const existingProject = logoProject || webDesignProject || webDevProject || contentProject;
-
-    if (!existingProject) {
-      res.status(404).json({
-        success: false,
-        message: 'Project not found',
-      });
+    const existing = await prisma.project.findUnique({ where: { id } });
+    if (!existing) {
+      res.status(404).json({ success: false, message: 'Project not found' });
       return;
     }
 
-    // Validate status if being updated
+    // Validate status
     if (updateData.status) {
-      const validStatuses = ['TODO', 'IN_PROGRESS', 'COMPLETED', 'REVISIONS'];
-      if (!validStatuses.includes(updateData.status)) {
-        res.status(400).json({
-          success: false,
-          message: 'Invalid status. Must be one of: TODO, IN_PROGRESS, COMPLETED, REVISIONS',
-        });
+      const valid = ['TODO', 'IN_PROGRESS', 'COMPLETED', 'REVISIONS'];
+      if (!valid.includes(updateData.status)) {
+        res.status(400).json({ success: false, message: 'Invalid status' });
         return;
       }
     }
 
-    // Validate priority if being updated
+    // Validate priority
     if (updateData.priority) {
-      const validPriorities = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'];
-      if (!validPriorities.includes(updateData.priority)) {
-        res.status(400).json({
-          success: false,
-          message: 'Invalid priority. Must be one of: LOW, MEDIUM, HIGH, CRITICAL',
-        });
+      const valid = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'];
+      if (!valid.includes(updateData.priority)) {
+        res.status(400).json({ success: false, message: 'Invalid priority' });
         return;
       }
     }
 
-    // Verify PM exists and has PM role if being updated
+    // Verify PM if changing
     if (updateData.pmId) {
-      const pm = await prisma.user.findUnique({
-        where: { id: updateData.pmId },
-      });
-
-      if (!pm) {
-        res.status(404).json({
-          success: false,
-          message: 'Project Manager not found',
-        });
-        return;
-      }
-
-      if (pm.role !== 'PM') {
-        res.status(403).json({
-          success: false,
-          message: 'Only users with PM role can be assigned as Project Managers',
-        });
-        return;
-      }
+      const pm = await prisma.user.findUnique({ where: { id: updateData.pmId } });
+      if (!pm) { res.status(404).json({ success: false, message: 'PM not found' }); return; }
+      if (pm.role !== 'PM') { res.status(403).json({ success: false, message: 'User is not a PM' }); return; }
     }
 
-    // Verify developer exists if being updated
+    // Verify developer if changing
     if (updateData.developerId) {
-      const developer = await prisma.user.findUnique({
-        where: { id: updateData.developerId },
-      });
-
-      if (!developer) {
-        res.status(404).json({
-          success: false,
-          message: 'Developer not found',
-        });
-        return;
-      }
+      const dev = await prisma.user.findUnique({ where: { id: updateData.developerId } });
+      if (!dev) { res.status(404).json({ success: false, message: 'Developer not found' }); return; }
     }
 
-    const finalUpdateData = {
+    const finalData = {
       ...updateData,
       dueDate: updateData.dueDate ? new Date(updateData.dueDate) : undefined,
     };
 
-    let project;
+    const project = await prisma.project.update({
+      where: { id },
+      data: finalData,
+      include: projectIncludes,
+    });
 
-    // Update in the correct table
-    if (logoProject) {
-      project = await prisma.logoDesignProject.update({
-        where: { id },
-        data: finalUpdateData,
-      });
-    } else if (webDesignProject) {
-      project = await prisma.webDesignProject.update({
-        where: { id },
-        data: finalUpdateData,
-      });
-    } else if (webDevProject) {
-      project = await prisma.webDevelopmentProject.update({
-        where: { id },
-        data: finalUpdateData,
-      });
-    } else if (contentProject) {
-      project = await prisma.contentWriterProject.update({
-        where: { id },
-        data: finalUpdateData,
+    // Log activity
+    if (req.user) {
+      await prisma.activityLog.create({
+        data: { action: 'Updated project', projectId: id, userId: req.user.id, details: updateData },
       });
     }
 
-    res.status(200).json({
-      success: true,
-      message: 'Project updated successfully',
-      data: { project },
-    });
+    res.status(200).json({ success: true, message: 'Project updated', data: { project } });
   } catch (error) {
     console.error('Update project error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Internal server error',
-    });
+    res.status(500).json({ success: false, message: 'Internal server error' });
   }
 };
 
-/**
- * Delete project
- * DELETE /api/projects/:id
- */
+// ─── Delete project ────────────────────────────────
+
 export const deleteProject = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
 
-    // Search for project in all tables
-    const [logoProject, webDesignProject, webDevProject, contentProject] = await Promise.all([
-      prisma.logoDesignProject.findUnique({ where: { id } }),
-      prisma.webDesignProject.findUnique({ where: { id } }),
-      prisma.webDevelopmentProject.findUnique({ where: { id } }),
-      prisma.contentWriterProject.findUnique({ where: { id } }),
-    ]);
-
-    const existingProject = logoProject || webDesignProject || webDevProject || contentProject;
-
-    if (!existingProject) {
-      res.status(404).json({
-        success: false,
-        message: 'Project not found',
-      });
+    const existing = await prisma.project.findUnique({ where: { id } });
+    if (!existing) {
+      res.status(404).json({ success: false, message: 'Project not found' });
       return;
     }
 
-    // Delete from the correct table
-    if (logoProject) {
-      await prisma.logoDesignProject.delete({ where: { id } });
-    } else if (webDesignProject) {
-      await prisma.webDesignProject.delete({ where: { id } });
-    } else if (webDevProject) {
-      await prisma.webDevelopmentProject.delete({ where: { id } });
-    } else if (contentProject) {
-      await prisma.contentWriterProject.delete({ where: { id } });
+    await prisma.project.delete({ where: { id } });
+
+    if (req.user) {
+      await prisma.activityLog.create({
+        data: { action: `Deleted project: ${existing.name}`, userId: req.user.id },
+      });
     }
 
-    res.status(200).json({
-      success: true,
-      message: 'Project deleted successfully',
-    });
+    res.status(200).json({ success: true, message: 'Project deleted' });
   } catch (error) {
     console.error('Delete project error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Internal server error',
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+};
+
+// ─── Comments ──────────────────────────────────────
+
+export const addComment = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const { content } = req.body;
+
+    if (!content) {
+      res.status(400).json({ success: false, message: 'Content is required' });
+      return;
+    }
+
+    const project = await prisma.project.findUnique({ where: { id } });
+    if (!project) { res.status(404).json({ success: false, message: 'Project not found' }); return; }
+
+    const comment = await prisma.comment.create({
+      data: { content, projectId: id, userId: req.user!.id },
+      include: { user: { select: { id: true, name: true, avatar: true } } },
     });
+
+    await prisma.activityLog.create({
+      data: { action: 'Added comment', projectId: id, userId: req.user!.id },
+    });
+
+    res.status(201).json({ success: true, data: { comment } });
+  } catch (error) {
+    console.error('Add comment error:', error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+};
+
+export const updateComment = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { commentId } = req.params;
+    const { content } = req.body;
+
+    const comment = await prisma.comment.update({
+      where: { id: commentId },
+      data: { content },
+      include: { user: { select: { id: true, name: true, avatar: true } } },
+    });
+
+    res.status(200).json({ success: true, data: { comment } });
+  } catch (error) {
+    console.error('Update comment error:', error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+};
+
+export const deleteComment = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { commentId } = req.params;
+    await prisma.comment.delete({ where: { id: commentId } });
+    res.status(200).json({ success: true, message: 'Comment deleted' });
+  } catch (error) {
+    console.error('Delete comment error:', error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+};
+
+// ─── Checklist ─────────────────────────────────────
+
+export const updateChecklist = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const { items } = req.body; // Array of { id?, title, completed, position }
+
+    const project = await prisma.project.findUnique({ where: { id } });
+    if (!project) { res.status(404).json({ success: false, message: 'Project not found' }); return; }
+
+    // Delete existing and recreate (simple upsert pattern)
+    await prisma.checklistItem.deleteMany({ where: { projectId: id } });
+
+    if (items && items.length > 0) {
+      await prisma.checklistItem.createMany({
+        data: items.map((item: any, index: number) => ({
+          title: item.title,
+          completed: item.completed || false,
+          position: item.position ?? index,
+          projectId: id,
+        })),
+      });
+    }
+
+    const checklist = await prisma.checklistItem.findMany({
+      where: { projectId: id },
+      orderBy: { position: 'asc' },
+    });
+
+    res.status(200).json({ success: true, data: { checklist } });
+  } catch (error) {
+    console.error('Update checklist error:', error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+};
+
+// ─── Labels ────────────────────────────────────────
+
+export const addLabel = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params; // project ID
+    const { name, color } = req.body;
+
+    if (!name || !color) {
+      res.status(400).json({ success: false, message: 'name and color are required' });
+      return;
+    }
+
+    // Find or create the label
+    let label = await prisma.label.findUnique({ where: { name } });
+    if (!label) {
+      label = await prisma.label.create({ data: { name, color } });
+    }
+
+    // Attach to project (ignore if already attached)
+    await prisma.projectLabel.upsert({
+      where: { projectId_labelId: { projectId: id, labelId: label.id } },
+      create: { projectId: id, labelId: label.id },
+      update: {},
+    });
+
+    res.status(200).json({ success: true, data: { label } });
+  } catch (error) {
+    console.error('Add label error:', error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+};
+
+export const removeLabel = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id, labelId } = req.params;
+    await prisma.projectLabel.delete({
+      where: { projectId_labelId: { projectId: id, labelId } },
+    });
+    res.status(200).json({ success: true, message: 'Label removed from project' });
+  } catch (error) {
+    console.error('Remove label error:', error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+};
+
+// ─── Attachments ───────────────────────────────────
+
+export const addAttachment = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const { filename, url, key, type, size } = req.body;
+
+    if (!filename || !url) {
+      res.status(400).json({ success: false, message: 'filename and url are required' });
+      return;
+    }
+
+    const attachment = await prisma.attachment.create({
+      data: { filename, url, key, type: type || 'image', size, projectId: id },
+    });
+
+    await prisma.activityLog.create({
+      data: { action: `Added attachment: ${filename}`, projectId: id, userId: req.user!.id },
+    });
+
+    res.status(201).json({ success: true, data: { attachment } });
+  } catch (error) {
+    console.error('Add attachment error:', error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+};
+
+export const removeAttachment = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { attachmentId } = req.params;
+    await prisma.attachment.delete({ where: { id: attachmentId } });
+    res.status(200).json({ success: true, message: 'Attachment deleted' });
+  } catch (error) {
+    console.error('Remove attachment error:', error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
   }
 };
