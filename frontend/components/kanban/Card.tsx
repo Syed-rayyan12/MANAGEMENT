@@ -9,6 +9,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useApp } from '@/contexts/useApp';
 import { PRIORITY_STYLES } from '@/lib/constants';
 import { API_BASE_URL, projectAPI } from '@/lib/api-service';
+import { toast } from 'sonner';
 import { Calendar, MessageSquare, Paperclip, Clock, Plus, X } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -75,8 +76,11 @@ export function ProjectCard({ project, onCardClick }: ProjectCardProps) {
           'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({ developerId: userId })
+      }).then(() => {
+        toast.success(`${user.name} assigned as developer`);
       }).catch(error => {
         console.error('Error updating developer:', error);
+        toast.error('Failed to assign developer');
       });
 
       // Update local state
@@ -115,9 +119,11 @@ export function ProjectCard({ project, onCardClick }: ProjectCardProps) {
           type: 'UPDATE_PROJECT',
           payload: updatedProject
         });
+        toast.success(`${user.name} tagged`);
       }
     } catch (error) {
       console.error('Error adding label:', error);
+      toast.error('Failed to add tag');
     }
 
     setShowTagModal(false);

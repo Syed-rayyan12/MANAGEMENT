@@ -1,6 +1,7 @@
 
 'use client';
 import { API_BASE_URL } from '@/lib/api-service';
+import { toast } from 'sonner';
 
 import React, { useState } from 'react';
 import { useApp } from '@/contexts/useApp';
@@ -168,13 +169,14 @@ export function CreateProjectModal({ onClose, initialStatus, initialWorkspace }:
           },
         });
 
+        toast.success('Project created successfully');
         onClose();
       } else {
-        alert(result.message || 'Failed to create project');
+        toast.error(result.message || 'Failed to create project');
       }
     } catch (error) {
       console.error('Error creating project:', error);
-      alert('Failed to create project. Please try again.');
+      toast.error('Failed to create project. Please try again.');
     }
   };
 

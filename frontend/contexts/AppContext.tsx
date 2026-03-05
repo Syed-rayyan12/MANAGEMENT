@@ -513,6 +513,7 @@ export const AppContext = createContext<{
   state: AppState;
   dispatch: React.Dispatch<AppAction>;
   users: ProjectManager[];
+  isLoading: boolean;
   getAllUsers: () => ProjectManager[];
   getUserName: (userId: string) => string;
   getUserAvatar: (userId: string) => string | undefined;
@@ -583,6 +584,7 @@ function mapApiProject(p: any): Project {
 export function AppProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(appReducer, initialState);
   const [users, setUsers] = useState<ProjectManager[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   const getAllUsers = useCallback(() => users, [users]);
 
@@ -626,6 +628,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const fetchProjects = async () => {
       if (!state.currentUser || typeof window === 'undefined') return;
 
+      setIsLoading(true);
       try {
         const result = await projectAPI.getAll();
         
@@ -635,6 +638,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         }
       } catch (error) {
         console.error('Error fetching projects:', error);
+      } finally {
+        setIsLoading(false);
       }
     };
 
@@ -642,7 +647,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [state.currentUser]);
 
   return (
-    <AppContext.Provider value={{ state, dispatch, users, getAllUsers, getUserName, getUserAvatar }}>
+    <AppContext.Provider value={{ state, dispatch, users, isLoading, getAllUsers, getUserName, getUserAvatar }}>
       {children}
     </AppContext.Provider>
   );

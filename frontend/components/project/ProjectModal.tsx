@@ -1,6 +1,7 @@
 
 'use client';
 import { API_BASE_URL, projectAPI, uploadAPI } from '@/lib/api-service';
+import { toast } from 'sonner';
 
 import React, { useState } from 'react';
 import { Project } from '@/lib/types';
@@ -78,8 +79,10 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
           },
           body: JSON.stringify({ name: editingTitle })
         });
+        toast.success('Project name updated');
       } catch (error) {
         console.error('Error updating project name:', error);
+        toast.error('Failed to update project name');
       }
     }
     setEditingName(false);
@@ -106,8 +109,10 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
         },
         body: JSON.stringify({ description: editingDesc })
       });
+      toast.success('Description updated');
     } catch (error) {
       console.error('Error updating project description:', error);
+      toast.error('Failed to update description');
     }
 
     setEditingDescription(false);
@@ -135,11 +140,14 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
               userId: state.currentUser.id,
             },
           });
+          toast.success('Comment added');
         } else {
           console.error('Error adding comment:', result.message);
+          toast.error('Failed to add comment');
         }
       } catch (error) {
         console.error('Error adding comment:', error);
+        toast.error('Failed to add comment');
       }
 
       // Extract mentioned users and create notifications
@@ -187,8 +195,10 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
       // Persist to backend
       try {
         await projectAPI.updateComment(project.id, commentId, editCommentContent);
+        toast.success('Comment updated');
       } catch (error) {
         console.error('Error updating comment:', error);
+        toast.error('Failed to update comment');
       }
 
       dispatch({
@@ -422,8 +432,10 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
   const handleDeleteProject = async () => {
     try {
       await projectAPI.delete(project.id);
+      toast.success('Project deleted');
     } catch (error) {
       console.error('Error deleting project:', error);
+      toast.error('Failed to delete project');
     }
 
     dispatch({
@@ -445,11 +457,13 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
 
   const handleAddAttachment = async () => {
     if (selectedFile) {
+      const loadingToast = toast.loading('Uploading file...');
       try {
         // Upload to R2 CDN
         const uploadResult = await uploadAPI.uploadFile(selectedFile, 'attachments');
         if (!uploadResult) {
-          console.error('File upload failed');
+          toast.dismiss(loadingToast);
+          toast.error('File upload failed');
           return;
         }
 
@@ -478,9 +492,13 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
               userId: project.pm,
             },
           });
+          toast.dismiss(loadingToast);
+          toast.success('File uploaded successfully');
         }
       } catch (error) {
         console.error('Error uploading attachment:', error);
+        toast.dismiss(loadingToast);
+        toast.error('Failed to upload file');
       }
 
       setSelectedFile(null);
@@ -493,8 +511,10 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
   const handleRemoveAttachment = async (attachmentId: string) => {
     try {
       await projectAPI.removeAttachment(project.id, attachmentId);
+      toast.success('Attachment removed');
     } catch (error) {
       console.error('Error removing attachment:', error);
+      toast.error('Failed to remove attachment');
     }
 
     dispatch({
@@ -525,11 +545,13 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
 
   const handleUpdateCoverPhoto = async () => {
     if (coverPhotoFile) {
+      const loadingToast = toast.loading('Uploading cover photo...');
       try {
         // Upload to R2 CDN
         const uploadResult = await uploadAPI.uploadFile(coverPhotoFile, 'covers');
         if (!uploadResult) {
-          console.error('Cover photo upload failed');
+          toast.dismiss(loadingToast);
+          toast.error('Cover photo upload failed');
           return;
         }
 
@@ -553,8 +575,12 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
             userId: project.pm,
           },
         });
+        toast.dismiss(loadingToast);
+        toast.success('Cover photo updated');
       } catch (error) {
         console.error('Error uploading cover photo:', error);
+        toast.dismiss(loadingToast);
+        toast.error('Failed to upload cover photo');
       }
 
       setCoverPhotoFile(null);

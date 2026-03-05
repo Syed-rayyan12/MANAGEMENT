@@ -7,10 +7,13 @@ import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { StatsCards } from '@/components/dashboard/StatsCards';
 import { Button } from '@/components/ui/button';
+import { DashboardSkeleton } from '@/components/ui/skeletons';
+import { useApp } from '@/contexts/useApp';
 import { Plus, Filter, SortAsc, Sparkles, Code, Palette, FileText, ArrowLeft, Briefcase } from 'lucide-react';
 
 export default function DashboardPage() {
   const router = useRouter();
+  const { isLoading } = useApp();
   const [workspaceStats, setWorkspaceStats] = useState({
     logoDesign: 0,
     webDesign: 0,
@@ -87,6 +90,10 @@ export default function DashboardPage() {
       projectCount: workspaceStats.contentWriter
     }
   ];
+
+  if (isLoading) {
+    return <DashboardSkeleton />;
+  }
 
   return (
     <div className="space-y-8 p-6">

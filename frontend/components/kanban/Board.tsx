@@ -2,6 +2,7 @@
 
 'use client';
 import { API_BASE_URL } from '@/lib/api-service';
+import { toast } from 'sonner';
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -24,12 +25,13 @@ import { ProjectModal } from '../project/ProjectModal';
 interface BoardProps {
   searchQuery?: string;
   filterPriority?: string;
+  filterAssignee?: string;
   sortBy?: string;
   workspace?: string | null;
   customColumns?: any[];
 }
 
-export function Board({ searchQuery = '', filterPriority = 'all', sortBy = 'date', workspace = null, customColumns = [] }: BoardProps) {
+export function Board({ searchQuery = '', filterPriority = 'all', filterAssignee = 'all', sortBy = 'date', workspace = null, customColumns = [] }: BoardProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const projectIdFromUrl = searchParams.get('project');
@@ -65,11 +67,12 @@ export function Board({ searchQuery = '', filterPriority = 'all', sortBy = 'date
       const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                            p.description.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesPriority = filterPriority === 'all' || p.priority === filterPriority;
+      const matchesAssignee = filterAssignee === 'all' || p.developer === filterAssignee || p.pm === filterAssignee;
       const matchesWorkspace = !workspace || p.workspace === workspace;
 
-      return isUserProject && matchesSearch && matchesPriority && matchesWorkspace;
+      return isUserProject && matchesSearch && matchesPriority && matchesAssignee && matchesWorkspace;
     });
-  }, [state.projects, state.currentUser?.id, searchQuery, filterPriority, workspace]);
+  }, [state.projects, state.currentUser?.id, searchQuery, filterPriority, filterAssignee, workspace]);
 
   // Sort projects
   const sortedProjects = useMemo(() => {
@@ -141,7 +144,16 @@ export function Board({ searchQuery = '', filterPriority = 'all', sortBy = 'date
         });
       } catch (error) {
         console.error('Error updating project status:', error);
-        // Optionally revert the local state if backend update fails
+        toast.error('Failed to update status — reverting');
+        // Revert the local state on backend failure
+        dispatch({
+          type: 'UPDATE_PROJECT_STATUS',
+          payload: {
+            projectId,
+            newStatus: project.status,
+            userId: state.currentUser?.id || '',
+          },
+        });
       }
     }
   };

@@ -7,13 +7,15 @@ import { CreateProjectModal } from '@/components/project/CreateProjectModal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { BoardSkeleton } from '@/components/ui/skeletons';
+import { useApp } from '@/contexts/useApp';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Plus, Filter, SortAsc, ArrowLeft } from 'lucide-react';
+import { Plus, Filter, SortAsc, ArrowLeft, Users, X } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -29,9 +31,11 @@ export default function WorkspacePage() {
   const params = useParams();
   const searchParams = useSearchParams();
   const { searchQuery } = useSearch();
+  const { isLoading, getAllUsers, getUserName } = useApp();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showAddColumnModal, setShowAddColumnModal] = useState(false);
   const [filterPriority, setFilterPriority] = useState<string>('all');
+  const [filterAssignee, setFilterAssignee] = useState<string>('all');
   const [sortBy, setSortBy] = useState<string>('date');
   const [refreshKey, setRefreshKey] = useState(0);
   const [customColumns, setCustomColumns] = useState<any[]>([]);
@@ -131,6 +135,30 @@ export default function WorkspacePage() {
                 <DropdownMenuItem onClick={() => setSortBy('priority')}>Priority</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm">
+                  <Users className="w-4 h-4 mr-2 text-white" />
+                  <span className='text-white'>
+                    Assignee: {filterAssignee === 'all' ? 'All' : getUserName(filterAssignee)}
+                  </span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="max-h-64 overflow-y-auto">
+                <DropdownMenuLabel>Filter by Assignee</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => setFilterAssignee('all')}>All Members</DropdownMenuItem>
+                {getAllUsers().map((user) => (
+                  <DropdownMenuItem key={user.id} onClick={() => setFilterAssignee(user.id)}>
+                    {user.name}
+                    {user.role && (
+                      <span className="ml-2 text-xs text-gray-400">({user.role})</span>
+                    )}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
           <Button
             onClick={() => setShowAddColumnModal(true)}
@@ -154,16 +182,57 @@ export default function WorkspacePage() {
         </div>
       </div>
 
+      {/* Active Filters */}
+      {(filterPriority !== 'all' || filterAssignee !== 'all' || searchQuery) && (
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-sm text-gray-400">Active filters:</span>
+          {searchQuery && (
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-orange-500/15 text-orange-400 border border-orange-500/30">
+              Search: &quot;{searchQuery}&quot;
+            </span>
+          )}
+          {filterPriority !== 'all' && (
+            <button
+              onClick={() => setFilterPriority('all')}
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-orange-500/15 text-orange-400 border border-orange-500/30 hover:bg-orange-500/25 transition-colors"
+            >
+              Priority: {filterPriority}
+              <X className="w-3 h-3" />
+            </button>
+          )}
+          {filterAssignee !== 'all' && (
+            <button
+              onClick={() => setFilterAssignee('all')}
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-orange-500/15 text-orange-400 border border-orange-500/30 hover:bg-orange-500/25 transition-colors"
+            >
+              Assignee: {getUserName(filterAssignee)}
+              <X className="w-3 h-3" />
+            </button>
+          )}
+          <button
+            onClick={() => { setFilterPriority('all'); setFilterAssignee('all'); }}
+            className="text-xs text-gray-500 hover:text-orange-400 transition-colors underline"
+          >
+            Clear all
+          </button>
+        </div>
+      )}
+
       {/* Kanban Board */}
       <div>
-        <Board
-          key={refreshKey}
-          searchQuery={searchQuery}
-          filterPriority={filterPriority}
-          sortBy={sortBy}
-          workspace={workspace}
-          customColumns={customColumns}
-        />
+        {isLoading ? (
+          <BoardSkeleton />
+        ) : (
+          <Board
+            key={refreshKey}
+            searchQuery={searchQuery}
+            filterPriority={filterPriority}
+            filterAssignee={filterAssignee}
+            sortBy={sortBy}
+            workspace={workspace}
+            customColumns={customColumns}
+          />
+        )}
       </div>
 
       {/* Create Project Modal */}
