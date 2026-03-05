@@ -1,0 +1,116 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  PM          // Project Manager
+  TL          // Team Lead
+  EXECUTIVE   // Executive
+  PRODUCTION  // Production
+}
+
+enum WorkspaceType {
+  LOGO            // Logo Design
+  WEB_DESIGN      // Web Design
+  WEB_DEVELOPMENT // Web Development
+  CONTENT         // Content Writer
+}
+
+enum ProjectStatus {
+  TODO
+  IN_PROGRESS
+  COMPLETED
+  REVISIONS
+}
+
+enum ProjectPriority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+model User {
+  id        String   @id @default(uuid())
+  username  String   @unique
+  email     String   @unique
+  password  String
+  role      UserRole
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("users")
+}
+
+model LogoDesignProject {
+  id          String          @id @default(uuid())
+  name        String
+  status      ProjectStatus   @default(TODO)
+  priority    ProjectPriority @default(MEDIUM)
+  description String?
+  dueDate     DateTime?
+  image       String?
+  pmId        String
+  developerId String?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  @@map("logo_design_projects")
+}
+
+model WebDesignProject {
+  id          String          @id @default(uuid())
+  name        String
+  status      ProjectStatus   @default(TODO)
+  priority    ProjectPriority @default(MEDIUM)
+  description String?
+  dueDate     DateTime?
+  image       String?
+  pmId        String
+  developerId String?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  @@map("web_design_projects")
+}
+
+model WebDevelopmentProject {
+  id          String          @id @default(uuid())
+  name        String
+  status      ProjectStatus   @default(TODO)
+  priority    ProjectPriority @default(MEDIUM)
+  description String?
+  dueDate     DateTime?
+  image       String?
+  pmId        String
+  developerId String?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  @@map("web_development_projects")
+}
+
+model ContentWriterProject {
+  id          String          @id @default(uuid())
+  name        String
+  status      ProjectStatus   @default(TODO)
+  priority    ProjectPriority @default(MEDIUM)
+  description String?
+  dueDate     DateTime?
+  image       String?
+  pmId        String
+  developerId String?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  @@map("content_writer_projects")
+}
