@@ -5,7 +5,7 @@
 import { API_BASE_URL } from '@/lib/api-service';
 import { toast } from 'sonner';
 
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
   DndContext,
@@ -45,6 +45,13 @@ export function Board({ searchQuery = '', filterPriority = 'all', filterAssignee
   const [activeId, setActiveId] = useState<string | null>(null);
   const [originalStatus, setOriginalStatus] = useState<string | null>(null);
   const { state, dispatch } = useApp();
+
+  // Debounced save: card must settle in a column for 10s before hitting backend
+  const pendingSaves = useRef<Map<string, {
+    timerId: ReturnType<typeof setTimeout>;
+    newStatus: string;
+    savedFromStatus: string; // the FIRST original status before any pending moves
+  }>>(new Map());
 
   // Update selected project when URL changes
   useEffect(() => {
@@ -154,9 +161,9 @@ export function Board({ searchQuery = '', filterPriority = 'all', filterAssignee
     });
   };
 
-  const handleDragEnd = async (event: DragEndEvent) => {
+  const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
-    const dragOriginalStatus = originalStatus; // capture before clearing
+    const dragOriginalStatus = originalStatus; // captured before drop
     setActiveId(null);
     setOriginalStatus(null);
     if (!over) return;
@@ -173,15 +180,10 @@ export function Board({ searchQuery = '', filterPriority = 'all', filterAssignee
       ? overId
       : (state.projects.find(p => p.id === overId)?.status || project.status);
 
-    // If status didn't actually change (already applied in onDragOver), just persist
-    const statusMap: Record<string, string> = {
-      'Todo': 'TODO',
-      'in-progress': 'IN_PROGRESS',
-      'Completed': 'COMPLETED',
-      'Revisons': 'REVISIONS',
-    };
+    // No actual column change — nothing to do
+    if (newStatus === dragOriginalStatus) return;
 
-    // Ensure local state is correct
+    // Ensure local state reflects new column immediately
     if (project.status !== newStatus) {
       dispatch({
         type: 'UPDATE_PROJECT_STATUS',
@@ -193,37 +195,63 @@ export function Board({ searchQuery = '', filterPriority = 'all', filterAssignee
       });
     }
 
-    // Persist to backend
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${API_BASE_URL}/projects/${projectId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({ status: statusMap[newStatus] || newStatus }),
-      });
+    const statusMap: Record<string, string> = {
+      'Todo': 'TODO',
+      'in-progress': 'IN_PROGRESS',
+      'Completed': 'COMPLETED',
+      'Revisons': 'REVISIONS',
+    };
 
-      if (!response.ok) {
-        const errData = await response.json().catch(() => ({ message: 'Unknown error' }));
-        throw new Error(errData.message || `HTTP ${response.status}`);
-      }
-    } catch (error: any) {
-      console.error('Error updating project status:', error);
-      toast.error(`Failed to move card: ${error.message} — reverting`);
-      // Revert to original status before drag started
-      if (dragOriginalStatus) {
+    // ── Debounced save ── cancel any prior pending save for this card
+    const existing = pendingSaves.current.get(projectId);
+    if (existing) {
+      clearTimeout(existing.timerId);
+    }
+
+    // Preserve the very first original status so we can revert all the way back
+    const trueOriginal = existing?.savedFromStatus ?? dragOriginalStatus ?? project.status;
+
+    const toastId = `move-${projectId}`;
+    toast.dismiss(toastId);
+    toast.info(`Card will be saved in 10s — move again to reset`, {
+      id: toastId,
+      duration: 10000,
+    });
+
+    const timerId = setTimeout(async () => {
+      pendingSaves.current.delete(projectId);
+      toast.dismiss(toastId);
+
+      try {
+        const token = localStorage.getItem('token');
+        const response = await fetch(`${API_BASE_URL}/projects/${projectId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          body: JSON.stringify({ status: statusMap[newStatus] || newStatus }),
+        });
+
+        if (!response.ok) {
+          const errData = await response.json().catch(() => ({ message: 'Unknown error' }));
+          throw new Error(errData.message || `HTTP ${response.status}`);
+        }
+      } catch (error: any) {
+        console.error('Error saving card move:', error);
+        toast.error(`Failed to save card move — reverting`);
         dispatch({
           type: 'UPDATE_PROJECT_STATUS',
           payload: {
             projectId,
-            newStatus: dragOriginalStatus as Project['status'],
+            newStatus: trueOriginal as Project['status'],
             userId: state.currentUser?.id || '',
           },
         });
       }
-    }
+    }, 10000);
+
+    pendingSaves.current.set(projectId, { timerId, newStatus, savedFromStatus: trueOriginal });
   };
 
   const handleCardClick = (projectId: string) => {
