@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import React, { useState } from 'react';
 import { Project } from '@/lib/types';
 import { useApp } from '@/contexts/useApp';
+import { usePermissions } from '@/hooks/usePermissions';
 import {
   Dialog,
   DialogContent,
@@ -38,6 +39,7 @@ interface ProjectModalProps {
 
 export function ProjectModal({ project, onClose }: ProjectModalProps) {
   const { state, dispatch, getUserName, getAllUsers, getUserAvatar } = useApp();
+  const { canDeleteProject, canChangePriority, canEditProjectFields, isReadOnly } = usePermissions();
   const [editingName, setEditingName] = useState(false);
   const [editingDescription, setEditingDescription] = useState(false);
   const [editingTitle, setEditingTitle] = useState(project.name);
@@ -731,18 +733,24 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
               {/* Priority */}
               <div>
                 <Label className="text-xs font-semibold text-gray-600 dark:text-orange-400">Priority</Label>
-                <Select value={project.priority} onValueChange={handleUpdatePriority}>
-                  <SelectTrigger className="mt-1">
-                    <SelectValue placeholder="Select priority" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(PRIORITY_STYLES).map(([key, style]) => (
-                      <SelectItem key={key} value={key}>
-                        {style.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                {canChangePriority ? (
+                  <Select value={project.priority} onValueChange={handleUpdatePriority}>
+                    <SelectTrigger className="mt-1">
+                      <SelectValue placeholder="Select priority" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(PRIORITY_STYLES).map(([key, style]) => (
+                        <SelectItem key={key} value={key}>
+                          {style.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <div className="mt-1 px-3 py-2 rounded-md border border-gray-200 dark:border-[#2d3548] text-sm dark:text-orange-400">
+                    {PRIORITY_STYLES[project.priority]?.label || project.priority}
+                  </div>
+                )}
               </div>
 
               {/* Due Date */}
@@ -806,14 +814,16 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
               </div>
 
               {/* Delete Button */}
-              <Button 
-                variant="destructive"
-                onClick={() => setShowDeleteConfirm(true)}
-                className="w-full"
-              >
-                <Trash2 className="w-4 h-4 mr-2" />
-                Delete Project
-              </Button>
+              {canDeleteProject && (
+                <Button 
+                  variant="destructive"
+                  onClick={() => setShowDeleteConfirm(true)}
+                  className="w-full"
+                >
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Delete Project
+                </Button>
+              )}
             </div>
           </div>
 

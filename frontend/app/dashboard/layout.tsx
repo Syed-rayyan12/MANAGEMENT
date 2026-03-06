@@ -4,6 +4,7 @@ import { useEffect, useState, createContext, useContext } from 'react';
 import { useRouter } from 'next/navigation';
 import { useApp } from '@/contexts/useApp';
 import { Navbar } from '@/components/layout/Navbar';
+import { Sidebar } from '@/components/layout/Sidebar';
 
 const SearchContext = createContext<{
   searchQuery: string;
@@ -26,6 +27,21 @@ export default function DashboardLayout({
   const { state, dispatch } = useApp();
   const [searchQuery, setSearchQuery] = useState('');
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+
+  // Persist sidebar state
+  useEffect(() => {
+    const stored = localStorage.getItem('sidebar-collapsed');
+    if (stored === 'true') setSidebarCollapsed(true);
+  }, []);
+
+  const handleSidebarToggle = () => {
+    setSidebarCollapsed((prev) => {
+      const next = !prev;
+      localStorage.setItem('sidebar-collapsed', String(next));
+      return next;
+    });
+  };
 
   useEffect(() => {
     // Check authentication on mount
@@ -77,8 +93,9 @@ export default function DashboardLayout({
   return (
     <SearchContext.Provider value={{ searchQuery, setSearchQuery }}>
       <Navbar searchQuery={searchQuery} onSearchChange={setSearchQuery} />
+      <Sidebar collapsed={sidebarCollapsed} onToggle={handleSidebarToggle} />
       <main 
-        className="min-h-screen relative"
+        className={`min-h-screen relative transition-all duration-300 ${sidebarCollapsed ? 'ml-16' : 'ml-60'}`}
         style={{
           backgroundImage: `linear-gradient(rgba(26, 31, 46, 0.92), rgba(0, 0, 0, 0.92)), url('https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=1200&q=80')`,
           backgroundSize: 'cover',

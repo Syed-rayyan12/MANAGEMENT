@@ -1,18 +1,19 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Project } from '@/lib/types';
 import { Card } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useApp } from '@/contexts/useApp';
-import { PRIORITY_STYLES } from '@/lib/constants';
+import { PRIORITY_STYLES, DEFAULT_KANBAN_COLUMNS } from '@/lib/constants';
 import { API_BASE_URL, projectAPI } from '@/lib/api-service';
 import { toast } from 'sonner';
-import { Calendar, MessageSquare, Paperclip, Clock, Plus, X, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { Calendar, MessageSquare, Paperclip, Clock, Plus, X, AlertTriangle, CheckCircle2, Pencil } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { usePermissions } from '@/hooks/usePermissions';
 
 interface ProjectCardProps {
   project: Project;
@@ -24,8 +25,12 @@ export function ProjectCard({ project, onCardClick }: ProjectCardProps) {
     id: project.id,
   });
   const { getUserName, getUserAvatar, getAllUsers, dispatch } = useApp();
+  const { isReadOnly, canAssignDeveloper, canChangePriority, canEditProjectFields } = usePermissions();
   const [showTagModal, setShowTagModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [showQuickEdit, setShowQuickEdit] = useState(false);
+  const [quickEditName, setQuickEditName] = useState(project.name);
+  const quickEditRef = useRef<HTMLDivElement>(null);
 
   const allUsers = getAllUsers();
 
@@ -155,6 +160,87 @@ export function ProjectCard({ project, onCardClick }: ProjectCardProps) {
     });
   };
 
+  // ── Quick-Edit handlers ──
+  const handleQuickEditToggle = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setQuickEditName(project.name);
+    setShowQuickEdit(true);
+  };
+
+  const handleQuickSaveName = async () => {
+    if (!quickEditName.trim() || quickEditName === project.name) {
+      setShowQuickEdit(false);
+      return;
+    }
+    dispatch({
+      type: 'UPDATE_NAME',
+      payload: { projectId: project.id, name: quickEditName.trim(), userId: project.pm },
+    });
+    try {
+      const token = localStorage.getItem('token');
+      await fetch(`${API_BASE_URL}/projects/${project.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ name: quickEditName.trim() }),
+      });
+      toast.success('Name updated');
+    } catch {
+      toast.error('Failed to save name');
+    }
+    setShowQuickEdit(false);
+  };
+
+  const handleQuickPriority = async (newPri: string) => {
+    dispatch({
+      type: 'UPDATE_PRIORITY',
+      payload: { projectId: project.id, priority: newPri as Project['priority'], userId: project.pm },
+    });
+    const priorityMap: Record<string, string> = { low: 'LOW', medium: 'MEDIUM', high: 'HIGH', critical: 'CRITICAL' };
+    try {
+      const token = localStorage.getItem('token');
+      await fetch(`${API_BASE_URL}/projects/${project.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ priority: priorityMap[newPri] }),
+      });
+    } catch {
+      toast.error('Failed to update priority');
+    }
+    setShowQuickEdit(false);
+  };
+
+  const handleQuickStatus = async (newStatus: string) => {
+    dispatch({
+      type: 'UPDATE_PROJECT_STATUS',
+      payload: { projectId: project.id, newStatus: newStatus as Project['status'], userId: project.pm },
+    });
+    const statusMap: Record<string, string> = { Todo: 'TODO', 'in-progress': 'IN_PROGRESS', Completed: 'COMPLETED', Revisons: 'REVISIONS' };
+    try {
+      const token = localStorage.getItem('token');
+      await fetch(`${API_BASE_URL}/projects/${project.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ status: statusMap[newStatus] || newStatus }),
+      });
+      toast.success('Status updated');
+    } catch {
+      toast.error('Failed to update status');
+    }
+    setShowQuickEdit(false);
+  };
+
+  // Close quick-edit on outside click
+  useEffect(() => {
+    if (!showQuickEdit) return;
+    const handler = (e: MouseEvent) => {
+      if (quickEditRef.current && !quickEditRef.current.contains(e.target as Node)) {
+        setShowQuickEdit(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [showQuickEdit]);
+
   const filteredUsers = allUsers.filter(user =>
     user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     user.email.toLowerCase().includes(searchQuery.toLowerCase())
@@ -164,8 +250,96 @@ export function ProjectCard({ project, onCardClick }: ProjectCardProps) {
     <Card
       ref={setNodeRef}
       style={style}
-      className="bg-white dark:bg-[#1a1f2e] dark:border-[#2d3548] cursor-pointer hover:shadow-lg hover:shadow-orange-500/10 dark:hover:shadow-orange-500/20 transition-all p-3 space-y-3"
+      className="group/card relative bg-white dark:bg-[#1a1f2e] dark:border-[#2d3548] cursor-pointer hover:shadow-lg hover:shadow-orange-500/10 dark:hover:shadow-orange-500/20 transition-all p-3 space-y-3"
     >
+      {/* Quick-Edit pencil button (visible on hover) */}
+      {!isReadOnly && !showQuickEdit && (
+        <button
+          onClick={handleQuickEditToggle}
+          className="absolute top-2 right-2 z-20 opacity-0 group-hover/card:opacity-100 transition-opacity w-7 h-7 rounded-md bg-gray-200 dark:bg-[#2d3548] hover:bg-orange-500 dark:hover:bg-orange-500 flex items-center justify-center shadow"
+        >
+          <Pencil className="w-3.5 h-3.5 text-gray-600 dark:text-gray-300 hover:text-white" />
+        </button>
+      )}
+
+      {/* Quick-Edit Overlay */}
+      {showQuickEdit && (
+        <div
+          ref={quickEditRef}
+          className="absolute inset-0 z-30 bg-white dark:bg-[#1a1f2e] rounded-lg border-2 border-orange-500 p-3 space-y-3 overflow-y-auto"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-xs font-bold text-orange-400 uppercase tracking-wider">Quick Edit</span>
+            <button onClick={() => setShowQuickEdit(false)} className="text-gray-400 hover:text-white">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* Name */}
+          <div>
+            <label className="text-[10px] text-gray-400 uppercase">Name</label>
+            <input
+              className="w-full mt-0.5 px-2 py-1.5 text-sm rounded border border-gray-300 dark:border-[#2d3548] bg-transparent dark:text-white focus:outline-none focus:border-orange-500"
+              value={quickEditName}
+              onChange={(e) => setQuickEditName(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleQuickSaveName()}
+              autoFocus
+            />
+          </div>
+
+          {/* Priority (only if allowed) */}
+          {canChangePriority && (
+            <div>
+              <label className="text-[10px] text-gray-400 uppercase">Priority</label>
+              <div className="flex gap-1.5 mt-1">
+                {Object.entries(PRIORITY_STYLES).map(([key, style]) => (
+                  <button
+                    key={key}
+                    onClick={() => handleQuickPriority(key)}
+                    className={`flex-1 text-[11px] py-1.5 rounded font-medium transition-colors ${
+                      project.priority === key
+                        ? 'bg-orange-500 text-white'
+                        : 'bg-gray-100 dark:bg-[#2d3548] text-gray-600 dark:text-gray-300 hover:bg-orange-500/20'
+                    }`}
+                  >
+                    {style.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Status */}
+          <div>
+            <label className="text-[10px] text-gray-400 uppercase">Move to</label>
+            <div className="grid grid-cols-2 gap-1.5 mt-1">
+              {DEFAULT_KANBAN_COLUMNS.map((col) => (
+                <button
+                  key={col.status}
+                  onClick={() => handleQuickStatus(col.status)}
+                  className={`text-[11px] py-1.5 rounded font-medium transition-colors ${
+                    project.status === col.status
+                      ? 'bg-orange-500 text-white'
+                      : 'bg-gray-100 dark:bg-[#2d3548] text-gray-600 dark:text-gray-300 hover:bg-orange-500/20'
+                  }`}
+                >
+                  {col.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Save Name Button */}
+          <button
+            onClick={handleQuickSaveName}
+            className="w-full py-1.5 text-sm font-medium rounded bg-orange-500 text-white hover:bg-orange-600 transition-colors"
+          >
+            Save
+          </button>
+        </div>
+      )}
+
       {/* Drag Handle - separate from click area */}
       <div
         {...attributes}
@@ -217,12 +391,14 @@ export function ProjectCard({ project, onCardClick }: ProjectCardProps) {
               />
             </span>
           ))}
-          <button
-            onClick={handleAddTag}
-            className="w-6 h-6 rounded bg-orange-500/20 hover:bg-orange-500/30 flex items-center justify-center transition-colors"
-          >
-            <Plus className="w-3 h-3 text-orange-500" />
-          </button>
+          {!isReadOnly && (
+            <button
+              onClick={handleAddTag}
+              className="w-6 h-6 rounded bg-orange-500/20 hover:bg-orange-500/30 flex items-center justify-center transition-colors"
+            >
+              <Plus className="w-3 h-3 text-orange-500" />
+            </button>
+          )}
         </div>
 
         {/* Avatars */}

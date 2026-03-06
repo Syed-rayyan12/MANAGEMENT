@@ -26,6 +26,7 @@ import { useApp } from '@/contexts/useApp';
 import { Column } from './Column';
 import { ProjectCard } from './Card';
 import { ProjectModal } from '../project/ProjectModal';
+import { usePermissions } from '@/hooks/usePermissions';
 
 interface BoardProps {
   searchQuery?: string;
@@ -45,6 +46,7 @@ export function Board({ searchQuery = '', filterPriority = 'all', filterAssignee
   const [activeId, setActiveId] = useState<string | null>(null);
   const [originalStatus, setOriginalStatus] = useState<string | null>(null);
   const { state, dispatch } = useApp();
+  const { canDragCards } = usePermissions();
 
   // Debounced save: card must settle in a column for 10s before hitting backend
   const pendingSaves = useRef<Map<string, {
@@ -61,7 +63,7 @@ export function Board({ searchQuery = '', filterPriority = 'all', filterAssignee
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 8,
+        distance: canDragCards ? 8 : Infinity,
       },
     }),
     useSensor(KeyboardSensor, {

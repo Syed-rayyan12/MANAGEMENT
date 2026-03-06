@@ -16,6 +16,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Plus, Filter, SortAsc, ArrowLeft, Users, X } from 'lucide-react';
+import { usePermissions } from '@/hooks/usePermissions';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -32,6 +33,7 @@ export default function WorkspacePage() {
   const searchParams = useSearchParams();
   const { searchQuery } = useSearch();
   const { isLoading, getAllUsers, getUserName } = useApp();
+  const { canCreateProject, canAddColumn } = usePermissions();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showAddColumnModal, setShowAddColumnModal] = useState(false);
   const [filterPriority, setFilterPriority] = useState<string>('all');
@@ -83,14 +85,6 @@ export default function WorkspacePage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <Button
-            variant="outline"
-            onClick={() => router.push('/dashboard')}
-            className="gap-2"
-          >
-            <ArrowLeft className="w-4 h-4 text-white" />
-            <span className='text-white'>Back to Workspaces</span>
-          </Button>
           <div>
             <h1 className="text-3xl font-bold text-gray-900 dark:text-orange-400">{workspaceName}</h1>
             <p className="text-gray-600 dark:text-gray-400 mt-1">Manage your {workspaceName.toLowerCase()} projects</p>
@@ -160,25 +154,29 @@ export default function WorkspacePage() {
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
-          <Button
-            onClick={() => setShowAddColumnModal(true)}
-            variant="outline"
-            className="border-orange-500/50 hover:bg-orange-500/10 dark:border-orange-500/50 dark:hover:bg-orange-500/10"
-          >
-            <Plus className="w-4 h-4 mr-2 text-orange-500" />
-            <span className='text-orange-500'>
-              Add Column
-            </span>
-          </Button>
-          <Button
-            onClick={() => setShowCreateModal(true)}
-            className="bg-orange-500 hover:bg-orange-600 dark:bg-orange-500 dark:hover:bg-orange-600 dark:shadow-lg dark:shadow-orange-500/50"
-          >
-            <Plus className="w-4 h-4 mr-2 text-white" />
-            <span className='text-white'>
-              New Project
-            </span>
-          </Button>
+          {canAddColumn && (
+            <Button
+              onClick={() => setShowAddColumnModal(true)}
+              variant="outline"
+              className="border-orange-500/50 hover:bg-orange-500/10 dark:border-orange-500/50 dark:hover:bg-orange-500/10"
+            >
+              <Plus className="w-4 h-4 mr-2 text-orange-500" />
+              <span className='text-orange-500'>
+                Add Column
+              </span>
+            </Button>
+          )}
+          {canCreateProject && (
+            <Button
+              onClick={() => setShowCreateModal(true)}
+              className="bg-orange-500 hover:bg-orange-600 dark:bg-orange-500 dark:hover:bg-orange-600 dark:shadow-lg dark:shadow-orange-500/50"
+            >
+              <Plus className="w-4 h-4 mr-2 text-white" />
+              <span className='text-white'>
+                New Project
+              </span>
+            </Button>
+          )}
         </div>
       </div>
 
