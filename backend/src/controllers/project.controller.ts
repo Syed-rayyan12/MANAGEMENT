@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { PrismaClient, WorkspaceType } from '@prisma/client';
+import { createNotification, createManyNotifications } from './notification.controller';
 
 const prisma = new PrismaClient();
 
@@ -23,12 +24,11 @@ const projectIncludes = {
 
 /**
  * Build a role-based where clause for project queries.
+ * All authenticated users can SEE all projects (Trello-like).
+ * Role restrictions are enforced on actions (create/update/delete) via route middleware.
  */
-function buildWhereClause(user: Request['user']) {
-  if (!user) return {};
-  if (user.role === 'PM') return { pmId: user.id };
-  if (user.role === 'TL' || user.role === 'PRODUCTION') return { developerId: user.id };
-  return {}; // EXECUTIVE sees all
+function buildWhereClause(_user: Request['user']) {
+  return {};
 }
 
 // ─── Workspace-specific getters (backward-compatible routes) ────
@@ -131,6 +131,18 @@ export const createProject = async (req: Request, res: Response): Promise<void> 
       data: { action: `Created project: ${name}`, projectId: project.id, userId: projectPmId },
     });
 
+    // Notify assigned developer
+    if (developerId && developerId !== projectPmId) {
+      const pmUser = await prisma.user.findUnique({ where: { id: projectPmId }, select: { name: true } });
+      await createNotification({
+        type: 'assigned',
+        message: `${pmUser?.name || 'A PM'} assigned you to project: ${name}`,
+        userId: developerId,
+        projectId: project.id,
+        actorId: projectPmId,
+      });
+    }
+
     res.status(201).json({
       success: true,
       message: `Project created in ${workspace} workspace`,
@@ -223,6 +235,34 @@ export const updateProject = async (req: Request, res: Response): Promise<void> 
       await prisma.activityLog.create({
         data: { action: 'Updated project', projectId: id, userId: req.user.id, details: updateData },
       });
+
+      const actorName = (await prisma.user.findUnique({ where: { id: req.user.id }, select: { name: true } }))?.name || 'Someone';
+
+      // Notify new developer if assignment changed
+      if (updateData.developerId && updateData.developerId !== existing.developerId && updateData.developerId !== req.user.id) {
+        await createNotification({
+          type: 'assigned',
+          message: `${actorName} assigned you to project: ${existing.name}`,
+          userId: updateData.developerId,
+          projectId: id,
+          actorId: req.user.id,
+        });
+      }
+
+      // Notify PM + developer on status change
+      if (updateData.status && updateData.status !== existing.status) {
+        const recipients = new Set<string>();
+        if (existing.pmId && existing.pmId !== req.user.id) recipients.add(existing.pmId);
+        if (existing.developerId && existing.developerId !== req.user.id) recipients.add(existing.developerId);
+        const items = [...recipients].map((uid) => ({
+          type: 'status',
+          message: `${actorName} changed status of ${existing.name} to ${updateData.status}`,
+          userId: uid,
+          projectId: id,
+          actorId: req.user!.id,
+        }));
+        await createManyNotifications(items);
+      }
     }
 
     res.status(200).json({ success: true, message: 'Project updated', data: { project } });
@@ -282,6 +322,36 @@ export const addComment = async (req: Request, res: Response): Promise<void> => 
     await prisma.activityLog.create({
       data: { action: 'Added comment', projectId: id, userId: req.user!.id },
     });
+
+    // Notify PM, developer, and @mentioned users
+    const actorName = (await prisma.user.findUnique({ where: { id: req.user!.id }, select: { name: true } }))?.name || 'Someone';
+    const snippet = content.length > 50 ? content.substring(0, 50) + '...' : content;
+    const recipientIds = new Set<string>();
+
+    // Add PM and developer (except commenter)
+    if (project.pmId && project.pmId !== req.user!.id) recipientIds.add(project.pmId);
+    if (project.developerId && project.developerId !== req.user!.id) recipientIds.add(project.developerId);
+
+    // Parse @mentions
+    const mentionRegex = /@([a-zA-Z0-9_]+)/g;
+    const mentions = content.match(mentionRegex);
+    if (mentions) {
+      const allUsers = await prisma.user.findMany({ select: { id: true, name: true } });
+      for (const match of mentions) {
+        const username = match.substring(1).toLowerCase();
+        const mentioned = allUsers.find(u => u.name.toLowerCase().replace(/\s+/g, '') === username);
+        if (mentioned && mentioned.id !== req.user!.id) recipientIds.add(mentioned.id);
+      }
+    }
+
+    const notifItems = [...recipientIds].map((uid) => ({
+      type: 'comment',
+      message: `${actorName} commented on ${project.name}: "${snippet}"`,
+      userId: uid,
+      projectId: id,
+      actorId: req.user!.id,
+    }));
+    await createManyNotifications(notifItems);
 
     res.status(201).json({ success: true, data: { comment } });
   } catch (error) {

@@ -58,6 +58,7 @@ model User {
   assignedProjects Project[]       @relation("ProjectDeveloper")
   comments         Comment[]
   activities       ActivityLog[]
+  notifications    Notification[]
 
   @@map("users")
 }
@@ -172,4 +173,21 @@ model ActivityLog {
   createdAt DateTime @default(now())
 
   @@map("activity_logs")
+}
+
+// ─── NOTIFICATIONS ──────────────────────────────────
+
+model Notification {
+  id        String   @id @default(uuid())
+  type      String   // assigned, mention, comment, status, project_created
+  message   String
+  read      Boolean  @default(false)
+  projectId String?
+  userId    String   // recipient
+  user      User     @relation(fields: [userId], references: [id])
+  actorId   String?  // who triggered it
+  createdAt DateTime @default(now())
+
+  @@index([userId, read])
+  @@map("notifications")
 }

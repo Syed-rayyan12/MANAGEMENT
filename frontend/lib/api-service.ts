@@ -298,3 +298,36 @@ export const dashboardAPI = {
     return await response.json();
   },
 };
+
+// Notification APIs
+export const notificationAPI = {
+  getAll: async () => {
+    const response = await fetch(`${API_BASE_URL}/notifications`, {
+      headers: getHeaders(),
+    });
+    return await response.json();
+  },
+
+  getUnreadCount: async () => {
+    const response = await fetch(`${API_BASE_URL}/notifications/unread-count`, {
+      headers: getHeaders(),
+    });
+    return await response.json();
+  },
+
+  markAsRead: async (id: string) => {
+    const response = await fetch(`${API_BASE_URL}/notifications/${id}/read`, {
+      method: 'PUT',
+      headers: getHeaders(),
+    });
+    return await response.json();
+  },
+
+  markAllAsRead: async () => {
+    const response = await fetch(`${API_BASE_URL}/notifications/read-all`, {
+      method: 'PUT',
+      headers: getHeaders(),
+    });
+    return await response.json();
+  },
+};

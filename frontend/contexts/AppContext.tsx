@@ -2,7 +2,7 @@
 
 import React, { createContext, useReducer, ReactNode, useCallback, useEffect, useState } from 'react';
 import { AppState, Project, CurrentUser, Notification, ActivityLog, ChecklistItem, Comment, Attachment, Label, ProjectManager } from '@/lib/types';
-import { projectAPI, usersAPI } from '@/lib/api-service';
+import { projectAPI, usersAPI, notificationAPI } from '@/lib/api-service';
 
 export type AppAction =
   | { type: 'SET_USER'; payload: CurrentUser }
@@ -26,6 +26,7 @@ export type AppAction =
   | { type: 'ADD_ATTACHMENT'; payload: { projectId: string; attachment: Attachment; userId: string } }
   | { type: 'REMOVE_ATTACHMENT'; payload: { projectId: string; attachmentId: string; userId: string } }
   | { type: 'ADD_NOTIFICATION'; payload: Notification }
+  | { type: 'SET_NOTIFICATIONS'; payload: Notification[] }
   | { type: 'MARK_NOTIFICATION_READ'; payload: string }
   | { type: 'MARK_ALL_NOTIFICATIONS_READ'; payload: string }
   | { type: 'ADD_ACTIVITY'; payload: ActivityLog };
@@ -479,6 +480,13 @@ function appReducer(state: AppState, action: AppAction): AppState {
       };
     }
 
+    case 'SET_NOTIFICATIONS': {
+      return {
+        ...state,
+        notifications: action.payload,
+      };
+    }
+
     case 'MARK_NOTIFICATION_READ': {
       return {
         ...state,
@@ -645,6 +653,35 @@ export function AppProvider({ children }: { children: ReactNode }) {
     };
 
     fetchProjects();
+  }, [state.currentUser]);
+
+  // Fetch notifications on mount + poll every 30s
+  useEffect(() => {
+    if (!state.currentUser || typeof window === 'undefined') return;
+
+    const fetchNotifications = async () => {
+      try {
+        const result = await notificationAPI.getAll();
+        if (result.success) {
+          const mapped: Notification[] = result.data.notifications.map((n: any) => ({
+            id: n.id,
+            userId: n.userId,
+            type: n.type as Notification['type'],
+            projectId: n.projectId || '',
+            read: n.read,
+            timestamp: new Date(n.createdAt),
+            message: n.message,
+          }));
+          dispatch({ type: 'SET_NOTIFICATIONS', payload: mapped });
+        }
+      } catch (error) {
+        console.error('Error fetching notifications:', error);
+      }
+    };
+
+    fetchNotifications();
+    const interval = setInterval(fetchNotifications, 30000);
+    return () => clearInterval(interval);
   }, [state.currentUser]);
 
   return (

@@ -5,11 +5,9 @@ const prisma = new PrismaClient();
 
 /**
  * Build a role-based where clause.
+ * All users see all projects (Trello-like board visibility).
  */
-function buildWhereClause(user: Request['user']) {
-  if (!user) return {};
-  if (user.role === 'PM') return { pmId: user.id };
-  if (user.role === 'TL' || user.role === 'PRODUCTION') return { developerId: user.id };
+function buildWhereClause(_user: Request['user']) {
   return {};
 }
 

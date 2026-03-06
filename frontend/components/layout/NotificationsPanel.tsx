@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { useApp } from '@/contexts/useApp';
+import { notificationAPI } from '@/lib/api-service';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,13 +22,23 @@ export function NotificationsPanel() {
     (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
   );
 
-  const handleMarkAsRead = (notificationId: string) => {
+  const handleMarkAsRead = async (notificationId: string) => {
     dispatch({ type: 'MARK_NOTIFICATION_READ', payload: notificationId });
+    try {
+      await notificationAPI.markAsRead(notificationId);
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+    }
   };
 
-  const handleMarkAllAsRead = () => {
+  const handleMarkAllAsRead = async () => {
     if (state.currentUser) {
       dispatch({ type: 'MARK_ALL_NOTIFICATIONS_READ', payload: state.currentUser.id });
+      try {
+        await notificationAPI.markAllAsRead();
+      } catch (error) {
+        console.error('Error marking all notifications as read:', error);
+      }
     }
   };
 

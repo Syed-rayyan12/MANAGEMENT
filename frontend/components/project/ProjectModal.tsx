@@ -156,41 +156,7 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
         toast.error('Failed to add comment');
       }
 
-      // Extract mentioned users and create notifications
-      const mentionedUserIds = extractMentionedUsers(newComment);
-      mentionedUserIds.forEach((userId) => {
-        const mentionedUser = allUsers.find(u => u.id === userId);
-        if (mentionedUser && state.currentUser) {
-          dispatch({
-            type: 'ADD_NOTIFICATION',
-            payload: {
-              id: Math.random().toString(36),
-              userId: userId,
-              type: 'comment',
-              projectId: project.id,
-              read: false,
-              timestamp: new Date(),
-              message: `${state.currentUser.name} mentioned you in ${project.name}: "${newComment.substring(0, 50)}${newComment.length > 50 ? '...' : ''}"`,
-            },
-          });
-        }
-      });
-
-      // Create notification for PM if not mentioned
-      if (!mentionedUserIds.includes(project.pm) && project.pm !== state.currentUser.id) {
-        dispatch({
-          type: 'ADD_NOTIFICATION',
-          payload: {
-            id: Math.random().toString(36),
-            userId: project.pm,
-            type: 'comment',
-            projectId: project.id,
-            read: false,
-            timestamp: new Date(),
-            message: `${state.currentUser.name} commented on ${project.name}: "${newComment.substring(0, 50)}${newComment.length > 50 ? '...' : ''}"`,
-          },
-        });
-      }
+      // Notifications are now handled server-side
       
       setNewComment('');
     }
@@ -217,25 +183,7 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
         },
       });
 
-      // Extract mentioned users and create notifications
-      const mentionedUserIds = extractMentionedUsers(editCommentContent);
-      mentionedUserIds.forEach((userId) => {
-        const mentionedUser = allUsers.find(u => u.id === userId);
-        if (mentionedUser && state.currentUser) {
-          dispatch({
-            type: 'ADD_NOTIFICATION',
-            payload: {
-              id: Math.random().toString(36),
-              userId: userId,
-              type: 'comment',
-              projectId: project.id,
-              read: false,
-              timestamp: new Date(),
-              message: `${state.currentUser.name} mentioned you in ${project.name}`,
-            },
-          });
-        }
-      });
+      // Notifications are now handled server-side
 
       setEditingCommentId(null);
       setEditCommentContent('');
