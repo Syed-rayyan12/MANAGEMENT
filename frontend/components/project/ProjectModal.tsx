@@ -63,7 +63,6 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
   const [showAddCheckItem, setShowAddCheckItem] = useState(false);
 
   const allUsers = getAllUsers();
-  const developers = allUsers.filter((u) => u.role === 'PRODUCTION' || u.role === 'TL');
 
   const handleSaveName = async () => {
     if (editingTitle.trim()) {
@@ -295,30 +294,34 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
     }
   };
 
-  const handleUpdateDeveloper = async (devId: string) => {
-    dispatch({
-      type: 'UPDATE_DEVELOPER',
-      payload: {
-        projectId: project.id,
-        developerId: devId === 'none' ? null : devId,
-        userId: project.pm,
-      },
-    });
-
-    // Update backend
-    try {
-      const token = localStorage.getItem('token');
-      await fetch(`${API_BASE_URL}/projects/${project.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ developerId: devId === 'none' ? null : devId })
-      });
-    } catch (error) {
-      console.error('Error updating developer:', error);
+  const handleAddMember = async (userId: string) => {
+    const user = allUsers.find(u => u.id === userId);
+    if (!user) return;
+    if (project.labels.some(l => l.name === user.name)) {
+      toast.info(`${user.name} is already a member`);
+      return;
     }
+    try {
+      const result = await projectAPI.addLabel(project.id, user.name, '#ff6600');
+      if (result.success) {
+        const savedLabel = result.data.label || result.data;
+        const newLabel = { id: savedLabel.id || `label_${Date.now()}`, name: user.name, color: '#ff6600' };
+        dispatch({ type: 'UPDATE_PROJECT', payload: { ...project, labels: [...project.labels, newLabel], updatedAt: new Date() } });
+        toast.success(`${user.name} added as member`);
+      }
+    } catch (error) {
+      console.error('Error adding member:', error);
+      toast.error('Failed to add member');
+    }
+  };
+
+  const handleRemoveMember = async (labelId: string) => {
+    try {
+      await projectAPI.removeLabel(project.id, labelId);
+    } catch (error) {
+      console.error('Error removing member:', error);
+    }
+    dispatch({ type: 'UPDATE_PROJECT', payload: { ...project, labels: project.labels.filter(l => l.id !== labelId), updatedAt: new Date() } });
   };
 
   const handleUpdateStatus = async (newStatus: string) => {
@@ -781,35 +784,61 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
                 </div>
               </div>
 
-              {/* Developer */}
+              {/* Members */}
               <div>
-                <Label className="text-xs font-semibold text-gray-600 dark:text-orange-400 mb-2 block">Developer</Label>
-                <Select 
-                  value={project.developer || 'none'} 
-                  onValueChange={handleUpdateDeveloper}
-                >
-                  <SelectTrigger className="mt-1">
-                    <SelectValue placeholder="Select developer" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">No Developer</SelectItem>
-                    {developers.map((dev) => (
-                      <SelectItem key={dev.id} value={dev.id}>
+                <Label className="text-xs font-semibold text-gray-600 dark:text-orange-400 mb-2 block">Members</Label>
+                {/* Current members list */}
+                <div className="space-y-1.5 mb-2">
+                  {project.labels.map((label) => {
+                    const memberUser = allUsers.find(u => u.name === label.name);
+                    const mAvatar = memberUser ? getUserAvatar(memberUser.id) : undefined;
+                    return (
+                      <div key={label.id} className="flex items-center justify-between p-2 bg-gray-50 dark:bg-[#232938] rounded-lg border dark:border-[#2d3548]">
                         <div className="flex items-center gap-2">
-                          <span>{dev.name}</span>
+                          <Avatar className="w-6 h-6">
+                            <AvatarImage src={mAvatar} alt={label.name} />
+                            <AvatarFallback className="text-[9px] bg-orange-500 text-white">{label.name.split(' ').map(w=>w[0]).join('').slice(0,2)}</AvatarFallback>
+                          </Avatar>
+                          <span className="text-xs font-medium dark:text-orange-400">{label.name}</span>
+                          {memberUser?.role && (
+                            <span className={`text-[9px] px-1 py-0.5 rounded font-bold text-white ${
+                              memberUser.role === 'PM' ? 'bg-blue-500' :
+                              memberUser.role === 'TL' ? 'bg-green-500' :
+                              memberUser.role === 'EXECUTIVE' ? 'bg-purple-500' : 'bg-gray-500'
+                            }`}>{memberUser.role}</span>
+                          )}
                         </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {project.developer && (
-                  <div className="flex items-center gap-2 p-2 mt-2 bg-gray-50 dark:bg-[#1a1f2e] rounded-lg border dark:border-orange-500/30">
-                    <Avatar className="w-6 h-6">
-                      <AvatarImage src={getUserAvatar(project.developer)} alt={getUserName(project.developer)} />
-                      <AvatarFallback>{getUserName(project.developer)[0]}</AvatarFallback>
-                    </Avatar>
-                    <span className="text-xs font-medium dark:text-orange-400">{getUserName(project.developer)}</span>
-                  </div>
+                        {!isReadOnly && (
+                          <button onClick={() => handleRemoveMember(label.id)} className="text-gray-400 hover:text-red-400 transition-colors">
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
+                  {project.labels.length === 0 && (
+                    <p className="text-xs text-gray-500 dark:text-gray-400 py-1">No members assigned</p>
+                  )}
+                </div>
+                {/* Add member dropdown */}
+                {!isReadOnly && (
+                  <Select onValueChange={(val) => handleAddMember(val)}>
+                    <SelectTrigger className="mt-1">
+                      <SelectValue placeholder="Add member..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {allUsers
+                        .filter(u => !project.labels.some(l => l.name === u.name))
+                        .map((user) => (
+                          <SelectItem key={user.id} value={user.id}>
+                            <div className="flex items-center gap-2">
+                              <span>{user.name}</span>
+                              <span className="text-[10px] text-gray-400">({user.role})</span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
                 )}
               </div>
 

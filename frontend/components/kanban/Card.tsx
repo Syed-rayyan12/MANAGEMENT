@@ -25,7 +25,7 @@ export function ProjectCard({ project, onCardClick }: ProjectCardProps) {
     id: project.id,
   });
   const { getUserName, getUserAvatar, getAllUsers, dispatch } = useApp();
-  const { isReadOnly, canAssignDeveloper, canChangePriority, canEditProjectFields } = usePermissions();
+  const { isReadOnly, canChangePriority } = usePermissions();
   const [showTagModal, setShowTagModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [showQuickEdit, setShowQuickEdit] = useState(false);
@@ -42,8 +42,6 @@ export function ProjectCard({ project, onCardClick }: ProjectCardProps) {
 
   const pmName = getUserName(project.pm);
   const pmAvatar = getUserAvatar(project.pm);
-  const devName = project.developer ? getUserName(project.developer) : null;
-  const devAvatar = project.developer ? getUserAvatar(project.developer) : undefined;
   const isOverdue = project.dueDate && new Date(project.dueDate) < new Date() && project.status !== 'Completed';
   const isDueSoon = project.dueDate && !isOverdue && project.status !== 'Completed' &&
     (new Date(project.dueDate).getTime() - new Date().getTime()) < 3 * 24 * 60 * 60 * 1000;
@@ -70,44 +68,18 @@ export function ProjectCard({ project, onCardClick }: ProjectCardProps) {
     setShowTagModal(true);
   };
 
-  const handleTagUser = async (userId: string) => {
+  const handleAddMember = async (userId: string) => {
     const user = allUsers.find(u => u.id === userId);
     if (!user) return;
 
-    // If user is a developer/production worker, assign them to the project
-    if (user.role === 'PRODUCTION' || user.role === 'TL') {
-      // Update developer in backend
-      const token = localStorage.getItem('token');
-      fetch(`${API_BASE_URL}/projects/${project.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ developerId: userId })
-      }).then(() => {
-        toast.success(`${user.name} assigned as developer`);
-      }).catch(error => {
-        console.error('Error updating developer:', error);
-        toast.error('Failed to assign developer');
-      });
-
-      // Update local state
-      dispatch({
-        type: 'UPDATE_DEVELOPER',
-        payload: {
-          projectId: project.id,
-          developerId: userId,
-          userId: project.pm
-        }
-      });
-
+    // Check if already a member
+    if (project.labels.some(l => l.name === user.name)) {
+      toast.info(`${user.name} is already a member`);
       setShowTagModal(false);
       setSearchQuery('');
       return;
     }
 
-    // Otherwise, add as label
     try {
       const result = await projectAPI.addLabel(project.id, user.name, '#ff6600');
       if (result.success) {
@@ -128,24 +100,24 @@ export function ProjectCard({ project, onCardClick }: ProjectCardProps) {
           type: 'UPDATE_PROJECT',
           payload: updatedProject
         });
-        toast.success(`${user.name} tagged`);
+        toast.success(`${user.name} added as member`);
       }
     } catch (error) {
-      console.error('Error adding label:', error);
-      toast.error('Failed to add tag');
+      console.error('Error adding member:', error);
+      toast.error('Failed to add member');
     }
 
     setShowTagModal(false);
     setSearchQuery('');
   };
 
-  const handleRemoveTag = async (e: React.MouseEvent, labelId: string) => {
+  const handleRemoveMember = async (e: React.MouseEvent, labelId: string) => {
     e.stopPropagation();
     
     try {
       await projectAPI.removeLabel(project.id, labelId);
     } catch (error) {
-      console.error('Error removing label:', error);
+      console.error('Error removing member:', error);
     }
 
     const updatedProject = {
@@ -367,53 +339,58 @@ export function ProjectCard({ project, onCardClick }: ProjectCardProps) {
           <h4 className="font-semibold text-gray-900 dark:text-orange-400 line-clamp-2">{project.name}</h4>
         </div>
 
-        {/* Tags with Initials and Developer */}
-        <div className="flex flex-wrap gap-2 items-center">
-          {/* Show developer badge if assigned */}
-          {project.developer && (
-            <div className="flex items-center gap-1 px-2 py-1 rounded bg-green-500 text-white text-xs font-bold">
-              <Avatar className="w-4 h-4 border">
-                <AvatarImage src={devAvatar} alt={devName || ''} />
-                <AvatarFallback className="text-[8px]">{devName?.split(' ')[0][0]}</AvatarFallback>
-              </Avatar>
-              <span>DEV</span>
+        {/* Members */}
+        <div className="flex flex-wrap gap-1.5 items-center">
+          {/* Stacked member avatars */}
+          {project.labels.length > 0 && (
+            <div className="flex -space-x-1.5">
+              {project.labels.slice(0, 5).map((label) => {
+                const memberUser = allUsers.find(u => u.name === label.name);
+                const memberAvatar = memberUser ? getUserAvatar(memberUser.id) : undefined;
+                return (
+                  <div key={label.id} className="relative group/member">
+                    <Avatar className="w-6 h-6 border-2 border-white dark:border-[#1a1f2e] cursor-pointer">
+                      <AvatarImage src={memberAvatar} alt={label.name} />
+                      <AvatarFallback className="text-[8px] bg-orange-500 text-white font-bold">
+                        {getInitials(label.name)}
+                      </AvatarFallback>
+                    </Avatar>
+                    {/* Tooltip + remove on hover */}
+                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 hidden group-hover/member:flex flex-col items-center z-40">
+                      <span className="bg-gray-900 text-white text-[10px] px-2 py-1 rounded whitespace-nowrap shadow-lg">
+                        {label.name}
+                      </span>
+                      {!isReadOnly && (
+                        <button
+                          onClick={(e) => handleRemoveMember(e, label.id)}
+                          className="mt-0.5 bg-red-500 text-white text-[9px] px-1.5 py-0.5 rounded hover:bg-red-600 transition-colors"
+                        >
+                          Remove
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+              {project.labels.length > 5 && (
+                <div className="w-6 h-6 rounded-full bg-gray-200 dark:bg-[#2d3548] border-2 border-white dark:border-[#1a1f2e] flex items-center justify-center">
+                  <span className="text-[9px] font-bold text-gray-600 dark:text-gray-300">+{project.labels.length - 5}</span>
+                </div>
+              )}
             </div>
           )}
-          {project.labels.map((label) => (
-            <span
-              key={label.id}
-              className="text-xs font-bold px-2 py-1 rounded bg-orange-500 text-white flex items-center gap-1 group"
-            >
-              {getInitials(label.name)}
-              <X 
-                className="w-3 h-3 opacity-0 group-hover:opacity-100 cursor-pointer transition-opacity" 
-                onClick={(e) => handleRemoveTag(e, label.id)}
-              />
-            </span>
-          ))}
           {!isReadOnly && (
             <button
               onClick={handleAddTag}
-              className="w-6 h-6 rounded bg-orange-500/20 hover:bg-orange-500/30 flex items-center justify-center transition-colors"
+              className="w-6 h-6 rounded-full bg-orange-500/20 hover:bg-orange-500/30 flex items-center justify-center transition-colors border border-dashed border-orange-500/40"
+              title="Add member"
             >
               <Plus className="w-3 h-3 text-orange-500" />
             </button>
           )}
         </div>
 
-        {/* Avatars */}
-        {/* <div className="flex items-center gap-2">
-          <Avatar className="w-6 h-6 border dark:border-orange-500/30">
-            <AvatarImage src={pmAvatar} alt={pmName} />
-            <AvatarFallback>{pmName.split(' ')[0][0]}</AvatarFallback>
-          </Avatar>
-          {devAvatar && (
-            <Avatar className="w-6 h-6 border dark:border-orange-500/30">
-              <AvatarImage src={devAvatar} alt={devName || ''} />
-              <AvatarFallback>{devName?.split(' ')[0][0]}</AvatarFallback>
-            </Avatar>
-          )}
-        </div> */}
+
 
         {/* Latest Comment */}
         {project.comments.length > 0 && (
@@ -488,11 +465,11 @@ export function ProjectCard({ project, onCardClick }: ProjectCardProps) {
         </div>
       </div>
 
-      {/* Tag User Modal */}
+      {/* Add Member Modal */}
       <Dialog open={showTagModal} onOpenChange={setShowTagModal}>
         <DialogContent className="dark:bg-[#1a1f2e] dark:border-orange-500/30" onClick={(e) => e.stopPropagation()}>
           <DialogHeader>
-            <DialogTitle className="text-white">Assign Person / Tag</DialogTitle>
+            <DialogTitle className="text-white">Add Member</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <Input
@@ -501,40 +478,69 @@ export function ProjectCard({ project, onCardClick }: ProjectCardProps) {
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full"
             />
+
+            {/* Current members */}
+            {project.labels.length > 0 && (
+              <div>
+                <p className="text-xs text-gray-400 mb-2">Current Members ({project.labels.length})</p>
+                <div className="flex flex-wrap gap-2">
+                  {project.labels.map((label) => {
+                    const memberUser = allUsers.find(u => u.name === label.name);
+                    const mAvatar = memberUser ? getUserAvatar(memberUser.id) : undefined;
+                    return (
+                      <div key={label.id} className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-orange-500/15 border border-orange-500/30">
+                        <Avatar className="w-5 h-5">
+                          <AvatarImage src={mAvatar} alt={label.name} />
+                          <AvatarFallback className="text-[8px] bg-orange-500 text-white">{getInitials(label.name)}</AvatarFallback>
+                        </Avatar>
+                        <span className="text-xs text-orange-400 font-medium">{label.name}</span>
+                        <button onClick={(e) => handleRemoveMember(e, label.id)} className="text-gray-400 hover:text-red-400">
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             <div className="max-h-64 overflow-y-auto space-y-2">
-              {filteredUsers.map((user) => (
-                <button
-                  key={user.id}
-                  onClick={() => handleTagUser(user.id)}
-                  className="w-full flex items-center gap-3 p-3 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-orange-50 dark:hover:bg-orange-900/20 hover:border-orange-500 transition-colors"
-                >
-                  <Avatar className="w-8 h-8">
-                    <AvatarImage src={user.avatar} />
-                    <AvatarFallback>{user.name[0]}</AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1 text-left">
-                    <div className="flex items-center gap-2">
-                      <p className="text-sm font-medium text-gray-900 dark:text-white">{user.name}</p>
-                      {(user.role === 'PRODUCTION' || user.role === 'TL') && (
-                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-green-500 text-white font-bold">
-                          {user.role === 'TL' ? 'TL' : 'DEV'}
+              {filteredUsers.map((user) => {
+                const isAlreadyMember = project.labels.some(l => l.name === user.name);
+                return (
+                  <button
+                    key={user.id}
+                    onClick={() => !isAlreadyMember && handleAddMember(user.id)}
+                    disabled={isAlreadyMember}
+                    className={`w-full flex items-center gap-3 p-3 rounded-lg border transition-colors ${
+                      isAlreadyMember
+                        ? 'border-green-500/30 bg-green-500/5 opacity-60 cursor-default'
+                        : 'border-gray-300 dark:border-gray-600 hover:bg-orange-50 dark:hover:bg-orange-900/20 hover:border-orange-500'
+                    }`}
+                  >
+                    <Avatar className="w-8 h-8">
+                      <AvatarImage src={user.avatar} />
+                      <AvatarFallback>{user.name[0]}</AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 text-left">
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-medium text-gray-900 dark:text-white">{user.name}</p>
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold text-white ${
+                          user.role === 'PM' ? 'bg-blue-500' :
+                          user.role === 'TL' ? 'bg-green-500' :
+                          user.role === 'EXECUTIVE' ? 'bg-purple-500' : 'bg-gray-500'
+                        }`}>
+                          {user.role}
                         </span>
-                      )}
-                      {user.role === 'PM' && (
-                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500 text-white font-bold">
-                          PM
-                        </span>
-                      )}
-                      {user.role === 'EXECUTIVE' && (
-                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-500 text-white font-bold">
-                          EXEC
-                        </span>
-                      )}
+                        {isAlreadyMember && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-green-500/20 text-green-400 font-medium">Added</span>
+                        )}
+                      </div>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">{user.email}</p>
                     </div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">{user.email}</p>
-                  </div>
-                </button>
-              ))}
+                  </button>
+                );
+              })}
               {filteredUsers.length === 0 && (
                 <p className="text-center text-gray-500 dark:text-gray-400 py-4">No users found</p>
               )}

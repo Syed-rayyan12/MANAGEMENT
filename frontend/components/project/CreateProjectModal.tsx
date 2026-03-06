@@ -1,6 +1,6 @@
 
 'use client';
-import { API_BASE_URL } from '@/lib/api-service';
+import { API_BASE_URL, projectAPI } from '@/lib/api-service';
 import { toast } from 'sonner';
 
 import React, { useState } from 'react';
@@ -26,7 +26,7 @@ import { Project, ProjectStatus, ProjectPriority, WorkspaceType } from '@/lib/ty
 import { KANBAN_COLUMNS, PRIORITY_STYLES } from '@/lib/constants';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon } from 'lucide-react';
+import { CalendarIcon, X } from 'lucide-react';
 import { format } from 'date-fns';
 
 interface CreateProjectModalProps {
@@ -59,11 +59,10 @@ export function CreateProjectModal({ onClose, initialStatus, initialWorkspace }:
   const [status, setStatus] = useState<ProjectStatus>(initialStatus || 'Todo');
   const [priority, setPriority] = useState<ProjectPriority>('medium');
   const [dueDate, setDueDate] = useState<Date | undefined>(undefined);
-  const [developer, setDeveloper] = useState<string>('none');
+  const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
   const [imageUrl, setImageUrl] = useState('');
 
   const allUsers = getAllUsers();
-  const developers = allUsers.filter((u) => u.role === 'PRODUCTION' || u.role === 'TL');
 
   const handleCreate = async () => {
     if (!name.trim()) {
@@ -107,7 +106,6 @@ export function CreateProjectModal({ onClose, initialStatus, initialWorkspace }:
         priority: priorityMap[priority],
         status: statusMap[status],
         dueDate: dueDate ? format(dueDate, 'yyyy-MM-dd') : undefined,
-        developerId: developer === 'none' ? undefined : developer,
         image: imageUrl.trim() || undefined
       };
 
@@ -133,6 +131,21 @@ export function CreateProjectModal({ onClose, initialStatus, initialWorkspace }:
 
         const internalWorkspace = internalWorkspaceMap[result.data.project.workspace] || workspace;
 
+        // Add selected members as labels
+        const addedLabels: { id: string; name: string; color: string }[] = [];
+        for (const memberId of selectedMembers) {
+          const memberUser = allUsers.find(u => u.id === memberId);
+          if (memberUser) {
+            try {
+              const labelResult = await projectAPI.addLabel(result.data.project.id, memberUser.name, '#ff6600');
+              if (labelResult.success) {
+                const saved = labelResult.data.label || labelResult.data;
+                addedLabels.push({ id: saved.id || `label_${Date.now()}`, name: memberUser.name, color: '#ff6600' });
+              }
+            } catch { /* continue */ }
+          }
+        }
+
         // Create local project object for immediate UI update
         const newProject: Project = {
           id: result.data.project.id,
@@ -145,8 +158,8 @@ export function CreateProjectModal({ onClose, initialStatus, initialWorkspace }:
           image: imageUrl.trim() || null,
           position: 0,
           pm: state.currentUser.id,
-          developer: developer === 'none' ? null : developer,
-          labels: [],
+          developer: null,
+          labels: addedLabels,
           checklist: [],
           comments: [],
           attachments: [],
@@ -288,20 +301,41 @@ export function CreateProjectModal({ onClose, initialStatus, initialWorkspace }:
             </Popover>
           </div>
 
-          {/* Developer */}
+          {/* Members */}
           <div>
-            <Label className="dark:text-white">Assign Developer (optional)</Label>
-            <Select value={developer} onValueChange={setDeveloper}>
+            <Label className="dark:text-white">Members (optional)</Label>
+            {/* Selected members chips */}
+            {selectedMembers.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mt-2 mb-2">
+                {selectedMembers.map((uid) => {
+                  const u = allUsers.find(x => x.id === uid);
+                  return u ? (
+                    <span key={uid} className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-orange-500/15 border border-orange-500/30 text-xs text-orange-400 font-medium">
+                      {u.name}
+                      <button onClick={() => setSelectedMembers(prev => prev.filter(id => id !== uid))} className="hover:text-red-400">
+                        <X className="w-3 h-3" />
+                      </button>
+                    </span>
+                  ) : null;
+                })}
+              </div>
+            )}
+            <Select onValueChange={(val) => {
+              if (!selectedMembers.includes(val)) {
+                setSelectedMembers(prev => [...prev, val]);
+              }
+            }}>
               <SelectTrigger className="mt-1">
-                <SelectValue placeholder="Select developer" />
+                <SelectValue placeholder="Add member..." />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="none">No Developer</SelectItem>
-                {developers.map((dev) => (
-                  <SelectItem key={dev.id} value={dev.id}>
-                    {dev.name}
-                  </SelectItem>
-                ))}
+                {allUsers
+                  .filter(u => !selectedMembers.includes(u.id))
+                  .map((user) => (
+                    <SelectItem key={user.id} value={user.id}>
+                      {user.name} ({user.role})
+                    </SelectItem>
+                  ))}
               </SelectContent>
             </Select>
           </div>
