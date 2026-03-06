@@ -546,6 +546,7 @@ function mapApiProject(p: any): Project {
     developer: p.developerId || p.developer?.id || null,
     workspace: workspaceMap[p.workspace as string] || 'logo',
     image: p.image || null,
+    position: p.position ?? 0,
     labels: (p.labels || []).map((pl: any) => {
       // Handle both { label: { id, name, color } } (ProjectLabel join) and { id, name, color } (direct)
       const l = pl.label || pl;

@@ -143,6 +143,7 @@ export function CreateProjectModal({ onClose, initialStatus, initialWorkspace }:
           priority,
           dueDate: dueDate || null,
           image: imageUrl.trim() || null,
+          position: 0,
           pm: state.currentUser.id,
           developer: developer === 'none' ? null : developer,
           labels: [],

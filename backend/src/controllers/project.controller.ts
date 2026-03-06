@@ -40,7 +40,7 @@ const workspaceGetter = (workspace: WorkspaceType) => {
       const projects = await prisma.project.findMany({
         where,
         include: projectIncludes,
-        orderBy: { createdAt: 'desc' },
+        orderBy: [{ position: 'asc' }, { createdAt: 'desc' }],
       });
 
       res.status(200).json({
@@ -68,7 +68,7 @@ export const getAllProjects = async (req: Request, res: Response): Promise<void>
     const projects = await prisma.project.findMany({
       where,
       include: projectIncludes,
-      orderBy: { createdAt: 'desc' },
+      orderBy: [{ position: 'asc' }, { createdAt: 'desc' }],
     });
 
     res.status(200).json({
@@ -434,6 +434,70 @@ export const removeAttachment = async (req: Request, res: Response): Promise<voi
     res.status(200).json({ success: true, message: 'Attachment deleted' });
   } catch (error) {
     console.error('Remove attachment error:', error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+};
+
+// ─── Reorder projects ──────────────────────────────
+
+export const reorderProjects = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { orderedIds } = req.body; // Array of { id, position, status }
+
+    if (!orderedIds || !Array.isArray(orderedIds)) {
+      res.status(400).json({ success: false, message: 'orderedIds array is required' });
+      return;
+    }
+
+    // Batch update positions
+    await prisma.$transaction(
+      orderedIds.map((item: { id: string; position: number; status?: string }) => {
+        const data: any = { position: item.position };
+        if (item.status) {
+          // Map frontend status names to enum
+          const statusMap: Record<string, string> = {
+            'Todo': 'TODO',
+            'in-progress': 'IN_PROGRESS',
+            'Completed': 'COMPLETED',
+            'Revisons': 'REVISIONS',
+            'TODO': 'TODO',
+            'IN_PROGRESS': 'IN_PROGRESS',
+            'COMPLETED': 'COMPLETED',
+            'REVISIONS': 'REVISIONS',
+          };
+          data.status = statusMap[item.status] || item.status;
+        }
+        return prisma.project.update({
+          where: { id: item.id },
+          data,
+        });
+      })
+    );
+
+    res.status(200).json({ success: true, message: 'Projects reordered' });
+  } catch (error) {
+    console.error('Reorder projects error:', error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+};
+
+// ─── Activity Log ──────────────────────────────────
+
+export const getActivityLogs = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const limit = parseInt(req.query.limit as string) || 50;
+    const activities = await prisma.activityLog.findMany({
+      orderBy: { createdAt: 'desc' },
+      take: limit,
+      include: {
+        user: { select: { id: true, name: true, avatar: true } },
+        project: { select: { id: true, name: true, workspace: true } },
+      },
+    });
+
+    res.status(200).json({ success: true, data: { activities } });
+  } catch (error) {
+    console.error('Get activity logs error:', error);
     res.status(500).json({ success: false, message: 'Internal server error' });
   }
 };

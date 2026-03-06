@@ -72,6 +72,7 @@ export interface Project {
   dueDate: Date | null;
   priority: ProjectPriority;
   image: string | null;
+  position: number;
   pm: string; // PM ID
   developer: string | null; // Developer ID
   labels: Label[];

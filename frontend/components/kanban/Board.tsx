@@ -14,8 +14,9 @@ import {
   useSensor,
   useSensors,
   DragEndEvent,
+  DragOverEvent,
 } from '@dnd-kit/core';
-import { sortableKeyboardCoordinates } from '@dnd-kit/sortable';
+import { sortableKeyboardCoordinates, arrayMove } from '@dnd-kit/sortable';
 import { Project } from '@/lib/types';
 import { DEFAULT_KANBAN_COLUMNS } from '@/lib/constants';
 import { useApp } from '@/contexts/useApp';
@@ -89,6 +90,9 @@ export function Board({ searchQuery = '', filterPriority = 'all', filterAssignee
         if (!b.dueDate) return -1;
         return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
       });
+    } else {
+      // Default: sort by position
+      projects.sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
     }
     
     return projects;
@@ -104,25 +108,31 @@ export function Board({ searchQuery = '', filterPriority = 'all', filterAssignee
   }, [sortedProjects, allColumns]);
 
   const handleDragEnd = async (event: DragEndEvent) => {
-    const { over } = event;
+    const { active, over } = event;
     if (!over) return;
 
-    const projectId = event.active.id as string;
-    const newStatus = over.id as Project['status'];
+    const projectId = active.id as string;
+    const overId = over.id as string;
 
     const project = state.projects.find((p) => p.id === projectId);
-    if (project && project.status !== newStatus) {
-      // Update local state immediately
+    if (!project) return;
+
+    // Determine if dropped on a column (status) or on another card
+    const isColumn = allColumns.some(col => col.status === overId);
+    const newStatus = isColumn ? overId : (state.projects.find(p => p.id === overId)?.status || project.status);
+
+    if (project.status !== newStatus) {
+      // Cross-column move
       dispatch({
         type: 'UPDATE_PROJECT_STATUS',
         payload: {
           projectId,
-          newStatus,
+          newStatus: newStatus as Project['status'],
           userId: state.currentUser?.id || '',
         },
       });
 
-      // Update backend
+      // Persist status + position
       try {
         const token = localStorage.getItem('token');
         const statusMap: Record<string, string> = {
@@ -139,13 +149,12 @@ export function Board({ searchQuery = '', filterPriority = 'all', filterAssignee
             'Authorization': `Bearer ${token}`
           },
           body: JSON.stringify({
-            status: statusMap[newStatus]
+            status: statusMap[newStatus] || newStatus
           })
         });
       } catch (error) {
         console.error('Error updating project status:', error);
         toast.error('Failed to update status — reverting');
-        // Revert the local state on backend failure
         dispatch({
           type: 'UPDATE_PROJECT_STATUS',
           payload: {

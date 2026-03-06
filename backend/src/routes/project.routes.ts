@@ -17,6 +17,8 @@ import {
   removeLabel,
   addAttachment,
   removeAttachment,
+  reorderProjects,
+  getActivityLogs,
 } from '../controllers/project.controller';
 import { authenticate, authorizeRoles } from '../middlewares/auth.middleware';
 import {
@@ -76,6 +78,12 @@ router.get('/', getAllProjects);
  * @access  Private (PM only)
  */
 router.post('/', authorizeRoles('PM'), validate(createProjectSchema), createProject);
+
+// ─── Reorder (must be before /:id) ─────────────────
+router.put('/reorder/batch', reorderProjects);
+
+// ─── Activity Log (must be before /:id) ────────────
+router.get('/activity/logs', getActivityLogs);
 
 /**
  * @route   GET /api/projects/:id

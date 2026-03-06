@@ -73,6 +73,7 @@ model Project {
   description String?
   dueDate     DateTime?
   image       String?
+  position    Int             @default(0)
 
   // Relations to users
   pmId        String

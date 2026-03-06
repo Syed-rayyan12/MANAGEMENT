@@ -10,7 +10,7 @@ import { useApp } from '@/contexts/useApp';
 import { PRIORITY_STYLES } from '@/lib/constants';
 import { API_BASE_URL, projectAPI } from '@/lib/api-service';
 import { toast } from 'sonner';
-import { Calendar, MessageSquare, Paperclip, Clock, Plus, X } from 'lucide-react';
+import { Calendar, MessageSquare, Paperclip, Clock, Plus, X, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 
@@ -40,6 +40,10 @@ export function ProjectCard({ project, onCardClick }: ProjectCardProps) {
   const devName = project.developer ? getUserName(project.developer) : null;
   const devAvatar = project.developer ? getUserAvatar(project.developer) : undefined;
   const isOverdue = project.dueDate && new Date(project.dueDate) < new Date() && project.status !== 'Completed';
+  const isDueSoon = project.dueDate && !isOverdue && project.status !== 'Completed' &&
+    (new Date(project.dueDate).getTime() - new Date().getTime()) < 3 * 24 * 60 * 60 * 1000;
+  const checklistTotal = project.checklist.length;
+  const checklistDone = project.checklist.filter(i => i.completed).length;
 
   const priorityStyle = PRIORITY_STYLES[project.priority];
 
@@ -254,18 +258,40 @@ export function ProjectCard({ project, onCardClick }: ProjectCardProps) {
             {priorityStyle.label}
           </span>
           {isOverdue && (
-            <span className="flex items-center gap-1 text-red-600 dark:text-red-400 font-medium">
+            <span className="flex items-center gap-1 text-red-600 dark:text-red-400 font-medium bg-red-50 dark:bg-red-500/10 px-2 py-1 rounded border border-red-200 dark:border-red-500/30 animate-pulse">
               <Clock className="w-3 h-3" />
               Overdue
             </span>
           )}
-          {project.dueDate && !isOverdue && (
+          {isDueSoon && (
+            <span className="flex items-center gap-1 text-amber-600 dark:text-amber-400 font-medium bg-amber-50 dark:bg-amber-500/10 px-2 py-1 rounded border border-amber-200 dark:border-amber-500/30">
+              <AlertTriangle className="w-3 h-3" />
+              Due Soon
+            </span>
+          )}
+          {project.dueDate && !isOverdue && !isDueSoon && (
             <span className="flex items-center gap-1 text-gray-600 dark:text-orange-400">
               <Calendar className="w-3 h-3" />
               {new Date(project.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
             </span>
           )}
         </div>
+
+        {/* Checklist Progress (if any items) */}
+        {checklistTotal > 0 && (
+          <div className="flex items-center gap-2 text-xs">
+            <CheckCircle2 className={`w-3.5 h-3.5 ${checklistDone === checklistTotal ? 'text-green-500' : 'text-gray-400 dark:text-gray-500'}`} />
+            <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
+              <div
+                className={`h-1.5 rounded-full transition-all ${checklistDone === checklistTotal ? 'bg-green-500' : 'bg-orange-500'}`}
+                style={{ width: `${checklistTotal > 0 ? (checklistDone / checklistTotal) * 100 : 0}%` }}
+              />
+            </div>
+            <span className={`font-medium ${checklistDone === checklistTotal ? 'text-green-500' : 'text-gray-500 dark:text-gray-400'}`}>
+              {checklistDone}/{checklistTotal}
+            </span>
+          </div>
+        )}
 
         {/* Meta */}
         <div className="flex items-center justify-between text-xs text-gray-500 dark:text-orange-400">

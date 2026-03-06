@@ -25,7 +25,9 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { X, Calendar, AlertCircle, MessageSquare, Paperclip, Plus, Check, Trash2, Upload, Download, Edit, AtSign, Image as ImageIcon } from 'lucide-react';
+import { X, Calendar, AlertCircle, MessageSquare, Paperclip, Plus, Check, Trash2, Upload, Download, Edit, AtSign, Image as ImageIcon, CheckSquare, Square, Activity, GripVertical } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Progress } from '@/components/ui/progress';
 import { PRIORITY_STYLES, LABEL_COLORS, KANBAN_COLUMNS } from '@/lib/constants';
 import { format } from 'date-fns';
 
@@ -53,6 +55,10 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
   const [showCoverPhotoModal, setShowCoverPhotoModal] = useState(false);
   const [coverPhotoFile, setCoverPhotoFile] = useState<File | null>(null);
   const coverPhotoInputRef = React.useRef<HTMLInputElement>(null);
+
+  // Checklist state
+  const [newCheckItemTitle, setNewCheckItemTitle] = useState('');
+  const [showAddCheckItem, setShowAddCheckItem] = useState(false);
 
   const allUsers = getAllUsers();
   const developers = allUsers.filter((u) => u.role === 'PRODUCTION' || u.role === 'TL');
@@ -603,6 +609,83 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
     setShowCoverPhotoModal(false);
   };
 
+  // ─── Checklist handlers ──────────────────────────
+  const checklistProgress = project.checklist.length > 0
+    ? Math.round((project.checklist.filter(i => i.completed).length / project.checklist.length) * 100)
+    : 0;
+
+  const persistChecklist = async (items: typeof project.checklist) => {
+    try {
+      await projectAPI.updateChecklist(
+        project.id,
+        items.map((item, idx) => ({
+          title: item.title,
+          completed: item.completed,
+          position: idx,
+        }))
+      );
+    } catch (error) {
+      console.error('Error updating checklist:', error);
+      toast.error('Failed to save checklist');
+    }
+  };
+
+  const handleAddCheckItem = async () => {
+    if (!newCheckItemTitle.trim()) return;
+    const newItem = {
+      id: `temp_${Date.now()}`,
+      title: newCheckItemTitle.trim(),
+      completed: false,
+    };
+    const updatedChecklist = [...project.checklist, newItem];
+
+    dispatch({
+      type: 'UPDATE_CHECKLIST',
+      payload: {
+        projectId: project.id,
+        checklist: updatedChecklist,
+        userId: state.currentUser?.id || project.pm,
+      },
+    });
+
+    setNewCheckItemTitle('');
+    await persistChecklist(updatedChecklist);
+    toast.success('Checklist item added');
+  };
+
+  const handleToggleCheckItem = async (itemId: string) => {
+    const updatedChecklist = project.checklist.map(item =>
+      item.id === itemId ? { ...item, completed: !item.completed } : item
+    );
+
+    dispatch({
+      type: 'UPDATE_CHECKLIST',
+      payload: {
+        projectId: project.id,
+        checklist: updatedChecklist,
+        userId: state.currentUser?.id || project.pm,
+      },
+    });
+
+    await persistChecklist(updatedChecklist);
+  };
+
+  const handleDeleteCheckItem = async (itemId: string) => {
+    const updatedChecklist = project.checklist.filter(item => item.id !== itemId);
+
+    dispatch({
+      type: 'UPDATE_CHECKLIST',
+      payload: {
+        projectId: project.id,
+        checklist: updatedChecklist,
+        userId: state.currentUser?.id || project.pm,
+      },
+    });
+
+    await persistChecklist(updatedChecklist);
+    toast.success('Checklist item removed');
+  };
+
   const priorityStyle = PRIORITY_STYLES[project.priority];
   const isOverdue = project.dueDate && new Date(project.dueDate) < new Date() && project.status !== 'Completed';
 
@@ -794,7 +877,7 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
               </DialogHeader>
 
               <Tabs defaultValue="details" className="mt-6">
-                <TabsList className="grid w-full grid-cols-3">
+                <TabsList className="grid w-full grid-cols-4">
                   <TabsTrigger value="details" className='text-white '>Details</TabsTrigger>
                   <TabsTrigger value="comments" className='text-white'>
                     <MessageSquare className="w-4 h-4 mr-2 text-white" />
@@ -802,7 +885,11 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
                   </TabsTrigger>
                   <TabsTrigger value="attachments" className='text-white'>
                     <Paperclip className="w-4 h-4 mr-2 text-white" />
-                    Attachments ({project.attachments.length})
+                    Files ({project.attachments.length})
+                  </TabsTrigger>
+                  <TabsTrigger value="activity" className='text-white'>
+                    <Activity className="w-4 h-4 mr-2 text-white" />
+                    Activity
                   </TabsTrigger>
                 </TabsList>
 
@@ -830,6 +917,93 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
                         className="mt-2 p-3 border dark:border-orange-500/30 rounded-lg bg-gray-50 dark:bg-[#1a1f2e] cursor-pointer hover:bg-gray-100 dark:hover:bg-[#232938] min-h-24 whitespace-pre-wrap text-sm dark:text-orange-400"
                       >
                         {project.description || 'Click to add description...'}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Checklist */}
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <Label className="text-sm font-semibold dark:text-orange-400 flex items-center gap-2">
+                        <CheckSquare className="w-4 h-4" />
+                        Checklist
+                        {project.checklist.length > 0 && (
+                          <span className="text-xs text-gray-500 dark:text-gray-400">
+                            ({project.checklist.filter(i => i.completed).length}/{project.checklist.length})
+                          </span>
+                        )}
+                      </Label>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setShowAddCheckItem(!showAddCheckItem)}
+                        className="h-7 text-xs"
+                      >
+                        <Plus className="w-3 h-3 mr-1" /> Add Item
+                      </Button>
+                    </div>
+
+                    {project.checklist.length > 0 && (
+                      <div className="mb-3">
+                        <div className="flex items-center gap-2 mb-1">
+                          <Progress value={checklistProgress} className="flex-1 h-2" />
+                          <span className="text-xs font-medium text-gray-500 dark:text-orange-400 min-w-[36px] text-right">
+                            {checklistProgress}%
+                          </span>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="space-y-1">
+                      {project.checklist.map((item) => (
+                        <div
+                          key={item.id}
+                          className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-[#232938] group transition-colors"
+                        >
+                          <Checkbox
+                            checked={item.completed}
+                            onCheckedChange={() => handleToggleCheckItem(item.id)}
+                            className="data-[state=checked]:bg-orange-500 data-[state=checked]:border-orange-500"
+                          />
+                          <span className={`flex-1 text-sm ${item.completed ? 'line-through text-gray-400 dark:text-gray-500' : 'text-gray-700 dark:text-gray-300'}`}>
+                            {item.title}
+                          </span>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeleteCheckItem(item.id)}
+                            className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 text-red-500 hover:text-red-600 transition-opacity"
+                          >
+                            <X className="w-3 h-3" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+
+                    {project.checklist.length === 0 && !showAddCheckItem && (
+                      <div className="text-center py-6 text-gray-400 dark:text-gray-500">
+                        <CheckSquare className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                        <p className="text-sm">No checklist items</p>
+                        <p className="text-xs mt-1">Break down this project into smaller tasks</p>
+                      </div>
+                    )}
+
+                    {showAddCheckItem && (
+                      <div className="flex items-center gap-2 mt-2">
+                        <Input
+                          placeholder="Add a checklist item..."
+                          value={newCheckItemTitle}
+                          onChange={(e) => setNewCheckItemTitle(e.target.value)}
+                          onKeyDown={(e) => { if (e.key === 'Enter') handleAddCheckItem(); }}
+                          autoFocus
+                          className="flex-1"
+                        />
+                        <Button size="sm" onClick={handleAddCheckItem} className="bg-orange-500 hover:bg-orange-600 text-white">
+                          Add
+                        </Button>
+                        <Button size="sm" variant="outline" onClick={() => { setShowAddCheckItem(false); setNewCheckItemTitle(''); }}>
+                          Cancel
+                        </Button>
                       </div>
                     )}
                   </div>
@@ -1067,6 +1241,47 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
                       </div>
                     )}
                   </div>
+                </TabsContent>
+
+                {/* Activity Tab */}
+                <TabsContent value="activity" className="space-y-4 mt-4">
+                  {project.activityLog.length === 0 ? (
+                    <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                      <Activity className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                      <p>No activity yet</p>
+                      <p className="text-xs mt-1">Actions on this project will appear here</p>
+                    </div>
+                  ) : (
+                    <div className="relative">
+                      {/* Timeline line */}
+                      <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-gray-200 dark:bg-orange-500/20" />
+
+                      <div className="space-y-4">
+                        {[...project.activityLog].reverse().map((log) => (
+                          <div key={log.id} className="flex items-start gap-3 relative pl-10">
+                            {/* Timeline dot */}
+                            <div className="absolute left-3 top-1.5 w-3 h-3 rounded-full bg-orange-500 border-2 border-white dark:border-[#0f1219]" />
+
+                            <div className="flex-1 p-3 rounded-lg bg-gray-50 dark:bg-[#1a1f2e] border dark:border-orange-500/20">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                  <Avatar className="w-5 h-5">
+                                    <AvatarImage src={getUserAvatar(log.userId)} />
+                                    <AvatarFallback className="text-[8px]">{getUserName(log.userId)[0]}</AvatarFallback>
+                                  </Avatar>
+                                  <span className="text-xs font-semibold dark:text-orange-400">{getUserName(log.userId)}</span>
+                                </div>
+                                <span className="text-xs text-gray-400 dark:text-gray-500">
+                                  {new Date(log.timestamp).toLocaleDateString()} {new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                </span>
+                              </div>
+                              <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">{log.action}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </TabsContent>
               </Tabs>
             </div>
