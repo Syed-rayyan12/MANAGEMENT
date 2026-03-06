@@ -249,19 +249,36 @@ export const updateProject = async (req: Request, res: Response): Promise<void> 
         });
       }
 
-      // Notify PM + developer on status change
+      // Notify on status change
       if (updateData.status && updateData.status !== existing.status) {
         const recipients = new Set<string>();
         if (existing.pmId && existing.pmId !== req.user.id) recipients.add(existing.pmId);
         if (existing.developerId && existing.developerId !== req.user.id) recipients.add(existing.developerId);
-        const items = [...recipients].map((uid) => ({
-          type: 'status',
-          message: `${actorName} changed status of ${existing.name} to ${updateData.status}`,
+
+        const isCompleted = updateData.status === 'COMPLETED';
+        const statusItems = [...recipients].map((uid) => ({
+          type: isCompleted ? 'completed' : 'status',
+          message: isCompleted
+            ? `${actorName} marked ${existing.name} as completed! 🎉`
+            : `${actorName} moved ${existing.name} to ${updateData.status.replace('_', ' ')}`,
           userId: uid,
           projectId: id,
           actorId: req.user!.id,
         }));
-        await createManyNotifications(items);
+        await createManyNotifications(statusItems);
+      }
+
+      // Notify developer when priority escalated to CRITICAL
+      if (updateData.priority && updateData.priority !== existing.priority && updateData.priority === 'CRITICAL') {
+        if (existing.developerId && existing.developerId !== req.user.id) {
+          await createNotification({
+            type: 'priority',
+            message: `⚠️ ${actorName} escalated ${existing.name} to CRITICAL priority`,
+            userId: existing.developerId,
+            projectId: id,
+            actorId: req.user.id,
+          });
+        }
       }
     }
 
@@ -290,6 +307,18 @@ export const deleteProject = async (req: Request, res: Response): Promise<void> 
       await prisma.activityLog.create({
         data: { action: `Deleted project: ${existing.name}`, userId: req.user.id },
       });
+
+      const actorName = (await prisma.user.findUnique({ where: { id: req.user.id }, select: { name: true } }))?.name || 'Someone';
+      const recipients = new Set<string>();
+      if (existing.pmId && existing.pmId !== req.user.id) recipients.add(existing.pmId);
+      if (existing.developerId && existing.developerId !== req.user.id) recipients.add(existing.developerId);
+      const deleteItems = [...recipients].map((uid) => ({
+        type: 'deleted',
+        message: `${actorName} deleted project: ${existing.name}`,
+        userId: uid,
+        actorId: req.user!.id,
+      }));
+      await createManyNotifications(deleteItems);
     }
 
     res.status(200).json({ success: true, message: 'Project deleted' });
@@ -418,6 +447,21 @@ export const updateChecklist = async (req: Request, res: Response): Promise<void
       orderBy: { position: 'asc' },
     });
 
+    // Notify PM when all checklist items are completed
+    if (items && items.length > 0 && items.every((item: any) => item.completed)) {
+      const proj = await prisma.project.findUnique({ where: { id }, select: { pmId: true, developerId: true, name: true } });
+      if (proj && req.user && proj.pmId && proj.pmId !== req.user.id) {
+        const devName = (await prisma.user.findUnique({ where: { id: req.user.id }, select: { name: true } }))?.name || 'Someone';
+        await createNotification({
+          type: 'checklist',
+          message: `✅ ${devName} completed all checklist items on ${proj.name}`,
+          userId: proj.pmId,
+          projectId: id,
+          actorId: req.user.id,
+        });
+      }
+    }
+
     res.status(200).json({ success: true, data: { checklist } });
   } catch (error) {
     console.error('Update checklist error:', error);
@@ -489,6 +533,23 @@ export const addAttachment = async (req: Request, res: Response): Promise<void> 
     await prisma.activityLog.create({
       data: { action: `Added attachment: ${filename}`, projectId: id, userId: req.user!.id },
     });
+
+    // Notify PM + developer about new file
+    const uploaderName = (await prisma.user.findUnique({ where: { id: req.user!.id }, select: { name: true } }))?.name || 'Someone';
+    const project = await prisma.project.findUnique({ where: { id }, select: { pmId: true, developerId: true, name: true } });
+    if (project) {
+      const attRecipients = new Set<string>();
+      if (project.pmId && project.pmId !== req.user!.id) attRecipients.add(project.pmId);
+      if (project.developerId && project.developerId !== req.user!.id) attRecipients.add(project.developerId);
+      const attItems = [...attRecipients].map((uid) => ({
+        type: 'attachment',
+        message: `${uploaderName} uploaded a file to ${project.name}: ${filename}`,
+        userId: uid,
+        projectId: id,
+        actorId: req.user!.id,
+      }));
+      await createManyNotifications(attItems);
+    }
 
     res.status(201).json({ success: true, data: { attachment } });
   } catch (error) {

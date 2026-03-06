@@ -35,10 +35,52 @@ export const getMyNotifications = async (req: Request, res: Response): Promise<v
       return;
     }
 
+    // ── Generate due-date reminders on-the-fly (once per task per day) ──
+    const now = new Date();
+    const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    const threeDaysFromNow = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
+
+    // Find overdue or due-soon projects where user is PM or developer
+    const dueSoonProjects = await prisma.project.findMany({
+      where: {
+        status: { notIn: ['COMPLETED', 'REVISIONS'] as any },
+        dueDate: { lte: threeDaysFromNow },
+        OR: [{ pmId: req.user.id }, { developerId: req.user.id }],
+      },
+      select: { id: true, name: true, dueDate: true },
+    });
+
+    for (const p of dueSoonProjects) {
+      if (!p.dueDate) continue;
+      const isOverdue = p.dueDate < now;
+      const type = 'due_date';
+      // Check if we already sent a due_date notification for this project today
+      const existing = await prisma.notification.findFirst({
+        where: {
+          userId: req.user.id,
+          projectId: p.id,
+          type,
+          createdAt: { gte: oneDayAgo },
+        },
+      });
+      if (!existing) {
+        await prisma.notification.create({
+          data: {
+            type,
+            message: isOverdue
+              ? `⏰ ${p.name} is overdue (was due ${p.dueDate.toLocaleDateString()})`
+              : `⏳ ${p.name} is due soon — ${p.dueDate.toLocaleDateString()}`,
+            userId: req.user.id,
+            projectId: p.id,
+          },
+        });
+      }
+    }
+
     const notifications = await prisma.notification.findMany({
       where: { userId: req.user.id },
       orderBy: { createdAt: 'desc' },
-      take: 50,
+      take: 60,
     });
 
     res.status(200).json({ success: true, data: { notifications } });

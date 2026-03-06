@@ -1,26 +1,30 @@
 
 
+
 'use client';
 import { API_BASE_URL } from '@/lib/api-service';
 import { toast } from 'sonner';
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
   DndContext,
-  closestCenter,
+  closestCorners,
   KeyboardSensor,
   PointerSensor,
   useSensor,
   useSensors,
   DragEndEvent,
   DragOverEvent,
+  DragStartEvent,
+  DragOverlay,
 } from '@dnd-kit/core';
-import { sortableKeyboardCoordinates, arrayMove } from '@dnd-kit/sortable';
+import { sortableKeyboardCoordinates } from '@dnd-kit/sortable';
 import { Project } from '@/lib/types';
 import { DEFAULT_KANBAN_COLUMNS } from '@/lib/constants';
 import { useApp } from '@/contexts/useApp';
 import { Column } from './Column';
+import { ProjectCard } from './Card';
 import { ProjectModal } from '../project/ProjectModal';
 
 interface BoardProps {
@@ -38,6 +42,8 @@ export function Board({ searchQuery = '', filterPriority = 'all', filterAssignee
   const projectIdFromUrl = searchParams.get('project');
   
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(projectIdFromUrl);
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [originalStatus, setOriginalStatus] = useState<string | null>(null);
   const { state, dispatch } = useApp();
 
   // Update selected project when URL changes
@@ -48,7 +54,7 @@ export function Board({ searchQuery = '', filterPriority = 'all', filterAssignee
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 18,
+        distance: 8,
       },
     }),
     useSensor(KeyboardSensor, {
@@ -59,26 +65,21 @@ export function Board({ searchQuery = '', filterPriority = 'all', filterAssignee
   // Merge default and custom columns
   const allColumns = [...DEFAULT_KANBAN_COLUMNS, ...customColumns];
 
-  // Filter projects by current user, search, priority, and workspace
+  // Filter projects by search, priority, assignee, and workspace
   const filteredProjects = useMemo(() => {
     return state.projects.filter((p) => {
-      // Show all projects regardless of PM (changed from: p.pm === state.currentUser?.id)
-      const isUserProject = true;
-      
       const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                            p.description.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesPriority = filterPriority === 'all' || p.priority === filterPriority;
       const matchesAssignee = filterAssignee === 'all' || p.developer === filterAssignee || p.pm === filterAssignee;
       const matchesWorkspace = !workspace || p.workspace === workspace;
-
-      return isUserProject && matchesSearch && matchesPriority && matchesAssignee && matchesWorkspace;
+      return matchesSearch && matchesPriority && matchesAssignee && matchesWorkspace;
     });
-  }, [state.projects, state.currentUser?.id, searchQuery, filterPriority, filterAssignee, workspace]);
+  }, [state.projects, searchQuery, filterPriority, filterAssignee, workspace]);
 
   // Sort projects
   const sortedProjects = useMemo(() => {
     const projects = [...filteredProjects];
-    
     if (sortBy === 'name') {
       projects.sort((a, b) => a.name.localeCompare(b.name));
     } else if (sortBy === 'priority') {
@@ -91,10 +92,8 @@ export function Board({ searchQuery = '', filterPriority = 'all', filterAssignee
         return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
       });
     } else {
-      // Default: sort by position
       projects.sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
     }
-    
     return projects;
   }, [filteredProjects, sortBy]);
 
@@ -107,8 +106,59 @@ export function Board({ searchQuery = '', filterPriority = 'all', filterAssignee
     return grouped;
   }, [sortedProjects, allColumns]);
 
+  const activeProject = useMemo(
+    () => state.projects.find((p) => p.id === activeId) ?? null,
+    [activeId, state.projects]
+  );
+
+  // ─── Find which column a project/card belongs to ────────────
+  const findColumnOfId = useCallback(
+    (id: string): string | null => {
+      // Is it a column id?
+      if (allColumns.some(col => col.status === id)) return id;
+      // Is it a project id?
+      const project = state.projects.find(p => p.id === id);
+      return project ? project.status : null;
+    },
+    [allColumns, state.projects]
+  );
+
+  const handleDragStart = (event: DragStartEvent) => {
+    const id = event.active.id as string;
+    setActiveId(id);
+    const proj = state.projects.find(p => p.id === id);
+    if (proj) setOriginalStatus(proj.status);
+  };
+
+  // onDragOver: detect cross-column hover → update local state immediately for live preview
+  const handleDragOver = (event: DragOverEvent) => {
+    const { active, over } = event;
+    if (!over) return;
+
+    const activeProjectId = active.id as string;
+    const overId = over.id as string;
+
+    const activeColumn = findColumnOfId(activeProjectId);
+    const overColumn = findColumnOfId(overId);
+
+    if (!activeColumn || !overColumn || activeColumn === overColumn) return;
+
+    // Move the card to the new column immediately for visual feedback
+    dispatch({
+      type: 'UPDATE_PROJECT_STATUS',
+      payload: {
+        projectId: activeProjectId,
+        newStatus: overColumn as Project['status'],
+        userId: state.currentUser?.id || '',
+      },
+    });
+  };
+
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
+    const dragOriginalStatus = originalStatus; // capture before clearing
+    setActiveId(null);
+    setOriginalStatus(null);
     if (!over) return;
 
     const projectId = active.id as string;
@@ -117,12 +167,22 @@ export function Board({ searchQuery = '', filterPriority = 'all', filterAssignee
     const project = state.projects.find((p) => p.id === projectId);
     if (!project) return;
 
-    // Determine if dropped on a column (status) or on another card
+    // Determine target column
     const isColumn = allColumns.some(col => col.status === overId);
-    const newStatus = isColumn ? overId : (state.projects.find(p => p.id === overId)?.status || project.status);
+    const newStatus = isColumn
+      ? overId
+      : (state.projects.find(p => p.id === overId)?.status || project.status);
 
+    // If status didn't actually change (already applied in onDragOver), just persist
+    const statusMap: Record<string, string> = {
+      'Todo': 'TODO',
+      'in-progress': 'IN_PROGRESS',
+      'Completed': 'COMPLETED',
+      'Revisons': 'REVISIONS',
+    };
+
+    // Ensure local state is correct
     if (project.status !== newStatus) {
-      // Cross-column move
       dispatch({
         type: 'UPDATE_PROJECT_STATUS',
         payload: {
@@ -131,35 +191,34 @@ export function Board({ searchQuery = '', filterPriority = 'all', filterAssignee
           userId: state.currentUser?.id || '',
         },
       });
+    }
 
-      // Persist status + position
-      try {
-        const token = localStorage.getItem('token');
-        const statusMap: Record<string, string> = {
-          'Todo': 'TODO',
-          'in-progress': 'IN_PROGRESS',
-          'Completed': 'COMPLETED',
-          'Revisons': 'REVISIONS'
-        };
+    // Persist to backend
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_BASE_URL}/projects/${projectId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ status: statusMap[newStatus] || newStatus }),
+      });
 
-        await fetch(`${API_BASE_URL}/projects/${projectId}`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify({
-            status: statusMap[newStatus] || newStatus
-          })
-        });
-      } catch (error) {
-        console.error('Error updating project status:', error);
-        toast.error('Failed to update status — reverting');
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({ message: 'Unknown error' }));
+        throw new Error(errData.message || `HTTP ${response.status}`);
+      }
+    } catch (error: any) {
+      console.error('Error updating project status:', error);
+      toast.error(`Failed to move card: ${error.message} — reverting`);
+      // Revert to original status before drag started
+      if (dragOriginalStatus) {
         dispatch({
           type: 'UPDATE_PROJECT_STATUS',
           payload: {
             projectId,
-            newStatus: project.status,
+            newStatus: dragOriginalStatus as Project['status'],
             userId: state.currentUser?.id || '',
           },
         });
@@ -168,6 +227,7 @@ export function Board({ searchQuery = '', filterPriority = 'all', filterAssignee
   };
 
   const handleCardClick = (projectId: string) => {
+    if (activeId) return; // Don't open modal if dragging
     const currentPath = window.location.pathname;
     router.push(`${currentPath}?project=${projectId}`);
   };
@@ -183,7 +243,9 @@ export function Board({ searchQuery = '', filterPriority = 'all', filterAssignee
     <>
       <DndContext
         sensors={sensors}
-        collisionDetection={closestCenter}
+        collisionDetection={closestCorners}
+        onDragStart={handleDragStart}
+        onDragOver={handleDragOver}
         onDragEnd={handleDragEnd}
       >
         <div className="overflow-x-auto pb-4">
@@ -200,6 +262,17 @@ export function Board({ searchQuery = '', filterPriority = 'all', filterAssignee
             ))}
           </div>
         </div>
+
+        <DragOverlay dropAnimation={null}>
+          {activeProject ? (
+            <div className="opacity-95 rotate-1 scale-105 shadow-2xl shadow-orange-500/30">
+              <ProjectCard
+                project={activeProject}
+                onCardClick={() => {}}
+              />
+            </div>
+          ) : null}
+        </DragOverlay>
       </DndContext>
 
       {selectedProject && (
@@ -207,6 +280,7 @@ export function Board({ searchQuery = '', filterPriority = 'all', filterAssignee
           project={selectedProject}
           onClose={handleCloseProject}
         />
+
       )}
     </>
   );

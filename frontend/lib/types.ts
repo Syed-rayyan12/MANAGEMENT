@@ -1,7 +1,17 @@
 export type WorkspaceType = 'logo' | 'web-design' | 'web-development' | 'content';
 export type ProjectStatus = 'Todo' | 'in-progress' | 'Completed' | 'Revisons' | string;
 export type ProjectPriority = 'low' | 'medium' | 'high' | 'critical';
-export type NotificationType = 'assigned' | 'due_date' | 'comment' | 'status' | 'developer';
+export type NotificationType =
+  | 'assigned'    // you were assigned to a project
+  | 'comment'     // someone commented on your project
+  | 'status'      // project status changed
+  | 'completed'   // project marked as completed
+  | 'priority'    // priority escalated to CRITICAL
+  | 'deleted'     // project you were on was deleted
+  | 'attachment'  // file uploaded to your project
+  | 'checklist'   // checklist fully completed
+  | 'due_date'    // due date reminder
+  | 'developer';  // developer changed
 export type AttachmentType = 'image' | 'pdf';
 
 export interface KanbanColumn {

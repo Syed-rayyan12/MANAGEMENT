@@ -94,10 +94,10 @@ router.get('/:id', getProjectById);
 
 /**
  * @route   PUT /api/projects/:id
- * @desc    Update a project
- * @access  Private (PM, TL only)
+ * @desc    Update a project (status, checklist, etc.) - all authenticated users
+ * @access  Private
  */
-router.put('/:id', authorizeRoles('PM', 'TL'), validate(updateProjectSchema), updateProject);
+router.put('/:id', validate(updateProjectSchema), updateProject);
 
 /**
  * @route   DELETE /api/projects/:id
