@@ -267,6 +267,78 @@ export function Board({ searchQuery = '', filterPriority = 'all', filterAssignee
     router.push(currentPath);
   };
 
+  // Inline quick-add card handler
+  const handleAddCard = async (name: string, status: string) => {
+    if (!state.currentUser) return;
+    const workspaceMap: Record<string, string> = {
+      logo: 'LOGO',
+      'web-design': 'WEB_DESIGN',
+      'web-development': 'WEB_DEVELOPMENT',
+      content: 'CONTENT',
+    };
+    const statusMap: Record<string, string> = {
+      Todo: 'TODO',
+      'in-progress': 'IN_PROGRESS',
+      Completed: 'COMPLETED',
+      Revisons: 'REVISIONS',
+    };
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_BASE_URL}/projects`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          name,
+          workspace: workspaceMap[workspace || 'logo'] || 'LOGO',
+          status: statusMap[status] || 'TODO',
+          priority: 'MEDIUM',
+          description: '',
+        }),
+      });
+      const result = await response.json();
+      if (result.success) {
+        const wsMap: Record<string, any> = {
+          LOGO: 'logo', WEB_DESIGN: 'web-design', WEB_DEVELOPMENT: 'web-development', CONTENT: 'content',
+        };
+        const stMap: Record<string, string> = {
+          TODO: 'Todo', IN_PROGRESS: 'in-progress', COMPLETED: 'Completed', REVISIONS: 'Revisons',
+        };
+        dispatch({
+          type: 'CREATE_PROJECT',
+          payload: {
+            project: {
+              id: result.data.project.id,
+              name,
+              description: '',
+              workspace: wsMap[result.data.project.workspace] || workspace || 'logo',
+              status: stMap[result.data.project.status] || status,
+              priority: 'medium',
+              dueDate: null,
+              image: null,
+              position: 0,
+              pm: state.currentUser.id,
+              developer: null,
+              labels: [],
+              checklist: [],
+              comments: [],
+              attachments: [],
+              activityLog: [],
+              createdAt: new Date(),
+              updatedAt: new Date(),
+            },
+            userId: state.currentUser.id,
+          },
+        });
+        toast.success(`Card "${name}" added`);
+      } else {
+        toast.error(result.message || 'Failed to add card');
+      }
+    } catch (error) {
+      console.error('Error adding card:', error);
+      toast.error('Failed to add card');
+    }
+  };
+
   const selectedProject = state.projects.find((p) => p.id === selectedProjectId);
 
   return (
@@ -288,6 +360,7 @@ export function Board({ searchQuery = '', filterPriority = 'all', filterAssignee
                 color={col.color}
                 projects={projectsByStatus[col.status] || []}
                 onCardClick={handleCardClick}
+                onAddCard={handleAddCard}
               />
             ))}
           </div>
