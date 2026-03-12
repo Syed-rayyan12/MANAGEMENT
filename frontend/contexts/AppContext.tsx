@@ -539,8 +539,10 @@ function mapApiProject(p: any): Project {
     dueDate: p.dueDate ? new Date(p.dueDate) : null,
     pm: p.pmId || p.pm?.id || '',
     developer: p.developerId || p.developer?.id || null,
-    workspaceId: p.workspaceId || '',
-    workspace: p.workspace ? { id: p.workspace.id, name: p.workspace.name } : undefined,
+    boardId: p.boardId || p.board?.id || '',
+    board: p.board ? { id: p.board.id, name: p.board.name, slug: p.board.slug } : undefined,
+    teamId: p.teamId || p.team?.id || undefined,
+    team: p.team ? { id: p.team.id, name: p.team.name, slug: p.team.slug } : undefined,
     image: p.image || null,
     position: p.position ?? 0,
     labels: (p.labels || []).map((pl: any) => {

@@ -19,13 +19,14 @@ export interface TeamInfo {
   name: string;
 }
 
-export interface WorkspaceInfo {
+export interface BoardInfo {
   id: string;
   name: string;
-  columns?: WorkspaceColumn[];
+  slug?: string;
+  columns?: BoardColumn[];
 }
 
-export interface WorkspaceColumn {
+export interface BoardColumn {
   id: string;
   name: string;
   key: string;
@@ -96,8 +97,10 @@ export interface Label {
 export interface Project {
   id: string;
   name: string;
-  workspaceId: string;
-  workspace?: WorkspaceInfo;
+  boardId: string;
+  board?: BoardInfo;
+  teamId?: string;
+  team?: TeamInfo;
   status: ProjectStatus;
   dueDate: Date | null;
   priority: ProjectPriority;

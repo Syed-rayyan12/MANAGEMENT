@@ -13,7 +13,7 @@ export const loginSchema = z.object({
 export const createProjectSchema = z.object({
   name: z.string().min(1, 'Project name is required').max(200),
   description: z.string().max(5000).optional().default(''),
-  workspaceId: z.string().uuid('Valid workspace ID is required'),
+  boardId: z.string().uuid('Valid board ID is required'),
   status: z.string().max(50).optional(),
   priority: z.enum(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']).optional(),
   dueDate: z.string().optional().nullable(),

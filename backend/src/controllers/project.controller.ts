@@ -20,38 +20,18 @@ const projectIncludes = {
     orderBy: { createdAt: 'desc' as const },
     take: 20,
   },
-  workspace: { select: { id: true, name: true, teamId: true } },
+  board: { select: { id: true, name: true, slug: true } },
+  team: { select: { id: true, name: true, slug: true } },
 };
 
 /**
- * Check if user can access a workspace.
- * - EXECUTIVE: can see all workspaces
- * - PRODUCTION: can see tasks assigned to them (handled at query level)
- * - TL/PM: can only see workspaces for teams they belong to
+ * Build WHERE clause scoped to user's team for project visibility.
+ * - EXECUTIVE: sees all projects
+ * - PRODUCTION: sees only tasks assigned to them
+ * - TL/PM: sees only projects owned by their team(s)
  */
-async function canUserAccessWorkspace(userId: string, role: string, workspaceId: string): Promise<boolean> {
-  if (role === 'EXECUTIVE') return true;
-  // For PRODUCTION, access is per-project (assigned tasks), not per-workspace
-  if (role === 'PRODUCTION') return true;
-
-  // Check if user is a member of the team that owns this workspace
-  const workspace = await prisma.workspace.findUnique({
-    where: { id: workspaceId },
-    select: { teamId: true },
-  });
-  if (!workspace) return false;
-
-  const membership = await prisma.teamMember.findUnique({
-    where: { teamId_userId: { teamId: workspace.teamId, userId } },
-  });
-  return !!membership;
-}
-
-/**
- * Build WHERE clause scoped to user's accessible workspaces.
- */
-async function buildWhereClause(user: Request['user']): Promise<Record<string, unknown>> {
-  if (!user) return { id: 'none' }; // return impossible condition
+function buildWhereClause(user: Request['user']): Record<string, unknown> {
+  if (!user) return { id: 'none' };
 
   // EXECUTIVE sees all
   if (user.role === 'EXECUTIVE') return {};
@@ -59,52 +39,35 @@ async function buildWhereClause(user: Request['user']): Promise<Record<string, u
   // PRODUCTION sees only tasks assigned to them
   if (user.role === 'PRODUCTION') return { developerId: user.id };
 
-  // TL/PM: see projects in workspaces belonging to their teams
+  // TL/PM: see projects belonging to their team(s)
   if (user.teamIds && user.teamIds.length > 0) {
-    const workspaces = await prisma.workspace.findMany({
-      where: { teamId: { in: user.teamIds } },
-      select: { id: true },
-    });
-    return { workspaceId: { in: workspaces.map(w => w.id) } };
+    return { teamId: { in: user.teamIds } };
   }
 
   return { id: 'none' }; // no teams = no access
 }
 
-// ─── Get projects by workspace ──────────────────────
+// ─── Get projects by board ──────────────────────────
 
-export const getWorkspaceProjects = async (req: Request, res: Response): Promise<void> => {
+export const getBoardProjects = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { workspaceId } = req.params;
+    const { boardId } = req.params;
 
     if (!req.user) {
       res.status(401).json({ success: false, message: 'Unauthorized' });
       return;
     }
 
-    // Verify workspace exists
-    const workspace = await prisma.workspace.findUnique({
-      where: { id: workspaceId },
-      include: { team: { select: { id: true, name: true, slug: true } } },
-    });
-    if (!workspace) {
-      res.status(404).json({ success: false, message: 'Workspace not found' });
+    // Verify board exists
+    const board = await prisma.board.findUnique({ where: { id: boardId } });
+    if (!board) {
+      res.status(404).json({ success: false, message: 'Board not found' });
       return;
     }
 
-    // Check access
-    const hasAccess = await canUserAccessWorkspace(req.user.id, req.user.role, workspaceId);
-    if (!hasAccess) {
-      res.status(403).json({ success: false, message: 'Access denied to this workspace' });
-      return;
-    }
-
-    const where: any = { workspaceId };
-
-    // PRODUCTION only sees tasks assigned to them
-    if (req.user.role === 'PRODUCTION') {
-      where.developerId = req.user.id;
-    }
+    // Build team-scoped WHERE + board filter
+    const teamWhere = buildWhereClause(req.user);
+    const where: any = { ...teamWhere, boardId };
 
     const projects = await prisma.project.findMany({
       where,
@@ -114,11 +77,11 @@ export const getWorkspaceProjects = async (req: Request, res: Response): Promise
 
     res.status(200).json({
       success: true,
-      message: `Projects retrieved for workspace: ${workspace.name}`,
+      message: `Projects retrieved for board: ${board.name}`,
       data: { projects },
     });
   } catch (error) {
-    console.error('Get workspace projects error:', error);
+    console.error('Get board projects error:', error);
     res.status(500).json({ success: false, message: 'Internal server error' });
   }
 };
@@ -127,7 +90,7 @@ export const getWorkspaceProjects = async (req: Request, res: Response): Promise
 
 export const getAllProjects = async (req: Request, res: Response): Promise<void> => {
   try {
-    const where = await buildWhereClause(req.user);
+    const where = buildWhereClause(req.user);
     const projects = await prisma.project.findMany({
       where,
       include: projectIncludes,
@@ -149,21 +112,32 @@ export const getAllProjects = async (req: Request, res: Response): Promise<void>
 
 export const createProject = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { name, workspaceId, description, priority, dueDate, pmId, developerId, image, status } = req.body;
+    const { name, boardId, description, priority, dueDate, pmId, developerId, image, status } = req.body;
 
     const projectPmId = pmId || req.user?.id;
 
-    if (!name || !workspaceId || !projectPmId) {
-      res.status(400).json({ success: false, message: 'Name, workspaceId, and PM ID are required' });
+    if (!name || !boardId || !projectPmId) {
+      res.status(400).json({ success: false, message: 'Name, boardId, and PM ID are required' });
       return;
     }
 
-    // Verify workspace exists
-    const workspace = await prisma.workspace.findUnique({ where: { id: workspaceId } });
-    if (!workspace) {
-      res.status(404).json({ success: false, message: 'Workspace not found' });
+    // Verify board exists
+    const board = await prisma.board.findUnique({ where: { id: boardId } });
+    if (!board) {
+      res.status(404).json({ success: false, message: 'Board not found' });
       return;
     }
+
+    // Determine teamId from the PM's team membership
+    const pmMemberships = await prisma.teamMember.findMany({
+      where: { userId: projectPmId },
+      select: { teamId: true },
+    });
+    if (pmMemberships.length === 0) {
+      res.status(400).json({ success: false, message: 'PM must belong to a team to create projects' });
+      return;
+    }
+    const teamId = pmMemberships[0].teamId;
 
     // Verify PM
     const pm = await prisma.user.findUnique({ where: { id: projectPmId } });
@@ -176,13 +150,13 @@ export const createProject = async (req: Request, res: Response): Promise<void> 
       if (!dev) { res.status(404).json({ success: false, message: 'Developer not found' }); return; }
     }
 
-    // If status is provided, validate it matches a workspace column key
+    // If status is provided, validate it matches a board column key
     if (status) {
-      const column = await prisma.workspaceColumn.findUnique({
-        where: { workspaceId_key: { workspaceId, key: status } },
+      const column = await prisma.boardColumn.findUnique({
+        where: { boardId_key: { boardId, key: status } },
       });
       if (!column) {
-        res.status(400).json({ success: false, message: `Invalid status "${status}" for this workspace` });
+        res.status(400).json({ success: false, message: `Invalid status "${status}" for this board` });
         return;
       }
     }
@@ -190,7 +164,8 @@ export const createProject = async (req: Request, res: Response): Promise<void> 
     const project = await prisma.project.create({
       data: {
         name,
-        workspaceId,
+        boardId,
+        teamId,
         description,
         status: status || 'todo',
         priority: priority || 'MEDIUM',
@@ -221,7 +196,7 @@ export const createProject = async (req: Request, res: Response): Promise<void> 
 
     res.status(201).json({
       success: true,
-      message: `Project created in workspace`,
+      message: `Project created on board`,
       data: { project },
     });
   } catch (error) {
@@ -266,17 +241,17 @@ export const updateProject = async (req: Request, res: Response): Promise<void> 
 
     // Validate status if provided
     if (updateData.status) {
-      // Validate against workspace columns
-      const project_ws = await prisma.project.findUnique({
+      // Validate against board columns
+      const project_board = await prisma.project.findUnique({
         where: { id },
-        select: { workspaceId: true },
+        select: { boardId: true },
       });
-      if (project_ws) {
-        const column = await prisma.workspaceColumn.findUnique({
-          where: { workspaceId_key: { workspaceId: project_ws.workspaceId, key: updateData.status } },
+      if (project_board) {
+        const column = await prisma.boardColumn.findUnique({
+          where: { boardId_key: { boardId: project_board.boardId, key: updateData.status } },
         });
         if (!column) {
-          res.status(400).json({ success: false, message: `Invalid status "${updateData.status}" for this workspace` });
+          res.status(400).json({ success: false, message: `Invalid status "${updateData.status}" for this board` });
           return;
         }
       }
@@ -670,7 +645,7 @@ export const reorderProjects = async (req: Request, res: Response): Promise<void
       orderedIds.map((item: { id: string; position: number; status?: string }) => {
         const data: any = { position: item.position };
         if (item.status) {
-          // Status is now a string matching workspace column keys — pass through directly
+          // Status is now a string matching board column keys — pass through directly
           data.status = item.status;
         }
         return prisma.project.update({
@@ -697,7 +672,7 @@ export const getActivityLogs = async (req: Request, res: Response): Promise<void
       take: limit,
       include: {
         user: { select: { id: true, name: true, avatar: true } },
-        project: { select: { id: true, name: true, workspaceId: true } },
+        project: { select: { id: true, name: true, boardId: true } },
       },
     });
 

@@ -1,6 +1,6 @@
 
 'use client';
-import { API_BASE_URL, teamAPI } from '@/lib/api-service';
+import { API_BASE_URL, boardAPI } from '@/lib/api-service';
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -12,8 +12,8 @@ import { useApp } from '@/contexts/useApp';
 import { Plus, Filter, SortAsc, Sparkles, Code, Palette, FileText, ArrowLeft, Briefcase, FolderKanban } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
-// Icon + images lookup by team slug
-const teamMeta: Record<string, { icon: LucideIcon; image: string; gradient: string; description: string }> = {
+// Icon + images lookup by board slug
+const boardMeta: Record<string, { icon: LucideIcon; image: string; gradient: string; description: string }> = {
   'logo-design': {
     icon: Sparkles,
     image: '/logo-section.png',
@@ -47,7 +47,7 @@ const defaultMeta = {
   description: 'Manage projects in this workspace',
 };
 
-interface TeamCard {
+interface BoardCard {
   slug: string;
   name: string;
   projectCount: number;
@@ -56,15 +56,15 @@ interface TeamCard {
 export default function DashboardPage() {
   const router = useRouter();
   const { isLoading } = useApp();
-  const [teams, setTeams] = useState<TeamCard[]>([]);
+  const [boards, setBoards] = useState<BoardCard[]>([]);
   const [statsLoading, setStatsLoading] = useState(true);
 
-  // Fetch teams + dashboard stats
+  // Fetch boards + dashboard stats
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [teamsResult, statsResult] = await Promise.all([
-          teamAPI.getMyTeams(),
+        const [boardsResult, statsResult] = await Promise.all([
+          boardAPI.getAll(),
           (async () => {
             const token = localStorage.getItem('token');
             const response = await fetch(`${API_BASE_URL}/dashboard/overview`, {
@@ -74,21 +74,24 @@ export default function DashboardPage() {
           })(),
         ]);
 
-        if (teamsResult.success) {
-          const teamList = teamsResult.data.teams;
-          const workspaceStats: Record<string, number> = {};
+        if (boardsResult.success) {
+          const boardList = boardsResult.data.boards;
+          const boardStats: Record<string, number> = {};
           
-          if (statsResult.success && statsResult.data.workspaceStats) {
-            for (const ws of statsResult.data.workspaceStats) {
-              workspaceStats[ws.workspaceId] = ws.count;
+          if (statsResult.success && statsResult.data.boardStats) {
+            const stats = statsResult.data.boardStats;
+            // Backend returns { slug: { name, slug, count } } object
+            for (const key of Object.keys(stats)) {
+              const entry = stats[key];
+              boardStats[key] = entry.count || 0;
             }
           }
 
-          setTeams(
-            teamList.map((t: any) => ({
-              slug: t.slug,
-              name: t.name,
-              projectCount: t.workspace ? (workspaceStats[t.workspace.id] || 0) : 0,
+          setBoards(
+            boardList.map((b: any) => ({
+              slug: b.slug,
+              name: b.name,
+              projectCount: boardStats[b.slug] || 0,
             }))
           );
         }
@@ -115,22 +118,22 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Workspace Cards Grid */}
+      {/* Board Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 ">
-        {teams.map((team) => {
-          const meta = teamMeta[team.slug] || defaultMeta;
+        {boards.map((board) => {
+          const meta = boardMeta[board.slug] || defaultMeta;
           const Icon = meta.icon;
           return (
             <button
-              key={team.slug}
-              onClick={() => router.push(`/dashboard/${team.slug}`)}
+              key={board.slug}
+              onClick={() => router.push(`/dashboard/${board.slug}`)}
               className={`group relative rounded-2xl border-2 dark:border-orange-500/30 hover:border-transparent transition-all duration-300 hover:shadow-2xl hover:scale-105 overflow-hidden flex flex-col`}
             >
                   {/* Image at Top */}
                   <div className="relative w-full h-40 overflow-hidden">
                     <Image
                       src={meta.image}
-                      alt={team.name}
+                      alt={board.name}
                       fill
                       className="object-cover group-hover:scale-110 transition-transform duration-300"
                     />
@@ -142,7 +145,7 @@ export default function DashboardPage() {
                     {/* Content */}
                     <div className="text-left space-y-2 flex-1">
                       <h3 className="text-xl font-bold text-gray-900 dark:text-orange-400  ">
-                        {team.name}
+                        {board.name}
                       </h3>
                       <p className="text-sm text-gray-600 dark:text-gray-400 min-h-[40px]">
                         {meta.description}
@@ -152,7 +155,7 @@ export default function DashboardPage() {
                     {/* Stats */}
                     <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-orange-500/20">
                       <span className="text-sm font-semibold text-gray-600 dark:text-gray-400">
-                        {team.projectCount} Projects
+                        {board.projectCount} Projects
                       </span>
                       <div className={`w-8 h-8 rounded-full border border-orange-500/30 ${meta.gradient} flex items-center justify-center group-hover:scale-110 transition-transform`}>
                         <ArrowLeft className="w-4 h-4 text-white rotate-180" />

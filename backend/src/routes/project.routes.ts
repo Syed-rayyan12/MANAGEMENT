@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import {
-  getWorkspaceProjects,
+  getBoardProjects,
   createProject,
   getAllProjects,
   getProjectById,
@@ -34,8 +34,8 @@ const router = Router();
 // All project routes require authentication
 router.use(authenticate);
 
-// ─── Get projects by workspace ID ──────────────────
-router.get('/workspace/:workspaceId', getWorkspaceProjects);
+// ─── Get projects by board ID ──────────────────
+router.get('/board/:boardId', getBoardProjects);
 
 // ─── Get all projects (scoped to user) ─────────────
 router.get('/', getAllProjects);

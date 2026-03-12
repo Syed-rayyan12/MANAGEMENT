@@ -58,7 +58,7 @@ export const authAPI = {
 export const projectAPI = {
   create: async (projectData: {
     name: string;
-    workspaceId: string;
+    boardId: string;
     description?: string;
     status?: string;
     priority?: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
@@ -80,8 +80,8 @@ export const projectAPI = {
     return await response.json();
   },
 
-  getByWorkspace: async (workspaceId: string) => {
-    const response = await fetch(`${API_BASE_URL}/projects/workspace/${workspaceId}`, {
+  getByBoard: async (boardId: string) => {
+    const response = await fetch(`${API_BASE_URL}/projects/board/${boardId}`, {
       headers: getHeaders(),
     });
     return await response.json();
@@ -327,9 +327,26 @@ export const teamAPI = {
     });
     return await response.json();
   },
+};
 
-  getWorkspaceColumns: async (workspaceId: string) => {
-    const response = await fetch(`${API_BASE_URL}/teams/workspace/${workspaceId}/columns`, {
+// Board APIs
+export const boardAPI = {
+  getAll: async () => {
+    const response = await fetch(`${API_BASE_URL}/boards`, {
+      headers: getHeaders(),
+    });
+    return await response.json();
+  },
+
+  getBySlug: async (slug: string) => {
+    const response = await fetch(`${API_BASE_URL}/boards/${slug}`, {
+      headers: getHeaders(),
+    });
+    return await response.json();
+  },
+
+  getColumns: async (boardId: string) => {
+    const response = await fetch(`${API_BASE_URL}/boards/${boardId}/columns`, {
       headers: getHeaders(),
     });
     return await response.json();

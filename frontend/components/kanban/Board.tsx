@@ -33,11 +33,11 @@ interface BoardProps {
   filterPriority?: string;
   filterAssignee?: string;
   sortBy?: string;
-  workspace?: string | null;
+  boardId?: string | null;
   customColumns?: any[];
 }
 
-export function Board({ searchQuery = '', filterPriority = 'all', filterAssignee = 'all', sortBy = 'date', workspace = null, customColumns = [] }: BoardProps) {
+export function Board({ searchQuery = '', filterPriority = 'all', filterAssignee = 'all', sortBy = 'date', boardId = null, customColumns = [] }: BoardProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const projectIdFromUrl = searchParams.get('project');
@@ -71,8 +71,8 @@ export function Board({ searchQuery = '', filterPriority = 'all', filterAssignee
     })
   );
 
-  // Merge default and custom columns
-  const allColumns = [...DEFAULT_KANBAN_COLUMNS, ...customColumns];
+  // Use custom columns if provided (from workspace API), otherwise use defaults
+  const allColumns = customColumns.length > 0 ? customColumns : DEFAULT_KANBAN_COLUMNS;
 
   // Filter projects by search, priority, assignee, and workspace
   const filteredProjects = useMemo(() => {
@@ -81,10 +81,10 @@ export function Board({ searchQuery = '', filterPriority = 'all', filterAssignee
                            p.description.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesPriority = filterPriority === 'all' || p.priority === filterPriority;
       const matchesAssignee = filterAssignee === 'all' || p.developer === filterAssignee || p.pm === filterAssignee;
-      const matchesWorkspace = !workspace || p.workspaceId === workspace;
-      return matchesSearch && matchesPriority && matchesAssignee && matchesWorkspace;
+      const matchesBoard = !boardId || p.boardId === boardId;
+      return matchesSearch && matchesPriority && matchesAssignee && matchesBoard;
     });
-  }, [state.projects, searchQuery, filterPriority, filterAssignee, workspace]);
+  }, [state.projects, searchQuery, filterPriority, filterAssignee, boardId]);
 
   // Sort projects
   const sortedProjects = useMemo(() => {
@@ -262,7 +262,7 @@ export function Board({ searchQuery = '', filterPriority = 'all', filterAssignee
 
   // Inline quick-add card handler
   const handleAddCard = async (name: string, status: string) => {
-    if (!state.currentUser || !workspace) return;
+    if (!state.currentUser || !boardId) return;
     try {
       const token = localStorage.getItem('token');
       const response = await fetch(`${API_BASE_URL}/projects`, {
@@ -270,7 +270,7 @@ export function Board({ searchQuery = '', filterPriority = 'all', filterAssignee
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({
           name,
-          workspaceId: workspace,
+          boardId: boardId,
           status: status || 'todo',
           priority: 'MEDIUM',
           description: '',
@@ -286,8 +286,8 @@ export function Board({ searchQuery = '', filterPriority = 'all', filterAssignee
               id: p.id,
               name,
               description: '',
-              workspaceId: p.workspaceId || workspace,
-              workspace: p.workspace ? { id: p.workspace.id, name: p.workspace.name } : undefined,
+              boardId: p.boardId || boardId,
+              board: p.board ? { id: p.board.id, name: p.board.name } : undefined,
               status: p.status || status,
               priority: (p.priority || 'MEDIUM').toLowerCase(),
               dueDate: null,

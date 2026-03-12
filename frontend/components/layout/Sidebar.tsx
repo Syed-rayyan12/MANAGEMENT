@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useApp } from '@/contexts/useApp';
-import { teamAPI } from '@/lib/api-service';
+import { boardAPI } from '@/lib/api-service';
 import {
   LayoutDashboard,
   Briefcase,
@@ -24,8 +24,8 @@ interface SidebarProps {
   onToggle: () => void;
 }
 
-// Icon + gradient lookup by team slug
-const teamStyles: Record<string, { icon: LucideIcon; gradient: string }> = {
+// Icon + gradient lookup by board slug
+const boardStyles: Record<string, { icon: LucideIcon; gradient: string }> = {
   'logo-design': { icon: Sparkles, gradient: 'from-purple-500 to-pink-500' },
   'web-design': { icon: Palette, gradient: 'from-orange-500 to-amber-500' },
   'web-development': { icon: Code, gradient: 'from-blue-500 to-cyan-500' },
@@ -34,38 +34,36 @@ const teamStyles: Record<string, { icon: LucideIcon; gradient: string }> = {
 
 const defaultStyle = { icon: FolderKanban, gradient: 'from-gray-500 to-gray-600' };
 
-interface TeamItem {
+interface BoardItem {
   slug: string;
   name: string;
-  workspaceId?: string;
 }
 
 export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const router = useRouter();
   const pathname = usePathname();
   const { state } = useApp();
-  const [teams, setTeams] = useState<TeamItem[]>([]);
+  const [boards, setBoards] = useState<BoardItem[]>([]);
 
-  // Fetch teams from API
+  // Fetch all org-level boards
   useEffect(() => {
     if (!state.currentUser) return;
-    const fetchTeams = async () => {
+    const fetchBoards = async () => {
       try {
-        const result = await teamAPI.getMyTeams();
+        const result = await boardAPI.getAll();
         if (result.success) {
-          setTeams(
-            result.data.teams.map((t: any) => ({
-              slug: t.slug,
-              name: t.name,
-              workspaceId: t.workspace?.id,
+          setBoards(
+            result.data.boards.map((b: any) => ({
+              slug: b.slug,
+              name: b.name,
             }))
           );
         }
       } catch (error) {
-        console.error('Error fetching teams:', error);
+        console.error('Error fetching boards:', error);
       }
     };
-    fetchTeams();
+    fetchBoards();
   }, [state.currentUser]);
 
   const navItems = [
@@ -134,27 +132,27 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
           <div className="border-t border-gray-200 dark:border-[#2d3548]" />
           {!collapsed && (
             <span className="block text-[10px] uppercase tracking-wider text-gray-400 dark:text-gray-500 mt-3 mb-1 px-1">
-              Workspaces
+              Boards
             </span>
           )}
         </div>
 
-        {/* Dynamic workspace links */}
-        {teams.map((team) => {
-          const style = teamStyles[team.slug] || defaultStyle;
+        {/* Dynamic board links */}
+        {boards.map((board) => {
+          const style = boardStyles[board.slug] || defaultStyle;
           const Icon = style.icon;
-          const isActive = pathname === `/dashboard/${team.slug}`;
+          const isActive = pathname === `/dashboard/${board.slug}`;
           return (
             <button
-              key={team.slug}
-              onClick={() => router.push(`/dashboard/${team.slug}`)}
+              key={board.slug}
+              onClick={() => router.push(`/dashboard/${board.slug}`)}
               className={cn(
                 'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all',
                 isActive
                   ? 'bg-orange-500/15 text-orange-500 dark:text-orange-400'
                   : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-[#1a1f2e] hover:text-gray-900 dark:hover:text-white'
               )}
-              title={collapsed ? team.name : undefined}
+              title={collapsed ? board.name : undefined}
             >
               <div
                 className={cn(
@@ -166,7 +164,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
               >
                 <Icon className={cn('w-3 h-3', isActive ? 'text-white' : 'text-gray-500 dark:text-gray-400')} />
               </div>
-              {!collapsed && <span className="truncate">{team.name}</span>}
+              {!collapsed && <span className="truncate">{board.name}</span>}
             </button>
           );
         })}

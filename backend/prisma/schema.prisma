@@ -32,22 +32,23 @@ model Organization {
   id        String   @id @default(uuid())
   name      String
   teams     Team[]
+  boards    Board[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@map("organizations")
 }
 
-// ─── TEAMS ──────────────────────────────────────────
+// ─── TEAMS (sales teams — for project ownership / visibility) ──
 
 model Team {
   id             String       @id @default(uuid())
   name           String
-  slug           String       @unique // URL-friendly: "logo-design", "web-design"
+  slug           String       @unique
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id])
   members        TeamMember[]
-  workspace      Workspace?
+  projects       Project[]
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
 
@@ -68,34 +69,35 @@ model TeamMember {
   @@map("team_members")
 }
 
-// ─── WORKSPACES ─────────────────────────────────────
+// ─── BOARDS (org-level, shared by all teams) ────────
 
-model Workspace {
-  id        String            @id @default(uuid())
-  name      String
-  teamId    String            @unique
-  team      Team              @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  columns   WorkspaceColumn[]
-  projects  Project[]
-  createdAt DateTime          @default(now())
-  updatedAt DateTime          @updatedAt
+model Board {
+  id             String        @id @default(uuid())
+  name           String
+  slug           String        @unique
+  organizationId String
+  organization   Organization  @relation(fields: [organizationId], references: [id])
+  columns        BoardColumn[]
+  projects       Project[]
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
 
-  @@map("workspaces")
+  @@map("boards")
 }
 
-// ─── WORKSPACE COLUMNS (custom workflow per workspace) ──
+// ─── BOARD COLUMNS (workflow stages per board) ──────
 
-model WorkspaceColumn {
-  id          String    @id @default(uuid())
-  name        String    // Display name: "To Do", "In Progress"
-  key         String    // Unique within workspace: "todo", "in-progress"
-  color       String    @default("#6B7280")
-  position    Int       @default(0)
-  workspaceId String
-  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+model BoardColumn {
+  id       String @id @default(uuid())
+  name     String
+  key      String
+  color    String @default("#6B7280")
+  position Int    @default(0)
+  boardId  String
+  board    Board  @relation(fields: [boardId], references: [id], onDelete: Cascade)
 
-  @@unique([workspaceId, key])
-  @@map("workspace_columns")
+  @@unique([boardId, key])
+  @@map("board_columns")
 }
 
 // ─── USERS ──────────────────────────────────────────
@@ -127,16 +129,20 @@ model User {
 model Project {
   id          String          @id @default(uuid())
   name        String
-  status      String          @default("todo") // references WorkspaceColumn.key
+  status      String          @default("todo") // references BoardColumn.key
   priority    ProjectPriority @default(MEDIUM)
   description String?
   dueDate     DateTime?
   image       String?
   position    Int             @default(0)
 
-  // Workspace relation
-  workspaceId String
-  workspace   Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  // Board relation (which service board: logo, web design, etc.)
+  boardId     String
+  board       Board           @relation(fields: [boardId], references: [id], onDelete: Cascade)
+
+  // Team relation (which sales team owns this project)
+  teamId      String
+  team        Team            @relation(fields: [teamId], references: [id])
 
   // Relations to users
   pmId        String

@@ -4,7 +4,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useApp } from '@/contexts/useApp';
 import { useSearch } from '../layout';
-import { teamAPI } from '@/lib/api-service';
+import { boardAPI } from '@/lib/api-service';
 import { Board } from '@/components/kanban/Board';
 import { BoardSkeleton } from '@/components/ui/skeletons';
 import { Button } from '@/components/ui/button';
@@ -18,7 +18,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Filter, SortAsc, X, Briefcase } from 'lucide-react';
 
-interface WorkspaceOption {
+interface BoardOption {
   id: string;
   name: string;
 }
@@ -27,29 +27,27 @@ export default function MyWorkPage() {
   const { state, isLoading, getUserName } = useApp();
   const { searchQuery } = useSearch();
   const [filterPriority, setFilterPriority] = useState<string>('all');
-  const [filterWorkspace, setFilterWorkspace] = useState<string>('all');
+  const [filterBoard, setFilterBoard] = useState<string>('all');
   const [sortBy, setSortBy] = useState<string>('date');
-  const [workspaceOptions, setWorkspaceOptions] = useState<WorkspaceOption[]>([]);
+  const [boardOptions, setBoardOptions] = useState<BoardOption[]>([]);
 
   const currentUserId = state.currentUser?.id;
 
-  // Fetch available workspaces for filter dropdown
+  // Fetch available boards for filter dropdown
   useEffect(() => {
-    const fetchTeams = async () => {
+    const fetchBoards = async () => {
       try {
-        const result = await teamAPI.getMyTeams();
+        const result = await boardAPI.getAll();
         if (result.success) {
-          setWorkspaceOptions(
-            result.data.teams
-              .filter((t: any) => t.workspace)
-              .map((t: any) => ({ id: t.workspace.id, name: t.name }))
+          setBoardOptions(
+            result.data.boards.map((b: any) => ({ id: b.id, name: b.name }))
           );
         }
       } catch (error) {
-        console.error('Error fetching teams:', error);
+        console.error('Error fetching boards:', error);
       }
     };
-    fetchTeams();
+    fetchBoards();
   }, []);
 
   // Get projects assigned to me (as developer or PM)
@@ -72,12 +70,12 @@ export default function MyWorkPage() {
     return { total, todo, inProgress, completed, overdue };
   }, [myProjects]);
 
-  // Workspace breakdown - group by workspace name
-  const workspaceBreakdown = useMemo(() => {
+  // Board breakdown - group by board name
+  const boardBreakdown = useMemo(() => {
     const counts: Record<string, number> = {};
     myProjects.forEach((p) => {
-      const wsName = p.workspace?.name || 'Unknown';
-      counts[wsName] = (counts[wsName] || 0) + 1;
+      const bName = p.board?.name || 'Unknown';
+      counts[bName] = (counts[bName] || 0) + 1;
     });
     return counts;
   }, [myProjects]);
@@ -94,7 +92,7 @@ export default function MyWorkPage() {
             <div>
               <h1 className="text-3xl font-bold text-gray-900 dark:text-orange-400">My Work</h1>
               <p className="text-gray-600 dark:text-gray-400 mt-0.5">
-                All tasks assigned to you across workspaces
+                All tasks assigned to you across boards
               </p>
             </div>
           </div>
@@ -127,17 +125,17 @@ export default function MyWorkPage() {
               <Button variant="outline" size="sm">
                 <Briefcase className="w-4 h-4 mr-2 text-white" />
                 <span className="text-white">
-                  Workspace: {filterWorkspace === 'all' ? 'All' : workspaceOptions.find(w => w.id === filterWorkspace)?.name || filterWorkspace}
+                  Board: {filterBoard === 'all' ? 'All' : boardOptions.find(b => b.id === filterBoard)?.name || filterBoard}
                 </span>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent>
-              <DropdownMenuLabel>Filter by Workspace</DropdownMenuLabel>
+              <DropdownMenuLabel>Filter by Board</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => setFilterWorkspace('all')}>All Workspaces</DropdownMenuItem>
-              {workspaceOptions.map((ws) => (
-                <DropdownMenuItem key={ws.id} onClick={() => setFilterWorkspace(ws.id)}>
-                  {ws.name}
+              <DropdownMenuItem onClick={() => setFilterBoard('all')}>All Boards</DropdownMenuItem>
+              {boardOptions.map((b) => (
+                <DropdownMenuItem key={b.id} onClick={() => setFilterBoard(b.id)}>
+                  {b.name}
                 </DropdownMenuItem>
               ))}
             </DropdownMenuContent>
@@ -183,7 +181,7 @@ export default function MyWorkPage() {
       </div>
 
       {/* Active Filters */}
-      {(filterPriority !== 'all' || filterWorkspace !== 'all' || searchQuery) && (
+      {(filterPriority !== 'all' || filterBoard !== 'all' || searchQuery) && (
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-sm text-gray-400">Active filters:</span>
           {searchQuery && (
@@ -200,19 +198,19 @@ export default function MyWorkPage() {
               <X className="w-3 h-3" />
             </button>
           )}
-          {filterWorkspace !== 'all' && (
+          {filterBoard !== 'all' && (
             <button
-              onClick={() => setFilterWorkspace('all')}
+              onClick={() => setFilterBoard('all')}
               className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-orange-500/15 text-orange-400 border border-orange-500/30 hover:bg-orange-500/25 transition-colors"
             >
-              Workspace: {workspaceOptions.find(w => w.id === filterWorkspace)?.name || filterWorkspace}
+              Board: {boardOptions.find(b => b.id === filterBoard)?.name || filterBoard}
               <X className="w-3 h-3" />
             </button>
           )}
           <button
             onClick={() => {
               setFilterPriority('all');
-              setFilterWorkspace('all');
+              setFilterBoard('all');
             }}
             className="text-xs text-gray-500 hover:text-orange-400 transition-colors underline"
           >
@@ -231,7 +229,7 @@ export default function MyWorkPage() {
             filterPriority={filterPriority}
             filterAssignee={currentUserId || ''}
             sortBy={sortBy}
-            workspace={filterWorkspace === 'all' ? null : filterWorkspace}
+            boardId={filterBoard === 'all' ? null : filterBoard}
           />
         )}
       </div>

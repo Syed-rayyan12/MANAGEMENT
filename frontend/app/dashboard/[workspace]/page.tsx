@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { BoardSkeleton } from '@/components/ui/skeletons';
 import { useApp } from '@/contexts/useApp';
-import { teamAPI } from '@/lib/api-service';
+import { boardAPI } from '@/lib/api-service';
 import {
   Dialog,
   DialogContent,
@@ -42,42 +42,40 @@ export default function WorkspacePage() {
   const [sortBy, setSortBy] = useState<string>('date');
   const [refreshKey, setRefreshKey] = useState(0);
   const [customColumns, setCustomColumns] = useState<any[]>([]);
-  const [teamName, setTeamName] = useState<string>('');
-  const [workspaceId, setWorkspaceId] = useState<string | null>(null);
+  const [boardName, setBoardName] = useState<string>('');
+  const [boardId, setBoardId] = useState<string | null>(null);
 
-  const workspace = params.workspace as string;
+  const boardSlug = params.workspace as string;
   const projectId = searchParams.get('project');
 
-  // Fetch team by slug to get workspace info + columns
+  // Fetch board by slug to get board info + columns
   useEffect(() => {
-    const fetchTeam = async () => {
+    const fetchBoard = async () => {
       try {
-        const result = await teamAPI.getBySlug(workspace);
+        const result = await boardAPI.getBySlug(boardSlug);
         if (result.success) {
-          const team = result.data.team;
-          setTeamName(team.name);
-          if (team.workspace) {
-            setWorkspaceId(team.workspace.id);
-            // Use workspace columns from API if available
-            if (team.workspace.columns && team.workspace.columns.length > 0) {
-              const cols = team.workspace.columns
-                .sort((a: any, b: any) => a.position - b.position)
-                .map((c: any) => ({
-                  status: c.key,
-                  label: c.name,
-                  color: c.color,
-                  isCustom: false,
-                }));
-              setCustomColumns(cols);
-            }
+          const board = result.data.board;
+          setBoardName(board.name);
+          setBoardId(board.id);
+          // Use board columns from API if available
+          if (board.columns && board.columns.length > 0) {
+            const cols = board.columns
+              .sort((a: any, b: any) => a.position - b.position)
+              .map((c: any) => ({
+                status: c.key,
+                label: c.name,
+                color: c.color,
+                isCustom: false,
+              }));
+            setCustomColumns(cols);
           }
         }
       } catch (error) {
-        console.error('Error fetching team:', error);
+        console.error('Error fetching board:', error);
       }
     };
-    fetchTeam();
-  }, [workspace]);
+    fetchBoard();
+  }, [boardSlug]);
 
   const handleAddColumn = (columnName: string, columnColor: string) => {
     const newColumn = {
@@ -92,7 +90,7 @@ export default function WorkspacePage() {
     setRefreshKey(prev => prev + 1);
   };
 
-  const workspaceName = teamName || workspace;
+  const displayName = boardName || boardSlug;
 
   return (
     <div className="space-y-8 p-6">
@@ -100,8 +98,8 @@ export default function WorkspacePage() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-orange-400">{workspaceName}</h1>
-            <p className="text-gray-600 dark:text-gray-400 mt-1">Manage your {workspaceName.toLowerCase()} projects</p>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-orange-400">{displayName}</h1>
+            <p className="text-gray-600 dark:text-gray-400 mt-1">Manage your {displayName.toLowerCase()} projects</p>
           </div>
         </div>
         <div className='flex items-center justify-between gap-5'>
@@ -241,7 +239,7 @@ export default function WorkspacePage() {
             filterPriority={filterPriority}
             filterAssignee={filterAssignee}
             sortBy={sortBy}
-            workspace={workspaceId}
+            boardId={boardId}
             customColumns={customColumns}
           />
         )}
@@ -254,7 +252,7 @@ export default function WorkspacePage() {
             setShowCreateModal(false);
             setRefreshKey(prev => prev + 1);
           }} 
-          initialWorkspace={workspaceId}
+          initialBoard={boardId}
         />
       )}
 

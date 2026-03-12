@@ -32,10 +32,10 @@ import { format } from 'date-fns';
 interface CreateProjectModalProps {
   onClose: () => void;
   initialStatus?: ProjectStatus;
-  initialWorkspace?: string | null;
+  initialBoard?: string | null;
 }
 
-export function CreateProjectModal({ onClose, initialStatus, initialWorkspace }: CreateProjectModalProps) {
+export function CreateProjectModal({ onClose, initialStatus, initialBoard }: CreateProjectModalProps) {
   const { state, dispatch, getAllUsers } = useApp();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -54,7 +54,7 @@ export function CreateProjectModal({ onClose, initialStatus, initialWorkspace }:
       return;
     }
 
-    if (!state.currentUser || !initialWorkspace) return;
+    if (!state.currentUser || !initialBoard) return;
 
     try {
       const token = localStorage.getItem('token');
@@ -68,7 +68,7 @@ export function CreateProjectModal({ onClose, initialStatus, initialWorkspace }:
 
       const projectData = {
         name: name.trim(),
-        workspaceId: initialWorkspace,
+        boardId: initialBoard,
         description: description.trim(),
         priority: priorityMap[priority],
         status,
@@ -110,8 +110,10 @@ export function CreateProjectModal({ onClose, initialStatus, initialWorkspace }:
           id: p.id,
           name: name.trim(),
           description: description.trim(),
-          workspaceId: p.workspaceId || initialWorkspace,
-          workspace: p.workspace ? { id: p.workspace.id, name: p.workspace.name } : undefined,
+          boardId: p.boardId || initialBoard,
+          board: p.board ? { id: p.board.id, name: p.board.name } : undefined,
+          teamId: p.teamId,
+          team: p.team ? { id: p.team.id, name: p.team.name } : undefined,
           status: p.status || status,
           priority: (p.priority || 'MEDIUM').toLowerCase() as ProjectPriority,
           dueDate: dueDate || null,

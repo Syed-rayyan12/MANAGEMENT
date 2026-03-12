@@ -11,6 +11,7 @@ import uploadRoutes from './routes/upload.routes';
 import userRoutes from './routes/user.routes';
 import notificationRoutes from './routes/notification.routes';
 import teamRoutes from './routes/team.routes';
+import boardRoutes from './routes/board.routes';
 
 // Load environment variables
 dotenv.config();
@@ -80,6 +81,7 @@ app.use('/api/upload', apiLimiter, uploadRoutes);
 app.use('/api/users', apiLimiter, userRoutes);
 app.use('/api/notifications', apiLimiter, notificationRoutes);
 app.use('/api/teams', apiLimiter, teamRoutes);
+app.use('/api/boards', apiLimiter, boardRoutes);
 
 // ─── 404 handler ───────────────────────────────────
 app.use((_req: Request, res: Response) => {
