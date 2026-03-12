@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { BoardSkeleton } from '@/components/ui/skeletons';
 import { useApp } from '@/contexts/useApp';
+import { teamAPI } from '@/lib/api-service';
 import {
   Dialog,
   DialogContent,
@@ -41,20 +42,41 @@ export default function WorkspacePage() {
   const [sortBy, setSortBy] = useState<string>('date');
   const [refreshKey, setRefreshKey] = useState(0);
   const [customColumns, setCustomColumns] = useState<any[]>([]);
+  const [teamName, setTeamName] = useState<string>('');
+  const [workspaceId, setWorkspaceId] = useState<string | null>(null);
 
   const workspace = params.workspace as string;
   const projectId = searchParams.get('project');
 
-  // Load custom columns from localStorage
+  // Fetch team by slug to get workspace info + columns
   useEffect(() => {
-    const stored = localStorage.getItem(`kanban-columns-${workspace}`);
-    if (stored) {
+    const fetchTeam = async () => {
       try {
-        setCustomColumns(JSON.parse(stored));
-      } catch (e) {
-        console.error('Failed to parse custom columns:', e);
+        const result = await teamAPI.getBySlug(workspace);
+        if (result.success) {
+          const team = result.data.team;
+          setTeamName(team.name);
+          if (team.workspace) {
+            setWorkspaceId(team.workspace.id);
+            // Use workspace columns from API if available
+            if (team.workspace.columns && team.workspace.columns.length > 0) {
+              const cols = team.workspace.columns
+                .sort((a: any, b: any) => a.position - b.position)
+                .map((c: any) => ({
+                  status: c.key,
+                  label: c.name,
+                  color: c.color,
+                  isCustom: false,
+                }));
+              setCustomColumns(cols);
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching team:', error);
       }
-    }
+    };
+    fetchTeam();
   }, [workspace]);
 
   const handleAddColumn = (columnName: string, columnColor: string) => {
@@ -67,18 +89,10 @@ export default function WorkspacePage() {
     
     const updatedColumns = [...customColumns, newColumn];
     setCustomColumns(updatedColumns);
-    localStorage.setItem(`kanban-columns-${workspace}`, JSON.stringify(updatedColumns));
     setRefreshKey(prev => prev + 1);
   };
 
-  const workspaceNames: Record<string, string> = {
-    'logo': 'Logo Design',
-    'web-design': 'Web Design',
-    'web-development': 'Web Development',
-    'content': 'Content Creation'
-  };
-
-  const workspaceName = workspaceNames[workspace] || 'Workspace';
+  const workspaceName = teamName || workspace;
 
   return (
     <div className="space-y-8 p-6">
@@ -227,7 +241,7 @@ export default function WorkspacePage() {
             filterPriority={filterPriority}
             filterAssignee={filterAssignee}
             sortBy={sortBy}
-            workspace={workspace}
+            workspace={workspaceId}
             customColumns={customColumns}
           />
         )}
@@ -240,7 +254,7 @@ export default function WorkspacePage() {
             setShowCreateModal(false);
             setRefreshKey(prev => prev + 1);
           }} 
-          initialWorkspace={workspace}
+          initialWorkspace={workspaceId}
         />
       )}
 

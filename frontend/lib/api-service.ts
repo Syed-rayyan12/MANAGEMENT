@@ -58,8 +58,9 @@ export const authAPI = {
 export const projectAPI = {
   create: async (projectData: {
     name: string;
-    workspace: 'LOGO' | 'WEB_DESIGN' | 'WEB_DEVELOPMENT' | 'CONTENT';
+    workspaceId: string;
     description?: string;
+    status?: string;
     priority?: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
     dueDate?: string;
     developerId?: string;
@@ -79,29 +80,8 @@ export const projectAPI = {
     return await response.json();
   },
 
-  getLogoDesign: async () => {
-    const response = await fetch(`${API_BASE_URL}/projects/logo-design`, {
-      headers: getHeaders(),
-    });
-    return await response.json();
-  },
-
-  getWebDesign: async () => {
-    const response = await fetch(`${API_BASE_URL}/projects/web-design`, {
-      headers: getHeaders(),
-    });
-    return await response.json();
-  },
-
-  getWebDevelopment: async () => {
-    const response = await fetch(`${API_BASE_URL}/projects/web-development`, {
-      headers: getHeaders(),
-    });
-    return await response.json();
-  },
-
-  getContentWriter: async () => {
-    const response = await fetch(`${API_BASE_URL}/projects/content-writer`, {
+  getByWorkspace: async (workspaceId: string) => {
+    const response = await fetch(`${API_BASE_URL}/projects/workspace/${workspaceId}`, {
       headers: getHeaders(),
     });
     return await response.json();
@@ -326,6 +306,30 @@ export const notificationAPI = {
   markAllAsRead: async () => {
     const response = await fetch(`${API_BASE_URL}/notifications/read-all`, {
       method: 'PUT',
+      headers: getHeaders(),
+    });
+    return await response.json();
+  },
+};
+
+// Team APIs
+export const teamAPI = {
+  getMyTeams: async () => {
+    const response = await fetch(`${API_BASE_URL}/teams/my-teams`, {
+      headers: getHeaders(),
+    });
+    return await response.json();
+  },
+
+  getBySlug: async (slug: string) => {
+    const response = await fetch(`${API_BASE_URL}/teams/${slug}`, {
+      headers: getHeaders(),
+    });
+    return await response.json();
+  },
+
+  getWorkspaceColumns: async (workspaceId: string) => {
+    const response = await fetch(`${API_BASE_URL}/teams/workspace/${workspaceId}/columns`, {
       headers: getHeaders(),
     });
     return await response.json();

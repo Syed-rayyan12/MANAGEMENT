@@ -4,11 +4,21 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
 /**
- * Build a role-based where clause.
- * All users see all projects (Trello-like board visibility).
+ * Build WHERE clause scoped to user's accessible workspaces.
  */
-function buildWhereClause(_user: Request['user']) {
-  return {};
+async function buildWhereClause(user: Request['user']): Promise<Record<string, unknown>> {
+  if (!user) return { id: 'none' };
+  if (user.role === 'EXECUTIVE') return {};
+  if (user.role === 'PRODUCTION') return { developerId: user.id };
+
+  if (user.teamIds && user.teamIds.length > 0) {
+    const workspaces = await prisma.workspace.findMany({
+      where: { teamId: { in: user.teamIds } },
+      select: { id: true },
+    });
+    return { workspaceId: { in: workspaces.map(w => w.id) } };
+  }
+  return { id: 'none' };
 }
 
 /**
@@ -17,25 +27,37 @@ function buildWhereClause(_user: Request['user']) {
  */
 export const getDashboardOverview = async (req: Request, res: Response): Promise<void> => {
   try {
-    const where = buildWhereClause(req.user);
+    const where = await buildWhereClause(req.user);
 
-    // Workspace counts
-    const [logoCount, webDesignCount, webDevelopmentCount, contentCount] = await Promise.all([
-      prisma.project.count({ where: { ...where, workspace: 'LOGO' } }),
-      prisma.project.count({ where: { ...where, workspace: 'WEB_DESIGN' } }),
-      prisma.project.count({ where: { ...where, workspace: 'WEB_DEVELOPMENT' } }),
-      prisma.project.count({ where: { ...where, workspace: 'CONTENT' } }),
-    ]);
+    // Get all workspaces the user can access
+    const workspaces = await prisma.workspace.findMany({
+      include: {
+        team: { select: { slug: true, name: true } },
+        columns: { orderBy: { position: 'asc' } },
+      },
+    });
 
-    const totalProjects = logoCount + webDesignCount + webDevelopmentCount + contentCount;
+    // Workspace counts (dynamic)
+    const workspaceStats: Record<string, { name: string; slug: string; count: number }> = {};
+    for (const ws of workspaces) {
+      const count = await prisma.project.count({
+        where: { ...where, workspaceId: ws.id },
+      });
+      workspaceStats[ws.team.slug] = { name: ws.team.name, slug: ws.team.slug, count };
+    }
 
-    // Status counts
-    const [todoCount, inProgressCount, completedCount, revisionsCount] = await Promise.all([
-      prisma.project.count({ where: { ...where, status: 'TODO' } }),
-      prisma.project.count({ where: { ...where, status: 'IN_PROGRESS' } }),
-      prisma.project.count({ where: { ...where, status: 'COMPLETED' } }),
-      prisma.project.count({ where: { ...where, status: 'REVISIONS' } }),
-    ]);
+    const totalProjects = await prisma.project.count({ where });
+
+    // Status counts — get unique statuses from projects
+    const statusGroups = await prisma.project.groupBy({
+      by: ['status'],
+      where,
+      _count: true,
+    });
+    const statusStats: Record<string, number> = {};
+    for (const g of statusGroups) {
+      statusStats[g.status] = g._count;
+    }
 
     // Priority counts
     const [lowPriority, mediumPriority, highPriority, criticalPriority] = await Promise.all([
@@ -53,6 +75,7 @@ export const getDashboardOverview = async (req: Request, res: Response): Promise
       include: {
         pm: { select: { id: true, name: true } },
         developer: { select: { id: true, name: true } },
+        workspace: { select: { id: true, name: true } },
       },
     });
 
@@ -60,18 +83,8 @@ export const getDashboardOverview = async (req: Request, res: Response): Promise
       success: true,
       message: 'Dashboard overview retrieved successfully',
       data: {
-        workspaceStats: {
-          logoDesign: logoCount,
-          webDesign: webDesignCount,
-          webDevelopment: webDevelopmentCount,
-          contentWriter: contentCount,
-        },
-        statusStats: {
-          todo: todoCount,
-          inProgress: inProgressCount,
-          completed: completedCount,
-          revisions: revisionsCount,
-        },
+        workspaceStats,
+        statusStats,
         priorityStats: {
           low: lowPriority,
           medium: mediumPriority,
@@ -101,24 +114,37 @@ export const getMyDashboardStats = async (req: Request, res: Response): Promise<
 
     const userId = req.user.id;
 
-    // Managed counts by workspace
-    const [logoManaged, webDesignManaged, webDevManaged, contentManaged] = await Promise.all([
-      prisma.project.count({ where: { pmId: userId, workspace: 'LOGO' } }),
-      prisma.project.count({ where: { pmId: userId, workspace: 'WEB_DESIGN' } }),
-      prisma.project.count({ where: { pmId: userId, workspace: 'WEB_DEVELOPMENT' } }),
-      prisma.project.count({ where: { pmId: userId, workspace: 'CONTENT' } }),
-    ]);
+    // Get user's teams and their workspaces
+    const teamMembers = await prisma.teamMember.findMany({
+      where: { userId },
+      include: {
+        team: {
+          include: {
+            workspace: { select: { id: true, name: true } },
+          },
+        },
+      },
+    });
 
-    // Assigned counts by workspace
-    const [logoAssigned, webDesignAssigned, webDevAssigned, contentAssigned] = await Promise.all([
-      prisma.project.count({ where: { developerId: userId, workspace: 'LOGO' } }),
-      prisma.project.count({ where: { developerId: userId, workspace: 'WEB_DESIGN' } }),
-      prisma.project.count({ where: { developerId: userId, workspace: 'WEB_DEVELOPMENT' } }),
-      prisma.project.count({ where: { developerId: userId, workspace: 'CONTENT' } }),
-    ]);
+    // Managed/Assigned counts per workspace
+    const workspaceBreakdown: Record<string, { name: string; managed: number; assigned: number }> = {};
+    for (const tm of teamMembers) {
+      if (tm.team.workspace) {
+        const wsId = tm.team.workspace.id;
+        const [managed, assigned] = await Promise.all([
+          prisma.project.count({ where: { pmId: userId, workspaceId: wsId } }),
+          prisma.project.count({ where: { developerId: userId, workspaceId: wsId } }),
+        ]);
+        workspaceBreakdown[tm.team.slug] = {
+          name: tm.team.name,
+          managed,
+          assigned,
+        };
+      }
+    }
 
-    const totalManaged = logoManaged + webDesignManaged + webDevManaged + contentManaged;
-    const totalAssigned = logoAssigned + webDesignAssigned + webDevAssigned + contentAssigned;
+    const totalManaged = await prisma.project.count({ where: { pmId: userId } });
+    const totalAssigned = await prisma.project.count({ where: { developerId: userId } });
 
     // Recent projects for this user
     const myRecentProjects = await prisma.project.findMany({
@@ -128,6 +154,7 @@ export const getMyDashboardStats = async (req: Request, res: Response): Promise<
       include: {
         pm: { select: { id: true, name: true } },
         developer: { select: { id: true, name: true } },
+        workspace: { select: { id: true, name: true } },
       },
     });
 
@@ -136,20 +163,9 @@ export const getMyDashboardStats = async (req: Request, res: Response): Promise<
       message: 'User dashboard stats retrieved successfully',
       data: {
         myWorkspaceStats: {
-          managed: {
-            logoDesign: logoManaged,
-            webDesign: webDesignManaged,
-            webDevelopment: webDevManaged,
-            contentWriter: contentManaged,
-            total: totalManaged,
-          },
-          assigned: {
-            logoDesign: logoAssigned,
-            webDesign: webDesignAssigned,
-            webDevelopment: webDevAssigned,
-            contentWriter: contentAssigned,
-            total: totalAssigned,
-          },
+          breakdown: workspaceBreakdown,
+          totalManaged,
+          totalAssigned,
         },
         myRecentProjects,
       },

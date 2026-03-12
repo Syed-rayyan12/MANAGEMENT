@@ -1,8 +1,9 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useApp } from '@/contexts/useApp';
+import { teamAPI } from '@/lib/api-service';
 import {
   LayoutDashboard,
   Briefcase,
@@ -13,45 +14,59 @@ import {
   ChevronLeft,
   ChevronRight,
   User,
+  FolderKanban,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import type { LucideIcon } from 'lucide-react';
 
 interface SidebarProps {
   collapsed: boolean;
   onToggle: () => void;
 }
 
-const workspaces = [
-  { id: 'logo', name: 'Logo Design', icon: Sparkles, gradient: 'from-purple-500 to-pink-500' },
-  { id: 'web-design', name: 'Web Design', icon: Palette, gradient: 'from-orange-500 to-amber-500' },
-  { id: 'web-development', name: 'Web Development', icon: Code, gradient: 'from-blue-500 to-cyan-500' },
-  { id: 'content', name: 'Content Creation', icon: FileText, gradient: 'from-green-500 to-teal-500' },
-];
+// Icon + gradient lookup by team slug
+const teamStyles: Record<string, { icon: LucideIcon; gradient: string }> = {
+  'logo-design': { icon: Sparkles, gradient: 'from-purple-500 to-pink-500' },
+  'web-design': { icon: Palette, gradient: 'from-orange-500 to-amber-500' },
+  'web-development': { icon: Code, gradient: 'from-blue-500 to-cyan-500' },
+  'content': { icon: FileText, gradient: 'from-green-500 to-teal-500' },
+};
+
+const defaultStyle = { icon: FolderKanban, gradient: 'from-gray-500 to-gray-600' };
+
+interface TeamItem {
+  slug: string;
+  name: string;
+  workspaceId?: string;
+}
 
 export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const router = useRouter();
   const pathname = usePathname();
   const { state } = useApp();
+  const [teams, setTeams] = useState<TeamItem[]>([]);
 
-  // Map frontend workspace IDs to backend WorkspaceType values
-  const workspaceBackendMap: Record<string, string> = {
-    logo: 'LOGO',
-    'web-design': 'WEB_DESIGN',
-    'web-development': 'WEB_DEVELOPMENT',
-    content: 'CONTENT',
-  };
-
-  const user = state.currentUser;
-  const canSeeAllWorkspaces =
-    !user ||
-    user.role === 'PRODUCTION' ||
-    user.role === 'EXECUTIVE' ||
-    !user.workspace; // unassigned users see all
-
-  const visibleWorkspaces = workspaces.filter((ws) => {
-    if (canSeeAllWorkspaces) return true;
-    return workspaceBackendMap[ws.id] === user?.workspace;
-  });
+  // Fetch teams from API
+  useEffect(() => {
+    if (!state.currentUser) return;
+    const fetchTeams = async () => {
+      try {
+        const result = await teamAPI.getMyTeams();
+        if (result.success) {
+          setTeams(
+            result.data.teams.map((t: any) => ({
+              slug: t.slug,
+              name: t.name,
+              workspaceId: t.workspace?.id,
+            }))
+          );
+        }
+      } catch (error) {
+        console.error('Error fetching teams:', error);
+      }
+    };
+    fetchTeams();
+  }, [state.currentUser]);
 
   const navItems = [
     {
@@ -124,33 +139,34 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
           )}
         </div>
 
-        {/* Workspace links */}
-        {visibleWorkspaces.map((ws) => {
-          const Icon = ws.icon;
-          const isActive = pathname === `/dashboard/${ws.id}`;
+        {/* Dynamic workspace links */}
+        {teams.map((team) => {
+          const style = teamStyles[team.slug] || defaultStyle;
+          const Icon = style.icon;
+          const isActive = pathname === `/dashboard/${team.slug}`;
           return (
             <button
-              key={ws.id}
-              onClick={() => router.push(`/dashboard/${ws.id}`)}
+              key={team.slug}
+              onClick={() => router.push(`/dashboard/${team.slug}`)}
               className={cn(
                 'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all',
                 isActive
                   ? 'bg-orange-500/15 text-orange-500 dark:text-orange-400'
                   : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-[#1a1f2e] hover:text-gray-900 dark:hover:text-white'
               )}
-              title={collapsed ? ws.name : undefined}
+              title={collapsed ? team.name : undefined}
             >
               <div
                 className={cn(
                   'w-5 h-5 rounded flex items-center justify-center flex-shrink-0',
                   isActive
-                    ? `bg-gradient-to-br ${ws.gradient}`
+                    ? `bg-gradient-to-br ${style.gradient}`
                     : 'bg-gray-200 dark:bg-[#2d3548]'
                 )}
               >
                 <Icon className={cn('w-3 h-3', isActive ? 'text-white' : 'text-gray-500 dark:text-gray-400')} />
               </div>
-              {!collapsed && <span className="truncate">{ws.name}</span>}
+              {!collapsed && <span className="truncate">{team.name}</span>}
             </button>
           );
         })}
@@ -173,9 +189,9 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
                 </p>
                 <p className="text-[11px] text-gray-500 dark:text-gray-400 truncate">
                   {state.currentUser.role}
-                  {state.currentUser.workspace && (
+                  {state.currentUser.teams && state.currentUser.teams.length > 0 && (
                     <span className="ml-1 text-orange-400 font-medium">
-                      · {state.currentUser.workspace.replace('_', ' ')}
+                      · {state.currentUser.teams.map(t => t.name).join(', ')}
                     </span>
                   )}
                 </p>

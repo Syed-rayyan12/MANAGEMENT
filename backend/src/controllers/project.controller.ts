@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { PrismaClient, WorkspaceType } from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
 import { createNotification, createManyNotifications } from './notification.controller';
 
 const prisma = new PrismaClient();
@@ -20,71 +20,114 @@ const projectIncludes = {
     orderBy: { createdAt: 'desc' as const },
     take: 20,
   },
+  workspace: { select: { id: true, name: true, teamId: true } },
 };
 
 /**
- * Determine if a user can access a specific workspace.
- * PRODUCTION and EXECUTIVE can see all workspaces.
- * Users with a workspace assignment only see their own workspace.
- * Users with no workspace assignment see all (unassigned/global roles).
+ * Check if user can access a workspace.
+ * - EXECUTIVE: can see all workspaces
+ * - PRODUCTION: can see tasks assigned to them (handled at query level)
+ * - TL/PM: can only see workspaces for teams they belong to
  */
-function canAccessWorkspace(user: Request['user'], workspace?: WorkspaceType): boolean {
-  if (!user) return false;
-  if (user.role === 'PRODUCTION' || user.role === 'EXECUTIVE') return true;
-  if (!user.workspace) return true; // unassigned user — unrestricted
-  if (workspace) return user.workspace === workspace;
-  return true;
+async function canUserAccessWorkspace(userId: string, role: string, workspaceId: string): Promise<boolean> {
+  if (role === 'EXECUTIVE') return true;
+  // For PRODUCTION, access is per-project (assigned tasks), not per-workspace
+  if (role === 'PRODUCTION') return true;
+
+  // Check if user is a member of the team that owns this workspace
+  const workspace = await prisma.workspace.findUnique({
+    where: { id: workspaceId },
+    select: { teamId: true },
+  });
+  if (!workspace) return false;
+
+  const membership = await prisma.teamMember.findUnique({
+    where: { teamId_userId: { teamId: workspace.teamId, userId } },
+  });
+  return !!membership;
 }
 
 /**
- * Build a prisma WHERE clause based on the user's team/workspace restriction.
- * Returns { workspace: ... } for restricted users, or {} for unrestricted.
+ * Build WHERE clause scoped to user's accessible workspaces.
  */
-function buildWhereClause(user: Request['user']): Record<string, unknown> {
-  if (!user) return {};
-  if (user.role === 'PRODUCTION' || user.role === 'EXECUTIVE') return {};
-  if (user.workspace) return { workspace: user.workspace as WorkspaceType };
-  return {};
+async function buildWhereClause(user: Request['user']): Promise<Record<string, unknown>> {
+  if (!user) return { id: 'none' }; // return impossible condition
+
+  // EXECUTIVE sees all
+  if (user.role === 'EXECUTIVE') return {};
+
+  // PRODUCTION sees only tasks assigned to them
+  if (user.role === 'PRODUCTION') return { developerId: user.id };
+
+  // TL/PM: see projects in workspaces belonging to their teams
+  if (user.teamIds && user.teamIds.length > 0) {
+    const workspaces = await prisma.workspace.findMany({
+      where: { teamId: { in: user.teamIds } },
+      select: { id: true },
+    });
+    return { workspaceId: { in: workspaces.map(w => w.id) } };
+  }
+
+  return { id: 'none' }; // no teams = no access
 }
 
-// ─── Workspace-specific getters (backward-compatible routes) ────
+// ─── Get projects by workspace ──────────────────────
 
-const workspaceGetter = (workspace: WorkspaceType) => {
-  return async (req: Request, res: Response): Promise<void> => {
-    try {
-      if (!canAccessWorkspace(req.user, workspace)) {
-        res.status(403).json({ success: false, message: 'Access denied to this workspace' });
-        return;
-      }
-      const where = { workspace };
-      const projects = await prisma.project.findMany({
-        where,
-        include: projectIncludes,
-        orderBy: [{ position: 'asc' }, { createdAt: 'desc' }],
-      });
+export const getWorkspaceProjects = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { workspaceId } = req.params;
 
-      res.status(200).json({
-        success: true,
-        message: `${workspace} projects retrieved successfully`,
-        data: { projects },
-      });
-    } catch (error) {
-      console.error(`Get ${workspace} projects error:`, error);
-      res.status(500).json({ success: false, message: 'Internal server error' });
+    if (!req.user) {
+      res.status(401).json({ success: false, message: 'Unauthorized' });
+      return;
     }
-  };
+
+    // Verify workspace exists
+    const workspace = await prisma.workspace.findUnique({
+      where: { id: workspaceId },
+      include: { team: { select: { id: true, name: true, slug: true } } },
+    });
+    if (!workspace) {
+      res.status(404).json({ success: false, message: 'Workspace not found' });
+      return;
+    }
+
+    // Check access
+    const hasAccess = await canUserAccessWorkspace(req.user.id, req.user.role, workspaceId);
+    if (!hasAccess) {
+      res.status(403).json({ success: false, message: 'Access denied to this workspace' });
+      return;
+    }
+
+    const where: any = { workspaceId };
+
+    // PRODUCTION only sees tasks assigned to them
+    if (req.user.role === 'PRODUCTION') {
+      where.developerId = req.user.id;
+    }
+
+    const projects = await prisma.project.findMany({
+      where,
+      include: projectIncludes,
+      orderBy: [{ position: 'asc' }, { createdAt: 'desc' }],
+    });
+
+    res.status(200).json({
+      success: true,
+      message: `Projects retrieved for workspace: ${workspace.name}`,
+      data: { projects },
+    });
+  } catch (error) {
+    console.error('Get workspace projects error:', error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
 };
 
-export const getLogoDesignProjects = workspaceGetter('LOGO');
-export const getWebDesignProjects = workspaceGetter('WEB_DESIGN');
-export const getWebDevelopmentProjects = workspaceGetter('WEB_DEVELOPMENT');
-export const getContentWriterProjects = workspaceGetter('CONTENT');
-
-// ─── Get all projects ───────────────────────────────
+// ─── Get all projects (scoped to user) ──────────────
 
 export const getAllProjects = async (req: Request, res: Response): Promise<void> => {
   try {
-    const where = buildWhereClause(req.user);
+    const where = await buildWhereClause(req.user);
     const projects = await prisma.project.findMany({
       where,
       include: projectIncludes,
@@ -106,18 +149,19 @@ export const getAllProjects = async (req: Request, res: Response): Promise<void>
 
 export const createProject = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { name, workspace, description, priority, dueDate, pmId, developerId, image } = req.body;
+    const { name, workspaceId, description, priority, dueDate, pmId, developerId, image, status } = req.body;
 
     const projectPmId = pmId || req.user?.id;
 
-    if (!name || !workspace || !projectPmId) {
-      res.status(400).json({ success: false, message: 'Name, workspace, and PM ID are required' });
+    if (!name || !workspaceId || !projectPmId) {
+      res.status(400).json({ success: false, message: 'Name, workspaceId, and PM ID are required' });
       return;
     }
 
-    const validWorkspaces: WorkspaceType[] = ['LOGO', 'WEB_DESIGN', 'WEB_DEVELOPMENT', 'CONTENT'];
-    if (!validWorkspaces.includes(workspace)) {
-      res.status(400).json({ success: false, message: 'Invalid workspace type' });
+    // Verify workspace exists
+    const workspace = await prisma.workspace.findUnique({ where: { id: workspaceId } });
+    if (!workspace) {
+      res.status(404).json({ success: false, message: 'Workspace not found' });
       return;
     }
 
@@ -132,11 +176,23 @@ export const createProject = async (req: Request, res: Response): Promise<void> 
       if (!dev) { res.status(404).json({ success: false, message: 'Developer not found' }); return; }
     }
 
+    // If status is provided, validate it matches a workspace column key
+    if (status) {
+      const column = await prisma.workspaceColumn.findUnique({
+        where: { workspaceId_key: { workspaceId, key: status } },
+      });
+      if (!column) {
+        res.status(400).json({ success: false, message: `Invalid status "${status}" for this workspace` });
+        return;
+      }
+    }
+
     const project = await prisma.project.create({
       data: {
         name,
-        workspace,
+        workspaceId,
         description,
+        status: status || 'todo',
         priority: priority || 'MEDIUM',
         dueDate: dueDate ? new Date(dueDate) : null,
         pmId: projectPmId,
@@ -165,7 +221,7 @@ export const createProject = async (req: Request, res: Response): Promise<void> 
 
     res.status(201).json({
       success: true,
-      message: `Project created in ${workspace} workspace`,
+      message: `Project created in workspace`,
       data: { project },
     });
   } catch (error) {
@@ -200,7 +256,7 @@ export const getProjectById = async (req: Request, res: Response): Promise<void>
 export const updateProject = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
-    const { workspace, ...updateData } = req.body;
+    const updateData = req.body;
 
     const existing = await prisma.project.findUnique({ where: { id } });
     if (!existing) {
@@ -208,12 +264,21 @@ export const updateProject = async (req: Request, res: Response): Promise<void> 
       return;
     }
 
-    // Validate status
+    // Validate status if provided
     if (updateData.status) {
-      const valid = ['TODO', 'IN_PROGRESS', 'COMPLETED', 'REVISIONS'];
-      if (!valid.includes(updateData.status)) {
-        res.status(400).json({ success: false, message: 'Invalid status' });
-        return;
+      // Validate against workspace columns
+      const project_ws = await prisma.project.findUnique({
+        where: { id },
+        select: { workspaceId: true },
+      });
+      if (project_ws) {
+        const column = await prisma.workspaceColumn.findUnique({
+          where: { workspaceId_key: { workspaceId: project_ws.workspaceId, key: updateData.status } },
+        });
+        if (!column) {
+          res.status(400).json({ success: false, message: `Invalid status "${updateData.status}" for this workspace` });
+          return;
+        }
       }
     }
 
@@ -275,12 +340,12 @@ export const updateProject = async (req: Request, res: Response): Promise<void> 
         if (existing.pmId && existing.pmId !== req.user.id) recipients.add(existing.pmId);
         if (existing.developerId && existing.developerId !== req.user.id) recipients.add(existing.developerId);
 
-        const isCompleted = updateData.status === 'COMPLETED';
+        const isCompleted = updateData.status === 'completed';
         const statusItems = [...recipients].map((uid) => ({
           type: isCompleted ? 'completed' : 'status',
           message: isCompleted
             ? `${actorName} marked ${existing.name} as completed! 🎉`
-            : `${actorName} moved ${existing.name} to ${updateData.status.replace('_', ' ')}`,
+            : `${actorName} moved ${existing.name} to ${updateData.status}`,
           userId: uid,
           projectId: id,
           actorId: req.user!.id,
@@ -605,18 +670,8 @@ export const reorderProjects = async (req: Request, res: Response): Promise<void
       orderedIds.map((item: { id: string; position: number; status?: string }) => {
         const data: any = { position: item.position };
         if (item.status) {
-          // Map frontend status names to enum
-          const statusMap: Record<string, string> = {
-            'Todo': 'TODO',
-            'in-progress': 'IN_PROGRESS',
-            'Completed': 'COMPLETED',
-            'Revisons': 'REVISIONS',
-            'TODO': 'TODO',
-            'IN_PROGRESS': 'IN_PROGRESS',
-            'COMPLETED': 'COMPLETED',
-            'REVISIONS': 'REVISIONS',
-          };
-          data.status = statusMap[item.status] || item.status;
+          // Status is now a string matching workspace column keys — pass through directly
+          data.status = item.status;
         }
         return prisma.project.update({
           where: { id: item.id },
@@ -642,7 +697,7 @@ export const getActivityLogs = async (req: Request, res: Response): Promise<void
       take: limit,
       include: {
         user: { select: { id: true, name: true, avatar: true } },
-        project: { select: { id: true, name: true, workspace: true } },
+        project: { select: { id: true, name: true, workspaceId: true } },
       },
     });
 

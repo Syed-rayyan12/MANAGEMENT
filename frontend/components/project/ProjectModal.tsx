@@ -337,19 +337,13 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
     // Update backend
     try {
       const token = localStorage.getItem('token');
-      const statusMap: Record<string, string> = {
-        'Todo': 'TODO',
-        'in-progress': 'IN_PROGRESS',
-        'Completed': 'COMPLETED',
-        'Revisons': 'REVISIONS'
-      };
       await fetch(`${API_BASE_URL}/projects/${project.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ status: statusMap[newStatus] })
+        body: JSON.stringify({ status: newStatus })
       });
     } catch (error) {
       console.error('Error updating status:', error);
@@ -640,7 +634,7 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
   };
 
   const priorityStyle = PRIORITY_STYLES[project.priority];
-  const isOverdue = project.dueDate && new Date(project.dueDate) < new Date() && project.status !== 'Completed';
+  const isOverdue = project.dueDate && new Date(project.dueDate) < new Date() && project.status !== 'completed';
 
   return ( 
     <>

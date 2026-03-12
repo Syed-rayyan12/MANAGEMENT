@@ -42,8 +42,8 @@ export function ProjectCard({ project, onCardClick }: ProjectCardProps) {
 
   const pmName = getUserName(project.pm);
   const pmAvatar = getUserAvatar(project.pm);
-  const isOverdue = project.dueDate && new Date(project.dueDate) < new Date() && project.status !== 'Completed';
-  const isDueSoon = project.dueDate && !isOverdue && project.status !== 'Completed' &&
+  const isOverdue = project.dueDate && new Date(project.dueDate) < new Date() && project.status !== 'completed';
+  const isDueSoon = project.dueDate && !isOverdue && project.status !== 'completed' &&
     (new Date(project.dueDate).getTime() - new Date().getTime()) < 3 * 24 * 60 * 60 * 1000;
   const checklistTotal = project.checklist.length;
   const checklistDone = project.checklist.filter(i => i.completed).length;
@@ -186,13 +186,12 @@ export function ProjectCard({ project, onCardClick }: ProjectCardProps) {
       type: 'UPDATE_PROJECT_STATUS',
       payload: { projectId: project.id, newStatus: newStatus as Project['status'], userId: project.pm },
     });
-    const statusMap: Record<string, string> = { Todo: 'TODO', 'in-progress': 'IN_PROGRESS', Completed: 'COMPLETED', Revisons: 'REVISIONS' };
     try {
       const token = localStorage.getItem('token');
       await fetch(`${API_BASE_URL}/projects/${project.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ status: statusMap[newStatus] || newStatus }),
+        body: JSON.stringify({ status: newStatus }),
       });
       toast.success('Status updated');
     } catch {

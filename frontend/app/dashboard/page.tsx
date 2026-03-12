@@ -1,6 +1,6 @@
 
 'use client';
-import { API_BASE_URL } from '@/lib/api-service';
+import { API_BASE_URL, teamAPI } from '@/lib/api-service';
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -9,89 +9,98 @@ import { StatsCards } from '@/components/dashboard/StatsCards';
 import { Button } from '@/components/ui/button';
 import { DashboardSkeleton } from '@/components/ui/skeletons';
 import { useApp } from '@/contexts/useApp';
-import { Plus, Filter, SortAsc, Sparkles, Code, Palette, FileText, ArrowLeft, Briefcase } from 'lucide-react';
+import { Plus, Filter, SortAsc, Sparkles, Code, Palette, FileText, ArrowLeft, Briefcase, FolderKanban } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
+
+// Icon + images lookup by team slug
+const teamMeta: Record<string, { icon: LucideIcon; image: string; gradient: string; description: string }> = {
+  'logo-design': {
+    icon: Sparkles,
+    image: '/logo-section.png',
+    gradient: 'from-purple-500 via-pink-500 to-rose-500',
+    description: 'Brand identity, logos, and visual branding',
+  },
+  'web-design': {
+    icon: Palette,
+    image: '/web-design.jpg',
+    gradient: 'from-orange-500 via-amber-500 to-yellow-500',
+    description: 'UI/UX design, mockups, and prototypes',
+  },
+  'web-development': {
+    icon: Code,
+    image: '/web-development.jpg',
+    gradient: 'from-blue-500 via-cyan-500 to-teal-500',
+    description: 'Frontend, backend, and full-stack development',
+  },
+  'content': {
+    icon: FileText,
+    image: '/content-writer.jpg',
+    gradient: 'from-green-500 via-orange-500 to-teal-500',
+    description: 'Copywriting, documentation, and media',
+  },
+};
+
+const defaultMeta = {
+  icon: FolderKanban,
+  image: '/logo-section.png',
+  gradient: 'from-gray-500 via-gray-600 to-gray-700',
+  description: 'Manage projects in this workspace',
+};
+
+interface TeamCard {
+  slug: string;
+  name: string;
+  projectCount: number;
+}
 
 export default function DashboardPage() {
   const router = useRouter();
   const { isLoading } = useApp();
-  const [workspaceStats, setWorkspaceStats] = useState({
-    logoDesign: 0,
-    webDesign: 0,
-    webDevelopment: 0,
-    contentWriter: 0
-  });
+  const [teams, setTeams] = useState<TeamCard[]>([]);
+  const [statsLoading, setStatsLoading] = useState(true);
 
-  // Fetch dashboard stats on component mount
+  // Fetch teams + dashboard stats
   useEffect(() => {
-    fetchDashboardStats();
+    const fetchData = async () => {
+      try {
+        const [teamsResult, statsResult] = await Promise.all([
+          teamAPI.getMyTeams(),
+          (async () => {
+            const token = localStorage.getItem('token');
+            const response = await fetch(`${API_BASE_URL}/dashboard/overview`, {
+              headers: { 'Authorization': `Bearer ${token}` }
+            });
+            return response.json();
+          })(),
+        ]);
+
+        if (teamsResult.success) {
+          const teamList = teamsResult.data.teams;
+          const workspaceStats: Record<string, number> = {};
+          
+          if (statsResult.success && statsResult.data.workspaceStats) {
+            for (const ws of statsResult.data.workspaceStats) {
+              workspaceStats[ws.workspaceId] = ws.count;
+            }
+          }
+
+          setTeams(
+            teamList.map((t: any) => ({
+              slug: t.slug,
+              name: t.name,
+              projectCount: t.workspace ? (workspaceStats[t.workspace.id] || 0) : 0,
+            }))
+          );
+        }
+      } catch (error) {
+        console.error('Error fetching dashboard data:', error);
+      }
+      setStatsLoading(false);
+    };
+    fetchData();
   }, []);
 
-  const fetchDashboardStats = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${API_BASE_URL}/dashboard/overview`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      const result = await response.json();
-      
-      if (result.success) {
-        setWorkspaceStats(result.data.workspaceStats);
-      }
-    } catch (error) {
-      console.error('Error fetching dashboard stats:', error);
-    }
-  };
-
-  const workspaces = [
-    {
-      id: 'logo',
-      name: 'Logo Design',
-      description: 'Brand identity, logos, and visual branding',
-      icon: Sparkles,
-      image: '/logo-section.png',
-      gradient: 'from-purple-500 via-pink-500 to-rose-500',
-      bgGradient: '',
-      iconBg: '-designdark:border-orange-500/30 text-white',
-      projectCount: workspaceStats.logoDesign
-    },
-    {
-      id: 'web-design',
-      name: 'Web Design',
-      description: 'UI/UX design, mockups, and prototypes',
-      icon: Palette,
-      image: '/web-design.jpg',
-      gradient: 'from-orange-500 via-amber-500 to-yellow-500',
-      bgGradient: '',
-      iconBg: 'dark:border-orange-500/30 text-white',
-      projectCount: workspaceStats.webDesign
-    },
-    {
-      id: 'web-development',
-      name: 'Web Development',
-      description: 'Frontend, backend, and full-stack development',
-      icon: Code,
-      image: '/web-development.jpg',
-      gradient: 'from-blue-500 via-cyan-500 to-teal-500',
-      bgGradient: '',
-      iconBg: 'dark:border-orange-500/30 text-white',
-      projectCount: workspaceStats.webDevelopment
-    },
-    {
-      id: 'content',
-      name: 'Content Creation',
-      description: 'Copywriting, documentation, and media',
-      icon: FileText,
-      image: '/content-writer.jpg',
-      gradient: 'from-green-500 via-orange-500 to-teal-500',
-      bgGradient: '',
-      iconBg: 'dark:border-orange-500/30 text-white',
-      projectCount: workspaceStats.contentWriter
-    }
-  ];
-
-  if (isLoading) {
+  if (isLoading || statsLoading) {
     return <DashboardSkeleton />;
   }
 
@@ -108,48 +117,44 @@ export default function DashboardPage() {
 
       {/* Workspace Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 ">
-        {workspaces.map((workspace) => {
-          const Icon = workspace.icon;
+        {teams.map((team) => {
+          const meta = teamMeta[team.slug] || defaultMeta;
+          const Icon = meta.icon;
           return (
             <button
-              key={workspace.id}
-              onClick={() => router.push(`/dashboard/${workspace.id}`)}
+              key={team.slug}
+              onClick={() => router.push(`/dashboard/${team.slug}`)}
               className={`group relative rounded-2xl border-2 dark:border-orange-500/30 hover:border-transparent transition-all duration-300 hover:shadow-2xl hover:scale-105 overflow-hidden flex flex-col`}
             >
                   {/* Image at Top */}
                   <div className="relative w-full h-40 overflow-hidden">
                     <Image
-                      src={workspace.image}
-                      alt={workspace.name}
+                      src={meta.image}
+                      alt={team.name}
                       fill
                       className="object-cover group-hover:scale-110 transition-transform duration-300"
                     />
-                    <div className={`absolute inset-0 bg-gradient-to-br ${workspace.gradient} opacity-20 group-hover:opacity-30 transition-opacity duration-300`}></div>
+                    <div className={`absolute inset-0 bg-gradient-to-br ${meta.gradient} opacity-20 group-hover:opacity-30 transition-opacity duration-300`}></div>
                   </div>
 
                   {/* Card Content */}
                   <div className="p-6 space-y-4 flex-1 flex flex-col">
-                    {/* Icon */}
-                    {/* <div className={`${workspace.iconBg} w-16 h-16 border border-orange-500/30 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300 shadow-lg`}>
-                      <Icon className="w-8 h-8 text-white" />
-                    </div> */}
-
                     {/* Content */}
                     <div className="text-left space-y-2 flex-1">
                       <h3 className="text-xl font-bold text-gray-900 dark:text-orange-400  ">
-                        {workspace.name}
+                        {team.name}
                       </h3>
                       <p className="text-sm text-gray-600 dark:text-gray-400 min-h-[40px]">
-                        {workspace.description}
+                        {meta.description}
                       </p>
                     </div>
 
                     {/* Stats */}
                     <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-orange-500/20">
                       <span className="text-sm font-semibold text-gray-600 dark:text-gray-400">
-                        {workspace.projectCount} Projects
+                        {team.projectCount} Projects
                       </span>
-                      <div className={`w-8 h-8 rounded-full border border-orange-500/30 ${workspace.gradient} flex items-center justify-center group-hover:scale-110 transition-transform`}>
+                      <div className={`w-8 h-8 rounded-full border border-orange-500/30 ${meta.gradient} flex items-center justify-center group-hover:scale-110 transition-transform`}>
                         <ArrowLeft className="w-4 h-4 text-white rotate-180" />
                       </div>
                     </div>
@@ -158,12 +163,6 @@ export default function DashboardPage() {
               );
             })}
           </div>
-
-          {/* Stats Overview */}
-          {/* <div className="mt-12">
-            <h2 className="text-xl font-bold text-gray-900 dark:text-orange-400 mb-4">Overview</h2>
-            <StatsCards />
-          </div> */}
     </div>
   );
 }

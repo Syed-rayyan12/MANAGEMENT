@@ -2,7 +2,7 @@ export interface UserPayload {
   id: string;
   email: string;
   role: 'PM' | 'TL' | 'EXECUTIVE' | 'PRODUCTION';
-  workspace?: string | null; // assigned team workspace (null = unrestricted)
+  teamIds: string[]; // IDs of teams the user is a member of
 }
 
 export interface SignupRequest {
@@ -26,7 +26,7 @@ export interface AuthResponse {
       email: string;
       role: string;
       name: string;
-      workspace: string | null;
+      teams: { id: string; slug: string; name: string }[];
     };
     token: string;
   };

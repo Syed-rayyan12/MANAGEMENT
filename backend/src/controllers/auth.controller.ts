@@ -37,6 +37,13 @@ export const login = async (
           mode: 'insensitive',
         },
       },
+      include: {
+        teamMembers: {
+          include: {
+            team: { select: { id: true, slug: true, name: true } },
+          },
+        },
+      },
     });
 
     if (!user) {
@@ -59,12 +66,19 @@ export const login = async (
     }
 
     // Generate token
+    const teamIds = user.teamMembers.map(tm => tm.team.id);
     const token = generateToken({
       id: user.id,
       email: user.email,
       role: user.role,
-      workspace: user.workspace ?? null,
+      teamIds,
     });
+
+    const teams = user.teamMembers.map(tm => ({
+      id: tm.team.id,
+      slug: tm.team.slug,
+      name: tm.team.name,
+    }));
 
     res.status(200).json({
       success: true,
@@ -75,7 +89,7 @@ export const login = async (
           email: user.email,
           role: user.role,
           name: user.name,
-          workspace: user.workspace ?? null,
+          teams,
         },
         token,
       },

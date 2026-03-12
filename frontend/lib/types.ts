@@ -1,5 +1,4 @@
-export type WorkspaceType = 'logo' | 'web-design' | 'web-development' | 'content';
-export type ProjectStatus = 'Todo' | 'in-progress' | 'Completed' | 'Revisons' | string;
+export type ProjectStatus = string;
 export type ProjectPriority = 'low' | 'medium' | 'high' | 'critical';
 export type NotificationType =
   | 'assigned'    // you were assigned to a project
@@ -13,6 +12,26 @@ export type NotificationType =
   | 'due_date'    // due date reminder
   | 'developer';  // developer changed
 export type AttachmentType = 'image' | 'pdf';
+
+export interface TeamInfo {
+  id: string;
+  slug: string;
+  name: string;
+}
+
+export interface WorkspaceInfo {
+  id: string;
+  name: string;
+  columns?: WorkspaceColumn[];
+}
+
+export interface WorkspaceColumn {
+  id: string;
+  name: string;
+  key: string;
+  color: string;
+  position: number;
+}
 
 export interface KanbanColumn {
   status: string;
@@ -77,7 +96,8 @@ export interface Label {
 export interface Project {
   id: string;
   name: string;
-  workspace: WorkspaceType;
+  workspaceId: string;
+  workspace?: WorkspaceInfo;
   status: ProjectStatus;
   dueDate: Date | null;
   priority: ProjectPriority;
@@ -101,7 +121,7 @@ export interface CurrentUser {
   email: string;
   role?: string;
   avatar?: string;
-  workspace?: string | null; // assigned team workspace (null = unrestricted)
+  teams?: TeamInfo[];
 }
 
 export interface AppState {

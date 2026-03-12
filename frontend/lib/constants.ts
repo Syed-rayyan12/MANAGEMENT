@@ -1,13 +1,14 @@
 import { ProjectPriority, KanbanColumn } from './types';
 
+// Fallback columns if workspace columns fail to load
 export const DEFAULT_KANBAN_COLUMNS: KanbanColumn[] = [
-  { status: 'Todo', label: 'Todo', color: '#6B7280', isCustom: false },
+  { status: 'todo', label: 'To Do', color: '#6B7280', isCustom: false },
   { status: 'in-progress', label: 'In Progress', color: '#3B82F6', isCustom: false },
-  { status: 'Completed', label: 'Completed', color: '#10B981', isCustom: false },
-  { status: 'Revisons', label: 'Revisions', color: '#F59E0B', isCustom: false },
+  { status: 'completed', label: 'Completed', color: '#10B981', isCustom: false },
+  { status: 'revisions', label: 'Revisions', color: '#F59E0B', isCustom: false },
 ];
 
-// Backward compatibility
+// Alias for backward compatibility
 export const KANBAN_COLUMNS = DEFAULT_KANBAN_COLUMNS;
 
 export const PRIORITY_STYLES: Record<ProjectPriority, { label: string; color: string; bgColor: string }> = {

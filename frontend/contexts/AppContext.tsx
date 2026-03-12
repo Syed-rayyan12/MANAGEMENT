@@ -528,31 +528,19 @@ export const AppContext = createContext<{
 } | null>(null);
 
 // ─── Map backend project to frontend Project shape ────────
-const workspaceMap: Record<string, Project['workspace']> = {
-  'LOGO': 'logo',
-  'WEB_DESIGN': 'web-design',
-  'WEB_DEVELOPMENT': 'web-development',
-  'CONTENT': 'content',
-};
-
-const statusMap: Record<string, Project['status']> = {
-  'TODO': 'Todo',
-  'IN_PROGRESS': 'in-progress',
-  'COMPLETED': 'Completed',
-  'REVISIONS': 'Revisons',
-};
 
 function mapApiProject(p: any): Project {
   return {
     id: p.id,
     name: p.name,
     description: p.description || '',
-    status: statusMap[p.status as string] || 'Todo',
+    status: p.status || 'todo',
     priority: (p.priority?.toLowerCase() || 'medium') as Project['priority'],
     dueDate: p.dueDate ? new Date(p.dueDate) : null,
     pm: p.pmId || p.pm?.id || '',
     developer: p.developerId || p.developer?.id || null,
-    workspace: workspaceMap[p.workspace as string] || 'logo',
+    workspaceId: p.workspaceId || '',
+    workspace: p.workspace ? { id: p.workspace.id, name: p.workspace.name } : undefined,
     image: p.image || null,
     position: p.position ?? 0,
     labels: (p.labels || []).map((pl: any) => {

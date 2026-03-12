@@ -1,9 +1,6 @@
 import { Router } from 'express';
 import {
-  getLogoDesignProjects,
-  getWebDesignProjects,
-  getWebDevelopmentProjects,
-  getContentWriterProjects,
+  getWorkspaceProjects,
   createProject,
   getAllProjects,
   getProjectById,
@@ -37,46 +34,13 @@ const router = Router();
 // All project routes require authentication
 router.use(authenticate);
 
-/**
- * @route   GET /api/projects/logo-design
- * @desc    Get all logo design projects
- * @access  Private
- */
-router.get('/logo-design', getLogoDesignProjects);
+// ─── Get projects by workspace ID ──────────────────
+router.get('/workspace/:workspaceId', getWorkspaceProjects);
 
-/**
- * @route   GET /api/projects/web-design
- * @desc    Get all web design projects
- * @access  Private
- */
-router.get('/web-design', getWebDesignProjects);
-
-/**
- * @route   GET /api/projects/web-development
- * @desc    Get all web development projects
- * @access  Private
- */
-router.get('/web-development', getWebDevelopmentProjects);
-
-/**
- * @route   GET /api/projects/content-writer
- * @desc    Get all content writer projects
- * @access  Private
- */
-router.get('/content-writer', getContentWriterProjects);
-
-/**
- * @route   GET /api/projects
- * @desc    Get all projects
- * @access  Private
- */
+// ─── Get all projects (scoped to user) ─────────────
 router.get('/', getAllProjects);
 
-/**
- * @route   POST /api/projects
- * @desc    Create a new project
- * @access  Private (PM only)
- */
+// ─── Create a new project ──────────────────────────
 router.post('/', authorizeRoles('PM'), validate(createProjectSchema), createProject);
 
 // ─── Reorder (must be before /:id) ─────────────────
@@ -85,25 +49,13 @@ router.put('/reorder/batch', reorderProjects);
 // ─── Activity Log (must be before /:id) ────────────
 router.get('/activity/logs', getActivityLogs);
 
-/**
- * @route   GET /api/projects/:id
- * @desc    Get project by ID
- * @access  Private
- */
+// ─── Get project by ID ────────────────────────────
 router.get('/:id', getProjectById);
 
-/**
- * @route   PUT /api/projects/:id
- * @desc    Update a project (status, checklist, etc.) - all authenticated users
- * @access  Private
- */
+// ─── Update a project ─────────────────────────────
 router.put('/:id', validate(updateProjectSchema), updateProject);
 
-/**
- * @route   DELETE /api/projects/:id
- * @desc    Delete a project
- * @access  Private (PM only)
- */
+// ─── Delete a project ─────────────────────────────
 router.delete('/:id', authorizeRoles('PM'), deleteProject);
 
 // ─── Comments ──────────────────────────────────────

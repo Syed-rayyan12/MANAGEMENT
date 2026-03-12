@@ -22,8 +22,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Project, ProjectStatus, ProjectPriority, WorkspaceType } from '@/lib/types';
-import { KANBAN_COLUMNS, PRIORITY_STYLES } from '@/lib/constants';
+import { Project, ProjectStatus, ProjectPriority } from '@/lib/types';
+import { DEFAULT_KANBAN_COLUMNS, PRIORITY_STYLES } from '@/lib/constants';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { CalendarIcon, X } from 'lucide-react';
@@ -40,23 +40,7 @@ export function CreateProjectModal({ onClose, initialStatus, initialWorkspace }:
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   
-  // Map URL workspace to internal workspace format
-  const mapWorkspace = (ws: string | null | undefined): WorkspaceType => {
-    if (!ws) return 'logo';
-    const mapping: Record<string, WorkspaceType> = {
-      'logo-design': 'logo',
-      'web-design': 'web-design',
-      'web-development': 'web-development',
-      'content': 'content',
-      'logo': 'logo'
-    };
-    return mapping[ws] || 'logo';
-  };
-
-  const [workspace, setWorkspace] = useState<WorkspaceType>(
-    mapWorkspace(initialWorkspace)
-  );
-  const [status, setStatus] = useState<ProjectStatus>(initialStatus || 'Todo');
+  const [status, setStatus] = useState<ProjectStatus>(initialStatus || 'todo');
   const [priority, setPriority] = useState<ProjectPriority>('medium');
   const [dueDate, setDueDate] = useState<Date | undefined>(undefined);
   const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
@@ -70,27 +54,10 @@ export function CreateProjectModal({ onClose, initialStatus, initialWorkspace }:
       return;
     }
 
-    if (!state.currentUser) return;
+    if (!state.currentUser || !initialWorkspace) return;
 
     try {
       const token = localStorage.getItem('token');
-      
-      // Map workspace to API format
-      const workspaceMap: Record<string, string> = {
-        'logo': 'LOGO',
-        'logo-design': 'LOGO',
-        'web-design': 'WEB_DESIGN',
-        'web-development': 'WEB_DEVELOPMENT',
-        'content': 'CONTENT'
-      };
-
-      // Map status to API format
-      const statusMap: Record<string, string> = {
-        'Todo': 'TODO',
-        'in-progress': 'IN_PROGRESS',
-        'Completed': 'COMPLETED',
-        'Revisons': 'REVISIONS'
-      };
 
       const priorityMap: Record<string, string> = {
         'low': 'LOW',
@@ -101,10 +68,10 @@ export function CreateProjectModal({ onClose, initialStatus, initialWorkspace }:
 
       const projectData = {
         name: name.trim(),
-        workspace: workspaceMap[workspace],
+        workspaceId: initialWorkspace,
         description: description.trim(),
         priority: priorityMap[priority],
-        status: statusMap[status],
+        status,
         dueDate: dueDate ? format(dueDate, 'yyyy-MM-dd') : undefined,
         image: imageUrl.trim() || undefined
       };
@@ -121,15 +88,7 @@ export function CreateProjectModal({ onClose, initialStatus, initialWorkspace }:
       const result = await response.json();
 
       if (result.success) {
-        // Map workspace back to internal format
-        const internalWorkspaceMap: Record<string, WorkspaceType> = {
-          'LOGO': 'logo',
-          'WEB_DESIGN': 'web-design',
-          'WEB_DEVELOPMENT': 'web-development',
-          'CONTENT': 'content'
-        };
-
-        const internalWorkspace = internalWorkspaceMap[result.data.project.workspace] || workspace;
+        const p = result.data.project;
 
         // Add selected members as labels
         const addedLabels: { id: string; name: string; color: string }[] = [];
@@ -137,7 +96,7 @@ export function CreateProjectModal({ onClose, initialStatus, initialWorkspace }:
           const memberUser = allUsers.find(u => u.id === memberId);
           if (memberUser) {
             try {
-              const labelResult = await projectAPI.addLabel(result.data.project.id, memberUser.name, '#ff6600');
+              const labelResult = await projectAPI.addLabel(p.id, memberUser.name, '#ff6600');
               if (labelResult.success) {
                 const saved = labelResult.data.label || labelResult.data;
                 addedLabels.push({ id: saved.id || `label_${Date.now()}`, name: memberUser.name, color: '#ff6600' });
@@ -148,12 +107,13 @@ export function CreateProjectModal({ onClose, initialStatus, initialWorkspace }:
 
         // Create local project object for immediate UI update
         const newProject: Project = {
-          id: result.data.project.id,
+          id: p.id,
           name: name.trim(),
           description: description.trim(),
-          workspace: internalWorkspace,
-          status,
-          priority,
+          workspaceId: p.workspaceId || initialWorkspace,
+          workspace: p.workspace ? { id: p.workspace.id, name: p.workspace.name } : undefined,
+          status: p.status || status,
+          priority: (p.priority || 'MEDIUM').toLowerCase() as ProjectPriority,
           dueDate: dueDate || null,
           image: imageUrl.trim() || null,
           position: 0,
@@ -226,22 +186,6 @@ export function CreateProjectModal({ onClose, initialStatus, initialWorkspace }:
             />
           </div>
 
-          {/* Workspace */}
-          <div>
-            <Label className="dark:text-white">Workspace *</Label>
-            <Select value={workspace} onValueChange={(val) => setWorkspace(val as WorkspaceType)}>
-              <SelectTrigger className="mt-1">
-                <SelectValue placeholder="Select workspace" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="logo">Logo Design</SelectItem>
-                <SelectItem value="web-design">Web Design</SelectItem>
-                <SelectItem value="web-development">Web Development</SelectItem>
-                <SelectItem value="content">Content Creation</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
           {/* Status and Priority */}
           <div className="grid grid-cols-2 gap-4">
             <div>
@@ -251,7 +195,7 @@ export function CreateProjectModal({ onClose, initialStatus, initialWorkspace }:
                   <SelectValue placeholder="Select status" />
                 </SelectTrigger>
                 <SelectContent>
-                  {KANBAN_COLUMNS.map((col) => (
+                  {DEFAULT_KANBAN_COLUMNS.map((col) => (
                     <SelectItem key={col.status} value={col.status}>
                       {col.label}
                     </SelectItem>

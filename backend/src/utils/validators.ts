@@ -13,8 +13,8 @@ export const loginSchema = z.object({
 export const createProjectSchema = z.object({
   name: z.string().min(1, 'Project name is required').max(200),
   description: z.string().max(5000).optional().default(''),
-  workspace: z.enum(['LOGO', 'WEB_DESIGN', 'WEB_DEVELOPMENT', 'CONTENT']),
-  status: z.enum(['TODO', 'IN_PROGRESS', 'COMPLETED', 'REVISIONS']).optional(),
+  workspaceId: z.string().uuid('Valid workspace ID is required'),
+  status: z.string().max(50).optional(),
   priority: z.enum(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']).optional(),
   dueDate: z.string().optional().nullable(),
   developerId: z.string().uuid().optional().nullable(),
@@ -24,7 +24,7 @@ export const createProjectSchema = z.object({
 export const updateProjectSchema = z.object({
   name: z.string().min(1).max(200).optional(),
   description: z.string().max(5000).optional(),
-  status: z.enum(['TODO', 'IN_PROGRESS', 'COMPLETED', 'REVISIONS']).optional(),
+  status: z.string().max(50).optional(),
   priority: z.enum(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']).optional(),
   dueDate: z.string().optional().nullable(),
   developerId: z.string().uuid().optional().nullable(),

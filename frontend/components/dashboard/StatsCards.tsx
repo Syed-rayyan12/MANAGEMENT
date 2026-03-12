@@ -13,15 +13,15 @@ function calculateStats(projects: Project[], userId: string) {
   const totalProjects = userProjects.length;
 
   const overdueProjects = userProjects.filter(
-    (p) => p.dueDate && new Date(p.dueDate) < new Date() && p.status !== 'Completed'
+    (p) => p.dueDate && new Date(p.dueDate) < new Date() && p.status !== 'completed'
   ).length;
 
   const inDevelopment = userProjects.filter((p) => p.status === 'in-progress').length;
 
-  const inProduction = userProjects.filter((p) => p.status === 'Completed').length;
+  const inProduction = userProjects.filter((p) => p.status === 'completed').length;
 
   const completedThisWeek = userProjects.filter((p) => {
-    if (p.status !== 'Completed') return false;
+    if (p.status !== 'completed') return false;
     const updateDate = new Date(p.updatedAt);
     const weekAgo = new Date();
     weekAgo.setDate(weekAgo.getDate() - 7);
@@ -29,7 +29,7 @@ function calculateStats(projects: Project[], userId: string) {
   }).length;
 
   const highPriorityProjects = userProjects.filter(
-    (p) => (p.priority === 'high' || p.priority === 'critical') && p.status !== 'Completed'
+    (p) => (p.priority === 'high' || p.priority === 'critical') && p.status !== 'completed'
   ).length;
 
   return {

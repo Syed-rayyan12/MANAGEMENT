@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useApp } from '@/contexts/useApp';
 import { useSearch } from '../layout';
+import { teamAPI } from '@/lib/api-service';
 import { Board } from '@/components/kanban/Board';
 import { BoardSkeleton } from '@/components/ui/skeletons';
 import { Button } from '@/components/ui/button';
@@ -15,14 +16,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Filter, SortAsc, X, Briefcase, Sparkles, Palette, Code, FileText } from 'lucide-react';
+import { Filter, SortAsc, X, Briefcase } from 'lucide-react';
 
-const workspaceMeta: Record<string, { name: string; icon: React.ElementType; color: string }> = {
-  logo: { name: 'Logo Design', icon: Sparkles, color: 'bg-purple-500' },
-  'web-design': { name: 'Web Design', icon: Palette, color: 'bg-orange-500' },
-  'web-development': { name: 'Web Development', icon: Code, color: 'bg-blue-500' },
-  content: { name: 'Content Creation', icon: FileText, color: 'bg-green-500' },
-};
+interface WorkspaceOption {
+  id: string;
+  name: string;
+}
 
 export default function MyWorkPage() {
   const { state, isLoading, getUserName } = useApp();
@@ -30,8 +29,28 @@ export default function MyWorkPage() {
   const [filterPriority, setFilterPriority] = useState<string>('all');
   const [filterWorkspace, setFilterWorkspace] = useState<string>('all');
   const [sortBy, setSortBy] = useState<string>('date');
+  const [workspaceOptions, setWorkspaceOptions] = useState<WorkspaceOption[]>([]);
 
   const currentUserId = state.currentUser?.id;
+
+  // Fetch available workspaces for filter dropdown
+  useEffect(() => {
+    const fetchTeams = async () => {
+      try {
+        const result = await teamAPI.getMyTeams();
+        if (result.success) {
+          setWorkspaceOptions(
+            result.data.teams
+              .filter((t: any) => t.workspace)
+              .map((t: any) => ({ id: t.workspace.id, name: t.name }))
+          );
+        }
+      } catch (error) {
+        console.error('Error fetching teams:', error);
+      }
+    };
+    fetchTeams();
+  }, []);
 
   // Get projects assigned to me (as developer or PM)
   const myProjects = useMemo(() => {
@@ -44,20 +63,21 @@ export default function MyWorkPage() {
   // Stats
   const stats = useMemo(() => {
     const total = myProjects.length;
-    const todo = myProjects.filter((p) => p.status === 'Todo').length;
+    const todo = myProjects.filter((p) => p.status === 'todo').length;
     const inProgress = myProjects.filter((p) => p.status === 'in-progress').length;
-    const completed = myProjects.filter((p) => p.status === 'Completed').length;
+    const completed = myProjects.filter((p) => p.status === 'completed').length;
     const overdue = myProjects.filter(
-      (p) => p.dueDate && new Date(p.dueDate) < new Date() && p.status !== 'Completed'
+      (p) => p.dueDate && new Date(p.dueDate) < new Date() && p.status !== 'completed'
     ).length;
     return { total, todo, inProgress, completed, overdue };
   }, [myProjects]);
 
-  // Workspace breakdown
+  // Workspace breakdown - group by workspace name
   const workspaceBreakdown = useMemo(() => {
     const counts: Record<string, number> = {};
     myProjects.forEach((p) => {
-      counts[p.workspace] = (counts[p.workspace] || 0) + 1;
+      const wsName = p.workspace?.name || 'Unknown';
+      counts[wsName] = (counts[wsName] || 0) + 1;
     });
     return counts;
   }, [myProjects]);
@@ -107,7 +127,7 @@ export default function MyWorkPage() {
               <Button variant="outline" size="sm">
                 <Briefcase className="w-4 h-4 mr-2 text-white" />
                 <span className="text-white">
-                  Workspace: {filterWorkspace === 'all' ? 'All' : workspaceMeta[filterWorkspace]?.name || filterWorkspace}
+                  Workspace: {filterWorkspace === 'all' ? 'All' : workspaceOptions.find(w => w.id === filterWorkspace)?.name || filterWorkspace}
                 </span>
               </Button>
             </DropdownMenuTrigger>
@@ -115,9 +135,9 @@ export default function MyWorkPage() {
               <DropdownMenuLabel>Filter by Workspace</DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => setFilterWorkspace('all')}>All Workspaces</DropdownMenuItem>
-              {Object.entries(workspaceMeta).map(([id, meta]) => (
-                <DropdownMenuItem key={id} onClick={() => setFilterWorkspace(id)}>
-                  {meta.name}
+              {workspaceOptions.map((ws) => (
+                <DropdownMenuItem key={ws.id} onClick={() => setFilterWorkspace(ws.id)}>
+                  {ws.name}
                 </DropdownMenuItem>
               ))}
             </DropdownMenuContent>
@@ -185,7 +205,7 @@ export default function MyWorkPage() {
               onClick={() => setFilterWorkspace('all')}
               className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-orange-500/15 text-orange-400 border border-orange-500/30 hover:bg-orange-500/25 transition-colors"
             >
-              Workspace: {workspaceMeta[filterWorkspace]?.name || filterWorkspace}
+              Workspace: {workspaceOptions.find(w => w.id === filterWorkspace)?.name || filterWorkspace}
               <X className="w-3 h-3" />
             </button>
           )}

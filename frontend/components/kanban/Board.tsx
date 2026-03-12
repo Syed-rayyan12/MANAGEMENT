@@ -81,7 +81,7 @@ export function Board({ searchQuery = '', filterPriority = 'all', filterAssignee
                            p.description.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesPriority = filterPriority === 'all' || p.priority === filterPriority;
       const matchesAssignee = filterAssignee === 'all' || p.developer === filterAssignee || p.pm === filterAssignee;
-      const matchesWorkspace = !workspace || p.workspace === workspace;
+      const matchesWorkspace = !workspace || p.workspaceId === workspace;
       return matchesSearch && matchesPriority && matchesAssignee && matchesWorkspace;
     });
   }, [state.projects, searchQuery, filterPriority, filterAssignee, workspace]);
@@ -197,13 +197,6 @@ export function Board({ searchQuery = '', filterPriority = 'all', filterAssignee
       });
     }
 
-    const statusMap: Record<string, string> = {
-      'Todo': 'TODO',
-      'in-progress': 'IN_PROGRESS',
-      'Completed': 'COMPLETED',
-      'Revisons': 'REVISIONS',
-    };
-
     // ── Debounced save ── cancel any prior pending save for this card
     const existing = pendingSaves.current.get(projectId);
     if (existing) {
@@ -232,7 +225,7 @@ export function Board({ searchQuery = '', filterPriority = 'all', filterAssignee
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`,
           },
-          body: JSON.stringify({ status: statusMap[newStatus] || newStatus }),
+          body: JSON.stringify({ status: newStatus }),
         });
 
         if (!response.ok) {
@@ -269,19 +262,7 @@ export function Board({ searchQuery = '', filterPriority = 'all', filterAssignee
 
   // Inline quick-add card handler
   const handleAddCard = async (name: string, status: string) => {
-    if (!state.currentUser) return;
-    const workspaceMap: Record<string, string> = {
-      logo: 'LOGO',
-      'web-design': 'WEB_DESIGN',
-      'web-development': 'WEB_DEVELOPMENT',
-      content: 'CONTENT',
-    };
-    const statusMap: Record<string, string> = {
-      Todo: 'TODO',
-      'in-progress': 'IN_PROGRESS',
-      Completed: 'COMPLETED',
-      Revisons: 'REVISIONS',
-    };
+    if (!state.currentUser || !workspace) return;
     try {
       const token = localStorage.getItem('token');
       const response = await fetch(`${API_BASE_URL}/projects`, {
@@ -289,30 +270,26 @@ export function Board({ searchQuery = '', filterPriority = 'all', filterAssignee
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({
           name,
-          workspace: workspaceMap[workspace || 'logo'] || 'LOGO',
-          status: statusMap[status] || 'TODO',
+          workspaceId: workspace,
+          status: status || 'todo',
           priority: 'MEDIUM',
           description: '',
         }),
       });
       const result = await response.json();
       if (result.success) {
-        const wsMap: Record<string, any> = {
-          LOGO: 'logo', WEB_DESIGN: 'web-design', WEB_DEVELOPMENT: 'web-development', CONTENT: 'content',
-        };
-        const stMap: Record<string, string> = {
-          TODO: 'Todo', IN_PROGRESS: 'in-progress', COMPLETED: 'Completed', REVISIONS: 'Revisons',
-        };
+        const p = result.data.project;
         dispatch({
           type: 'CREATE_PROJECT',
           payload: {
             project: {
-              id: result.data.project.id,
+              id: p.id,
               name,
               description: '',
-              workspace: wsMap[result.data.project.workspace] || workspace || 'logo',
-              status: stMap[result.data.project.status] || status,
-              priority: 'medium',
+              workspaceId: p.workspaceId || workspace,
+              workspace: p.workspace ? { id: p.workspace.id, name: p.workspace.name } : undefined,
+              status: p.status || status,
+              priority: (p.priority || 'MEDIUM').toLowerCase(),
               dueDate: null,
               image: null,
               position: 0,

@@ -13,24 +13,10 @@ datasource db {
 // ─── ENUMS ──────────────────────────────────────────
 
 enum UserRole {
-  PM          // Project Manager
-  TL          // Team Lead
-  EXECUTIVE   // Executive
-  PRODUCTION  // Production
-}
-
-enum WorkspaceType {
-  LOGO            // Logo Design
-  WEB_DESIGN      // Web Design
-  WEB_DEVELOPMENT // Web Development
-  CONTENT         // Content Writer
-}
-
-enum ProjectStatus {
-  TODO
-  IN_PROGRESS
-  COMPLETED
-  REVISIONS
+  TL          // Team Lead — oversees PMs within their team
+  PM          // Project Manager — manages projects and tasks
+  PRODUCTION  // Cross-team execution layer
+  EXECUTIVE   // High-level viewer
 }
 
 enum ProjectPriority {
@@ -38,6 +24,78 @@ enum ProjectPriority {
   MEDIUM
   HIGH
   CRITICAL
+}
+
+// ─── ORGANIZATION ───────────────────────────────────
+
+model Organization {
+  id        String   @id @default(uuid())
+  name      String
+  teams     Team[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("organizations")
+}
+
+// ─── TEAMS ──────────────────────────────────────────
+
+model Team {
+  id             String       @id @default(uuid())
+  name           String
+  slug           String       @unique // URL-friendly: "logo-design", "web-design"
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  members        TeamMember[]
+  workspace      Workspace?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@map("teams")
+}
+
+// ─── TEAM MEMBERS ───────────────────────────────────
+
+model TeamMember {
+  id       String   @id @default(uuid())
+  teamId   String
+  team     Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  userId   String
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  joinedAt DateTime @default(now())
+
+  @@unique([teamId, userId])
+  @@map("team_members")
+}
+
+// ─── WORKSPACES ─────────────────────────────────────
+
+model Workspace {
+  id        String            @id @default(uuid())
+  name      String
+  teamId    String            @unique
+  team      Team              @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  columns   WorkspaceColumn[]
+  projects  Project[]
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+
+  @@map("workspaces")
+}
+
+// ─── WORKSPACE COLUMNS (custom workflow per workspace) ──
+
+model WorkspaceColumn {
+  id          String    @id @default(uuid())
+  name        String    // Display name: "To Do", "In Progress"
+  key         String    // Unique within workspace: "todo", "in-progress"
+  color       String    @default("#6B7280")
+  position    Int       @default(0)
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, key])
+  @@map("workspace_columns")
 }
 
 // ─── USERS ──────────────────────────────────────────
@@ -50,7 +108,6 @@ model User {
   role      UserRole
   name      String
   avatar    String?
-  workspace WorkspaceType? // which team/workspace this user belongs to (null = sees all)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -60,22 +117,26 @@ model User {
   comments         Comment[]
   activities       ActivityLog[]
   notifications    Notification[]
+  teamMembers      TeamMember[]
 
   @@map("users")
 }
 
-// ─── PROJECTS (single unified table) ────────────────
+// ─── PROJECTS ───────────────────────────────────────
 
 model Project {
   id          String          @id @default(uuid())
   name        String
-  workspace   WorkspaceType
-  status      ProjectStatus   @default(TODO)
+  status      String          @default("todo") // references WorkspaceColumn.key
   priority    ProjectPriority @default(MEDIUM)
   description String?
   dueDate     DateTime?
   image       String?
   position    Int             @default(0)
+
+  // Workspace relation
+  workspaceId String
+  workspace   Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   // Relations to users
   pmId        String

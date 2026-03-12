@@ -54,7 +54,7 @@ export function LoginForm() {
           name: data.data.user.name,
           email: data.data.user.email,
           role: data.data.user.role,
-          workspace: data.data.user.workspace ?? null,
+          teams: data.data.user.teams || [],
         },
       });
 
