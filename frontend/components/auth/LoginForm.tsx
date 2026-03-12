@@ -53,7 +53,8 @@ export function LoginForm() {
           id: data.data.user.id,
           name: data.data.user.name,
           email: data.data.user.email,
-          role: data.data.user.role, // Add role
+          role: data.data.user.role,
+          workspace: data.data.user.workspace ?? null,
         },
       });
 

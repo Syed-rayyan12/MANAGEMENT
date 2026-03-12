@@ -50,6 +50,7 @@ model User {
   role      UserRole
   name      String
   avatar    String?
+  workspace WorkspaceType? // which team/workspace this user belongs to (null = sees all)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

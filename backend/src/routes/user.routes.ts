@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getAllUsers, getUsersByRole, getUserById } from '../controllers/user.controller';
+import { getAllUsers, getUsersByRole, getUserById, updateUserWorkspace } from '../controllers/user.controller';
 import { authenticate } from '../middlewares/auth.middleware';
 
 const router = Router();
@@ -26,5 +26,12 @@ router.get('/role/:role', getUsersByRole);
  * @access  Private
  */
 router.get('/:id', getUserById);
+
+/**
+ * @route   PATCH /api/users/:id/workspace
+ * @desc    Assign a team workspace to a user (PM only)
+ * @access  Private (PM)
+ */
+router.patch('/:id/workspace', updateUserWorkspace);
 
 export default router;

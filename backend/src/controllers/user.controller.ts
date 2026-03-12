@@ -17,6 +17,7 @@ export const getAllUsers = async (_req: Request, res: Response): Promise<void> =
         name: true,
         role: true,
         avatar: true,
+        workspace: true,
         createdAt: true,
       },
       orderBy: { name: 'asc' },
@@ -55,6 +56,7 @@ export const getUsersByRole = async (req: Request, res: Response): Promise<void>
         name: true,
         role: true,
         avatar: true,
+        workspace: true,
         createdAt: true,
       },
       orderBy: { name: 'asc' },
@@ -85,6 +87,7 @@ export const getUserById = async (req: Request, res: Response): Promise<void> =>
         name: true,
         role: true,
         avatar: true,
+        workspace: true,
         createdAt: true,
       },
     });
@@ -97,6 +100,37 @@ export const getUserById = async (req: Request, res: Response): Promise<void> =>
     res.status(200).json({ success: true, data: { user } });
   } catch (error) {
     console.error('Get user by ID error:', error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+};
+
+/**
+ * Assign a workspace to a user (PM only)
+ * PATCH /api/users/:id/workspace
+ */
+export const updateUserWorkspace = async (req: Request, res: Response): Promise<void> => {
+  try {
+    if (req.user?.role !== 'PM') {
+      res.status(403).json({ success: false, message: 'Only PMs can assign team workspaces' });
+      return;
+    }
+
+    const { workspace } = req.body;
+    const validWorkspaces = ['LOGO', 'WEB_DESIGN', 'WEB_DEVELOPMENT', 'CONTENT', null];
+    if (!validWorkspaces.includes(workspace)) {
+      res.status(400).json({ success: false, message: 'Invalid workspace value' });
+      return;
+    }
+
+    const user = await prisma.user.update({
+      where: { id: req.params.id },
+      data: { workspace: workspace ?? null },
+      select: { id: true, name: true, role: true, workspace: true },
+    });
+
+    res.status(200).json({ success: true, message: 'Workspace assigned', data: { user } });
+  } catch (error) {
+    console.error('Update user workspace error:', error);
     res.status(500).json({ success: false, message: 'Internal server error' });
   }
 };

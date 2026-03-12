@@ -101,6 +101,7 @@ export interface CurrentUser {
   email: string;
   role?: string;
   avatar?: string;
+  workspace?: string | null; // assigned team workspace (null = unrestricted)
 }
 
 export interface AppState {

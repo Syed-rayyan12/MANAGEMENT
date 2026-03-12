@@ -33,6 +33,26 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const pathname = usePathname();
   const { state } = useApp();
 
+  // Map frontend workspace IDs to backend WorkspaceType values
+  const workspaceBackendMap: Record<string, string> = {
+    logo: 'LOGO',
+    'web-design': 'WEB_DESIGN',
+    'web-development': 'WEB_DEVELOPMENT',
+    content: 'CONTENT',
+  };
+
+  const user = state.currentUser;
+  const canSeeAllWorkspaces =
+    !user ||
+    user.role === 'PRODUCTION' ||
+    user.role === 'EXECUTIVE' ||
+    !user.workspace; // unassigned users see all
+
+  const visibleWorkspaces = workspaces.filter((ws) => {
+    if (canSeeAllWorkspaces) return true;
+    return workspaceBackendMap[ws.id] === user?.workspace;
+  });
+
   const navItems = [
     {
       id: 'dashboard',
@@ -105,7 +125,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
         </div>
 
         {/* Workspace links */}
-        {workspaces.map((ws) => {
+        {visibleWorkspaces.map((ws) => {
           const Icon = ws.icon;
           const isActive = pathname === `/dashboard/${ws.id}`;
           return (
@@ -153,6 +173,11 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
                 </p>
                 <p className="text-[11px] text-gray-500 dark:text-gray-400 truncate">
                   {state.currentUser.role}
+                  {state.currentUser.workspace && (
+                    <span className="ml-1 text-orange-400 font-medium">
+                      · {state.currentUser.workspace.replace('_', ' ')}
+                    </span>
+                  )}
                 </p>
               </div>
             )}

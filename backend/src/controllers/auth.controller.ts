@@ -63,6 +63,7 @@ export const login = async (
       id: user.id,
       email: user.email,
       role: user.role,
+      workspace: user.workspace ?? null,
     });
 
     res.status(200).json({
@@ -74,6 +75,7 @@ export const login = async (
           email: user.email,
           role: user.role,
           name: user.name,
+          workspace: user.workspace ?? null,
         },
         token,
       },

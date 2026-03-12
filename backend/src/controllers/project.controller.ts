@@ -23,11 +23,27 @@ const projectIncludes = {
 };
 
 /**
- * Build a role-based where clause for project queries.
- * All authenticated users can SEE all projects (Trello-like).
- * Role restrictions are enforced on actions (create/update/delete) via route middleware.
+ * Determine if a user can access a specific workspace.
+ * PRODUCTION and EXECUTIVE can see all workspaces.
+ * Users with a workspace assignment only see their own workspace.
+ * Users with no workspace assignment see all (unassigned/global roles).
  */
-function buildWhereClause(_user: Request['user']) {
+function canAccessWorkspace(user: Request['user'], workspace?: WorkspaceType): boolean {
+  if (!user) return false;
+  if (user.role === 'PRODUCTION' || user.role === 'EXECUTIVE') return true;
+  if (!user.workspace) return true; // unassigned user — unrestricted
+  if (workspace) return user.workspace === workspace;
+  return true;
+}
+
+/**
+ * Build a prisma WHERE clause based on the user's team/workspace restriction.
+ * Returns { workspace: ... } for restricted users, or {} for unrestricted.
+ */
+function buildWhereClause(user: Request['user']): Record<string, unknown> {
+  if (!user) return {};
+  if (user.role === 'PRODUCTION' || user.role === 'EXECUTIVE') return {};
+  if (user.workspace) return { workspace: user.workspace as WorkspaceType };
   return {};
 }
 
@@ -36,7 +52,11 @@ function buildWhereClause(_user: Request['user']) {
 const workspaceGetter = (workspace: WorkspaceType) => {
   return async (req: Request, res: Response): Promise<void> => {
     try {
-      const where = { ...buildWhereClause(req.user), workspace };
+      if (!canAccessWorkspace(req.user, workspace)) {
+        res.status(403).json({ success: false, message: 'Access denied to this workspace' });
+        return;
+      }
+      const where = { workspace };
       const projects = await prisma.project.findMany({
         where,
         include: projectIncludes,
