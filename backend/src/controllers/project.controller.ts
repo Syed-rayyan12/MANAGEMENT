@@ -112,7 +112,7 @@ export const getAllProjects = async (req: Request, res: Response): Promise<void>
 
 export const createProject = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { name, boardId, description, priority, dueDate, pmId, developerId, image, status } = req.body;
+    let { name, boardId, description, priority, dueDate, pmId, developerId, image, status } = req.body;
 
     const projectPmId = pmId || req.user?.id;
 
@@ -121,12 +121,18 @@ export const createProject = async (req: Request, res: Response): Promise<void> 
       return;
     }
 
-    // Verify board exists
-    const board = await prisma.board.findUnique({ where: { id: boardId } });
+    // Resolve board: accept either UUID or slug
+    let board = await prisma.board.findUnique({ where: { id: boardId } });
+    if (!board) {
+      // Try looking up by slug
+      board = await prisma.board.findUnique({ where: { slug: boardId } });
+    }
     if (!board) {
       res.status(404).json({ success: false, message: 'Board not found' });
       return;
     }
+    // Use the resolved UUID from here on
+    boardId = board.id;
 
     // Determine teamId from the PM's team membership
     const pmMemberships = await prisma.teamMember.findMany({
