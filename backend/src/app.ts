@@ -18,6 +18,9 @@ dotenv.config();
 
 const app: Application = express();
 
+// ─── Trust proxy (Railway reverse proxy) ───────────
+app.set('trust proxy', 1);
+
 // ─── Security headers ──────────────────────────────
 app.use(helmet());
 
