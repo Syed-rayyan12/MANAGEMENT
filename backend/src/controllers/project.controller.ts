@@ -36,8 +36,8 @@ function buildWhereClause(user: Request['user']): Record<string, unknown> {
   // EXECUTIVE sees all
   if (user.role === 'EXECUTIVE') return {};
 
-  // PRODUCTION sees only tasks assigned to them
-  if (user.role === 'PRODUCTION') return { developerId: user.id };
+  // PRODUCTION sees all projects (cross-team execution layer)
+  if (user.role === 'PRODUCTION') return {};
 
   // TL/PM: see projects belonging to their team(s)
   if (user.teamIds && user.teamIds.length > 0) {
@@ -189,8 +189,9 @@ export const createProject = async (req: Request, res: Response): Promise<void> 
     });
 
     // Notify assigned developer
+    const pmUser = await prisma.user.findUnique({ where: { id: projectPmId }, select: { name: true } });
+
     if (developerId && developerId !== projectPmId) {
-      const pmUser = await prisma.user.findUnique({ where: { id: projectPmId }, select: { name: true } });
       await createNotification({
         type: 'assigned',
         message: `${pmUser?.name || 'A PM'} assigned you to project: ${name}`,
@@ -199,6 +200,22 @@ export const createProject = async (req: Request, res: Response): Promise<void> 
         actorId: projectPmId,
       });
     }
+
+    // Notify all PRODUCTION users about the new project
+    const productionUsers = await prisma.user.findMany({
+      where: { role: 'PRODUCTION' },
+      select: { id: true },
+    });
+    const prodNotifItems = productionUsers
+      .filter(u => u.id !== projectPmId && u.id !== developerId)
+      .map(u => ({
+        type: 'project_created',
+        message: `${pmUser?.name || 'A PM'} created a new project: ${name}`,
+        userId: u.id,
+        projectId: project.id,
+        actorId: projectPmId,
+      }));
+    await createManyNotifications(prodNotifItems);
 
     res.status(201).json({
       success: true,

@@ -9,7 +9,7 @@ const prisma = new PrismaClient();
 function buildWhereClause(user: Request['user']): Record<string, unknown> {
   if (!user) return { id: 'none' };
   if (user.role === 'EXECUTIVE') return {};
-  if (user.role === 'PRODUCTION') return { developerId: user.id };
+  if (user.role === 'PRODUCTION') return {};
 
   if (user.teamIds && user.teamIds.length > 0) {
     return { teamId: { in: user.teamIds } };
