@@ -48,12 +48,33 @@ export function Board({ searchQuery = '', filterPriority = 'all', filterAssignee
   const { state, dispatch } = useApp();
   const { canDragCards } = usePermissions();
 
-  // Debounced save: card must settle in a column for 10s before hitting backend
+  // Debounced save: card must settle in a column for 1.5s before hitting backend
   const pendingSaves = useRef<Map<string, {
     timerId: ReturnType<typeof setTimeout>;
     newStatus: string;
     savedFromStatus: string; // the FIRST original status before any pending moves
   }>>(new Map());
+
+  // Flush pending saves on page unload to prevent data loss
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      pendingSaves.current.forEach((pending, projectId) => {
+        clearTimeout(pending.timerId);
+        const token = localStorage.getItem('token');
+        const blob = new Blob(
+          [JSON.stringify({ status: pending.newStatus })],
+          { type: 'application/json' }
+        );
+        navigator.sendBeacon(
+          `${API_BASE_URL}/projects/${projectId}`,
+          blob
+        );
+      });
+      pendingSaves.current.clear();
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, []);
 
   // Update selected project when URL changes
   useEffect(() => {
@@ -208,9 +229,9 @@ export function Board({ searchQuery = '', filterPriority = 'all', filterAssignee
 
     const toastId = `move-${projectId}`;
     toast.dismiss(toastId);
-    toast.info(`Card will be saved in 10s — move again to reset`, {
+    toast.info(`Card will be saved shortly — move again to reset`, {
       id: toastId,
-      duration: 10000,
+      duration: 1500,
     });
 
     const timerId = setTimeout(async () => {
@@ -244,7 +265,7 @@ export function Board({ searchQuery = '', filterPriority = 'all', filterAssignee
           },
         });
       }
-    }, 10000);
+    }, 1500);
 
     pendingSaves.current.set(projectId, { timerId, newStatus, savedFromStatus: trueOriginal });
   };

@@ -27,6 +27,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useSearch } from '../layout';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 export default function WorkspacePage() {
   const router = useRouter();
@@ -233,15 +234,17 @@ export default function WorkspacePage() {
         {isLoading ? (
           <BoardSkeleton />
         ) : (
-          <Board
-            key={refreshKey}
-            searchQuery={searchQuery}
-            filterPriority={filterPriority}
-            filterAssignee={filterAssignee}
-            sortBy={sortBy}
-            boardId={boardId}
-            customColumns={customColumns}
-          />
+          <ErrorBoundary>
+            <Board
+              key={refreshKey}
+              searchQuery={searchQuery}
+              filterPriority={filterPriority}
+              filterAssignee={filterAssignee}
+              sortBy={sortBy}
+              boardId={boardId}
+              customColumns={customColumns}
+            />
+          </ErrorBoundary>
         )}
       </div>
 

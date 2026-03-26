@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useApp } from '@/contexts/useApp';
 import { Navbar } from '@/components/layout/Navbar';
 import { Sidebar } from '@/components/layout/Sidebar';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 const SearchContext = createContext<{
   searchQuery: string;
@@ -107,7 +108,9 @@ export default function DashboardLayout({
       >
         <div className="absolute inset-0 backdrop-blur-sm pointer-events-none"></div>
         <div className="relative z-10">
-          {children}
+          <ErrorBoundary>
+            {children}
+          </ErrorBoundary>
         </div>
       </main>
     </SearchContext.Provider>
