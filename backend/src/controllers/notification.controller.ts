@@ -1,7 +1,5 @@
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import prisma from '../lib/prisma';
 
 // ─── Helper: Create notification(s) ────────────────
 
@@ -43,7 +41,7 @@ export const getMyNotifications = async (req: Request, res: Response): Promise<v
     // Find overdue or due-soon projects where user is PM or developer
     const dueSoonProjects = await prisma.project.findMany({
       where: {
-        status: { notIn: ['COMPLETED', 'REVISIONS'] as any },
+        status: { notIn: ['completed', 'revisions'] },
         dueDate: { lte: threeDaysFromNow },
         OR: [{ pmId: req.user.id }, { developerId: req.user.id }],
       },

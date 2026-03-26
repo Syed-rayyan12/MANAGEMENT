@@ -1,8 +1,6 @@
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
 import { createNotification, createManyNotifications } from './notification.controller';
-
-const prisma = new PrismaClient();
+import prisma from '../lib/prisma';
 
 // Shared include for loading project relations
 const projectIncludes = {

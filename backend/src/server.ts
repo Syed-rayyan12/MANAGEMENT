@@ -1,12 +1,11 @@
 import app from './app';
-import { PrismaClient } from '@prisma/client';
+import prisma from './lib/prisma';
 import { validateEnv } from './utils/env';
 
 // Validate required env vars before anything else
 validateEnv();
 
 const PORT = process.env.PORT || 5000;
-const prisma = new PrismaClient();
 
 // Test database connection
 async function connectDatabase() {
