@@ -7,32 +7,18 @@ import { boardAPI } from '@/lib/api-service';
 import {
   LayoutDashboard,
   Briefcase,
-  Sparkles,
-  Palette,
-  Code,
-  FileText,
   ChevronLeft,
   ChevronRight,
   User,
-  FolderKanban,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import type { LucideIcon } from 'lucide-react';
+import { BOARD_METADATA, DEFAULT_BOARD_METADATA } from '@/lib/constants';
 
 interface SidebarProps {
   collapsed: boolean;
   onToggle: () => void;
 }
 
-// Icon + gradient lookup by board slug
-const boardStyles: Record<string, { icon: LucideIcon; gradient: string }> = {
-  'logo-design': { icon: Sparkles, gradient: 'from-purple-500 to-pink-500' },
-  'web-design': { icon: Palette, gradient: 'from-orange-500 to-amber-500' },
-  'web-development': { icon: Code, gradient: 'from-blue-500 to-cyan-500' },
-  'content': { icon: FileText, gradient: 'from-green-500 to-teal-500' },
-};
-
-const defaultStyle = { icon: FolderKanban, gradient: 'from-gray-500 to-gray-600' };
 
 interface BoardItem {
   slug: string;
@@ -139,7 +125,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
 
         {/* Dynamic board links */}
         {boards.map((board) => {
-          const style = boardStyles[board.slug] || defaultStyle;
+          const style = BOARD_METADATA[board.slug] || DEFAULT_BOARD_METADATA;
           const Icon = style.icon;
           const isActive = pathname === `/dashboard/${board.slug}`;
           return (
@@ -158,7 +144,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
                 className={cn(
                   'w-5 h-5 rounded flex items-center justify-center flex-shrink-0',
                   isActive
-                    ? `bg-gradient-to-br ${style.gradient}`
+                    ? `bg-gradient-to-br ${style.sidebarGradient}`
                     : 'bg-gray-200 dark:bg-[#2d3548]'
                 )}
               >

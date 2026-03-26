@@ -113,13 +113,13 @@ export function Navbar({ searchQuery, onSearchChange }: NavbarProps) {
                 <span className="text-xs text-white">{state.currentUser.email}</span>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="gap-2 hover:bg-[#1a1f2e]">
+              <DropdownMenuItem className="gap-2 hover:bg-[#1a1f2e] opacity-50 cursor-not-allowed" disabled>
                 <User className="w-4 h-4 text-orange-500 " />
-                <span className='text-white text-[12px]'>Profile</span>
+                <span className='text-white text-[12px]'>Profile <span className="text-[10px] text-gray-500">(Coming soon)</span></span>
               </DropdownMenuItem>
-              <DropdownMenuItem className="gap-2 hover:bg-[#1a1f2e]">
+              <DropdownMenuItem className="gap-2 hover:bg-[#1a1f2e] opacity-50 cursor-not-allowed" disabled>
                 <Settings className="w-4 h-4 text-orange-500 " />
-                <span className='text-white text-[12px]'>Settings</span>
+                <span className='text-white text-[12px]'>Settings <span className="text-[10px] text-gray-500">(Coming soon)</span></span>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={handleLogout} className="gap-2 text-red-600">

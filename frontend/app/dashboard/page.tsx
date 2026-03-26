@@ -9,43 +9,9 @@ import { StatsCards } from '@/components/dashboard/StatsCards';
 import { Button } from '@/components/ui/button';
 import { DashboardSkeleton } from '@/components/ui/skeletons';
 import { useApp } from '@/contexts/useApp';
-import { Plus, Filter, SortAsc, Sparkles, Code, Palette, FileText, ArrowLeft, Briefcase, FolderKanban } from 'lucide-react';
-import type { LucideIcon } from 'lucide-react';
-
-// Icon + images lookup by board slug
-const boardMeta: Record<string, { icon: LucideIcon; image: string; gradient: string; description: string }> = {
-  'logo-design': {
-    icon: Sparkles,
-    image: '/logo-section.png',
-    gradient: 'from-purple-500 via-pink-500 to-rose-500',
-    description: 'Brand identity, logos, and visual branding',
-  },
-  'web-design': {
-    icon: Palette,
-    image: '/web-design.jpg',
-    gradient: 'from-orange-500 via-amber-500 to-yellow-500',
-    description: 'UI/UX design, mockups, and prototypes',
-  },
-  'web-development': {
-    icon: Code,
-    image: '/web-development.jpg',
-    gradient: 'from-blue-500 via-cyan-500 to-teal-500',
-    description: 'Frontend, backend, and full-stack development',
-  },
-  'content': {
-    icon: FileText,
-    image: '/content-writer.jpg',
-    gradient: 'from-green-500 via-orange-500 to-teal-500',
-    description: 'Copywriting, documentation, and media',
-  },
-};
-
-const defaultMeta = {
-  icon: FolderKanban,
-  image: '/logo-section.png',
-  gradient: 'from-gray-500 via-gray-600 to-gray-700',
-  description: 'Manage projects in this workspace',
-};
+import { ArrowLeft } from 'lucide-react';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { BOARD_METADATA, DEFAULT_BOARD_METADATA } from '@/lib/constants';
 
 interface BoardCard {
   slug: string;
@@ -108,6 +74,7 @@ export default function DashboardPage() {
   }
 
   return (
+    <ErrorBoundary>
     <div className="space-y-8 p-6">
       {/* Workspace Selection View */}
       {/* Header */}
@@ -121,7 +88,7 @@ export default function DashboardPage() {
       {/* Board Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 ">
         {boards.map((board) => {
-          const meta = boardMeta[board.slug] || defaultMeta;
+          const meta = BOARD_METADATA[board.slug] || DEFAULT_BOARD_METADATA;
           const Icon = meta.icon;
           return (
             <button
@@ -167,5 +134,6 @@ export default function DashboardPage() {
             })}
           </div>
     </div>
+    </ErrorBoundary>
   );
 }

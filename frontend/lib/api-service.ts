@@ -7,44 +7,79 @@ const getToken = () => {
   return localStorage.getItem('token');
 };
 
-// Common headers
-const getHeaders = (includeAuth = true) => {
+/**
+ * Centralized fetch wrapper with error intercepting.
+ * - Auto-adds Content-Type and Authorization headers
+ * - Handles 401 (session expired), 403, 500+ errors globally
+ * - Returns the raw Response on success so callers can parse as needed
+ */
+async function apiFetch(url: string, options: RequestInit = {}): Promise<Response> {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
+    ...(options.headers as Record<string, string> || {}),
   };
-  
-  if (includeAuth) {
-    const token = getToken();
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
+
+  const token = getToken();
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
   }
-  
-  return headers;
-};
+
+  let response: Response;
+  try {
+    response = await fetch(url, { ...options, headers });
+  } catch {
+    throw new Error('Network error — please check your connection');
+  }
+
+  if (response.status === 401) {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    window.location.href = '/';
+    throw new Error('Session expired — please log in again');
+  }
+
+  if (response.status === 403) {
+    throw new Error("You don't have permission to perform this action");
+  }
+
+  if (response.status >= 500) {
+    let message = 'An unexpected server error occurred';
+    try {
+      const body = await response.json();
+      if (body.message) {
+        message = body.message;
+      }
+    } catch {
+      // response wasn't valid JSON — use default message
+    }
+    throw new Error(message);
+  }
+
+  return response;
+}
 
 // Auth APIs
 export const authAPI = {
   login: async (username: string, password: string) => {
+    // Login uses raw fetch — a 401 here means invalid credentials,
+    // not an expired session, so the interceptor should not fire.
     const response = await fetch(`${API_BASE_URL}/auth/login`, {
       method: 'POST',
-      headers: getHeaders(false),
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, password }),
     });
     const data = await response.json();
-    
+
     if (data.success && data.data.token) {
       localStorage.setItem('token', data.data.token);
       localStorage.setItem('user', JSON.stringify(data.data.user));
     }
-    
+
     return data;
   },
 
   getMe: async () => {
-    const response = await fetch(`${API_BASE_URL}/auth/me`, {
-      headers: getHeaders(),
-    });
+    const response = await apiFetch(`${API_BASE_URL}/auth/me`);
     return await response.json();
   },
 
@@ -65,84 +100,71 @@ export const projectAPI = {
     dueDate?: string;
     developerId?: string;
   }) => {
-    const response = await fetch(`${API_BASE_URL}/projects`, {
+    const response = await apiFetch(`${API_BASE_URL}/projects`, {
       method: 'POST',
-      headers: getHeaders(),
       body: JSON.stringify(projectData),
     });
     return await response.json();
   },
 
   getAll: async () => {
-    const response = await fetch(`${API_BASE_URL}/projects`, {
-      headers: getHeaders(),
-    });
+    const response = await apiFetch(`${API_BASE_URL}/projects`);
     return await response.json();
   },
 
   getByBoard: async (boardId: string) => {
-    const response = await fetch(`${API_BASE_URL}/projects/board/${boardId}`, {
-      headers: getHeaders(),
-    });
+    const response = await apiFetch(`${API_BASE_URL}/projects/board/${boardId}`);
     return await response.json();
   },
 
   getById: async (id: string) => {
-    const response = await fetch(`${API_BASE_URL}/projects/${id}`, {
-      headers: getHeaders(),
-    });
+    const response = await apiFetch(`${API_BASE_URL}/projects/${id}`);
     return await response.json();
   },
 
   update: async (id: string, updateData: any) => {
-    const response = await fetch(`${API_BASE_URL}/projects/${id}`, {
+    const response = await apiFetch(`${API_BASE_URL}/projects/${id}`, {
       method: 'PUT',
-      headers: getHeaders(),
       body: JSON.stringify(updateData),
     });
     return await response.json();
   },
 
   delete: async (id: string) => {
-    const response = await fetch(`${API_BASE_URL}/projects/${id}`, {
+    const response = await apiFetch(`${API_BASE_URL}/projects/${id}`, {
       method: 'DELETE',
-      headers: getHeaders(),
     });
     return await response.json();
   },
 
   // ─── Comments ────────────────────────────────────
   addComment: async (projectId: string, content: string) => {
-    const response = await fetch(`${API_BASE_URL}/projects/${projectId}/comments`, {
+    const response = await apiFetch(`${API_BASE_URL}/projects/${projectId}/comments`, {
       method: 'POST',
-      headers: getHeaders(),
       body: JSON.stringify({ content }),
     });
     return await response.json();
   },
 
   updateComment: async (projectId: string, commentId: string, content: string) => {
-    const response = await fetch(`${API_BASE_URL}/projects/${projectId}/comments/${commentId}`, {
+    const response = await apiFetch(`${API_BASE_URL}/projects/${projectId}/comments/${commentId}`, {
       method: 'PUT',
-      headers: getHeaders(),
       body: JSON.stringify({ content }),
     });
     return await response.json();
   },
 
   deleteComment: async (projectId: string, commentId: string) => {
-    const response = await fetch(`${API_BASE_URL}/projects/${projectId}/comments/${commentId}`, {
+    const response = await apiFetch(`${API_BASE_URL}/projects/${projectId}/comments/${commentId}`, {
       method: 'DELETE',
-      headers: getHeaders(),
     });
     return await response.json();
   },
 
   // ─── Checklist ───────────────────────────────────
   updateChecklist: async (projectId: string, items: { title: string; completed: boolean; position: number }[]) => {
-    const response = await fetch(`${API_BASE_URL}/projects/${projectId}/checklist`, {
+    const response = await apiFetch(`${API_BASE_URL}/projects/${projectId}/checklist`, {
       method: 'PUT',
-      headers: getHeaders(),
       body: JSON.stringify({ items }),
     });
     return await response.json();
@@ -150,36 +172,32 @@ export const projectAPI = {
 
   // ─── Labels ──────────────────────────────────────
   addLabel: async (projectId: string, name: string, color: string) => {
-    const response = await fetch(`${API_BASE_URL}/projects/${projectId}/labels`, {
+    const response = await apiFetch(`${API_BASE_URL}/projects/${projectId}/labels`, {
       method: 'POST',
-      headers: getHeaders(),
       body: JSON.stringify({ name, color }),
     });
     return await response.json();
   },
 
   removeLabel: async (projectId: string, labelId: string) => {
-    const response = await fetch(`${API_BASE_URL}/projects/${projectId}/labels/${labelId}`, {
+    const response = await apiFetch(`${API_BASE_URL}/projects/${projectId}/labels/${labelId}`, {
       method: 'DELETE',
-      headers: getHeaders(),
     });
     return await response.json();
   },
 
   // ─── Attachments ─────────────────────────────────
   addAttachment: async (projectId: string, data: { filename: string; url: string; key?: string; type: string; size?: number }) => {
-    const response = await fetch(`${API_BASE_URL}/projects/${projectId}/attachments`, {
+    const response = await apiFetch(`${API_BASE_URL}/projects/${projectId}/attachments`, {
       method: 'POST',
-      headers: getHeaders(),
       body: JSON.stringify(data),
     });
     return await response.json();
   },
 
   removeAttachment: async (projectId: string, attachmentId: string) => {
-    const response = await fetch(`${API_BASE_URL}/projects/${projectId}/attachments/${attachmentId}`, {
+    const response = await apiFetch(`${API_BASE_URL}/projects/${projectId}/attachments/${attachmentId}`, {
       method: 'DELETE',
-      headers: getHeaders(),
     });
     return await response.json();
   },
@@ -188,23 +206,17 @@ export const projectAPI = {
 // Users APIs
 export const usersAPI = {
   getAll: async () => {
-    const response = await fetch(`${API_BASE_URL}/users`, {
-      headers: getHeaders(),
-    });
+    const response = await apiFetch(`${API_BASE_URL}/users`);
     return await response.json();
   },
 
   getByRole: async (role: string) => {
-    const response = await fetch(`${API_BASE_URL}/users/role/${role}`, {
-      headers: getHeaders(),
-    });
+    const response = await apiFetch(`${API_BASE_URL}/users/role/${role}`);
     return await response.json();
   },
 
   getById: async (id: string) => {
-    const response = await fetch(`${API_BASE_URL}/users/${id}`, {
-      headers: getHeaders(),
-    });
+    const response = await apiFetch(`${API_BASE_URL}/users/${id}`);
     return await response.json();
   },
 };
@@ -212,9 +224,8 @@ export const usersAPI = {
 // Upload APIs (R2 CDN)
 export const uploadAPI = {
   getPresignedUrl: async (filename: string, contentType: string, fileSize: number, folder = 'uploads') => {
-    const response = await fetch(`${API_BASE_URL}/upload/presign`, {
+    const response = await apiFetch(`${API_BASE_URL}/upload/presign`, {
       method: 'POST',
-      headers: getHeaders(),
       body: JSON.stringify({ filename, contentType, fileSize, folder }),
     });
     return await response.json();
@@ -226,14 +237,14 @@ export const uploadAPI = {
    */
   uploadFile: async (file: File, folder = 'uploads'): Promise<{ publicUrl: string; key: string } | null> => {
     try {
-      // 1. Get presigned URL from backend
+      // 1. Get presigned URL from backend (uses apiFetch via getPresignedUrl)
       const presignResult = await uploadAPI.getPresignedUrl(file.name, file.type, file.size, folder);
       if (!presignResult.success) {
         console.error('Presign failed:', presignResult.message);
         return null;
       }
 
-      // 2. PUT the file directly to R2
+      // 2. PUT the file directly to R2 (raw fetch — external URL, not our API)
       const uploadResponse = await fetch(presignResult.uploadUrl, {
         method: 'PUT',
         headers: { 'Content-Type': file.type },
@@ -253,9 +264,8 @@ export const uploadAPI = {
   },
 
   deleteFile: async (key: string) => {
-    const response = await fetch(`${API_BASE_URL}/upload`, {
+    const response = await apiFetch(`${API_BASE_URL}/upload`, {
       method: 'DELETE',
-      headers: getHeaders(),
       body: JSON.stringify({ key }),
     });
     return await response.json();
@@ -265,16 +275,12 @@ export const uploadAPI = {
 // Dashboard APIs
 export const dashboardAPI = {
   getOverview: async () => {
-    const response = await fetch(`${API_BASE_URL}/dashboard/overview`, {
-      headers: getHeaders(),
-    });
+    const response = await apiFetch(`${API_BASE_URL}/dashboard/overview`);
     return await response.json();
   },
 
   getMyStats: async () => {
-    const response = await fetch(`${API_BASE_URL}/dashboard/my-stats`, {
-      headers: getHeaders(),
-    });
+    const response = await apiFetch(`${API_BASE_URL}/dashboard/my-stats`);
     return await response.json();
   },
 };
@@ -282,31 +288,25 @@ export const dashboardAPI = {
 // Notification APIs
 export const notificationAPI = {
   getAll: async () => {
-    const response = await fetch(`${API_BASE_URL}/notifications`, {
-      headers: getHeaders(),
-    });
+    const response = await apiFetch(`${API_BASE_URL}/notifications`);
     return await response.json();
   },
 
   getUnreadCount: async () => {
-    const response = await fetch(`${API_BASE_URL}/notifications/unread-count`, {
-      headers: getHeaders(),
-    });
+    const response = await apiFetch(`${API_BASE_URL}/notifications/unread-count`);
     return await response.json();
   },
 
   markAsRead: async (id: string) => {
-    const response = await fetch(`${API_BASE_URL}/notifications/${id}/read`, {
+    const response = await apiFetch(`${API_BASE_URL}/notifications/${id}/read`, {
       method: 'PUT',
-      headers: getHeaders(),
     });
     return await response.json();
   },
 
   markAllAsRead: async () => {
-    const response = await fetch(`${API_BASE_URL}/notifications/read-all`, {
+    const response = await apiFetch(`${API_BASE_URL}/notifications/read-all`, {
       method: 'PUT',
-      headers: getHeaders(),
     });
     return await response.json();
   },
@@ -315,16 +315,12 @@ export const notificationAPI = {
 // Team APIs
 export const teamAPI = {
   getMyTeams: async () => {
-    const response = await fetch(`${API_BASE_URL}/teams/my-teams`, {
-      headers: getHeaders(),
-    });
+    const response = await apiFetch(`${API_BASE_URL}/teams/my-teams`);
     return await response.json();
   },
 
   getBySlug: async (slug: string) => {
-    const response = await fetch(`${API_BASE_URL}/teams/${slug}`, {
-      headers: getHeaders(),
-    });
+    const response = await apiFetch(`${API_BASE_URL}/teams/${slug}`);
     return await response.json();
   },
 };
@@ -332,23 +328,17 @@ export const teamAPI = {
 // Board APIs
 export const boardAPI = {
   getAll: async () => {
-    const response = await fetch(`${API_BASE_URL}/boards`, {
-      headers: getHeaders(),
-    });
+    const response = await apiFetch(`${API_BASE_URL}/boards`);
     return await response.json();
   },
 
   getBySlug: async (slug: string) => {
-    const response = await fetch(`${API_BASE_URL}/boards/${slug}`, {
-      headers: getHeaders(),
-    });
+    const response = await apiFetch(`${API_BASE_URL}/boards/${slug}`);
     return await response.json();
   },
 
   getColumns: async (boardId: string) => {
-    const response = await fetch(`${API_BASE_URL}/boards/${boardId}/columns`, {
-      headers: getHeaders(),
-    });
+    const response = await apiFetch(`${API_BASE_URL}/boards/${boardId}/columns`);
     return await response.json();
   },
 };
