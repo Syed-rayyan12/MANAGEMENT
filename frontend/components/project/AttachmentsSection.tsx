@@ -7,41 +7,91 @@ import { toast } from 'sonner';
 import { useApp } from '@/contexts/useApp';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { Paperclip, Plus, Trash2, Upload, Download } from 'lucide-react';
+import {
+  Paperclip, Plus, Trash2, Upload, Download,
+  FileText, FileSpreadsheet, FileImage, File, Archive, Presentation,
+} from 'lucide-react';
 
 interface AttachmentsSectionProps {
   project: Project;
 }
 
+/** Map a filename to an attachment type */
+function getAttachmentType(filename: string): string {
+  const ext = filename.split('.').pop()?.toLowerCase() || '';
+  if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp', 'ico'].includes(ext)) return 'image';
+  if (ext === 'pdf') return 'pdf';
+  if (['doc', 'docx', 'txt', 'rtf', 'odt', 'md'].includes(ext)) return 'document';
+  if (['xls', 'xlsx', 'csv', 'ods'].includes(ext)) return 'spreadsheet';
+  if (['ppt', 'pptx', 'odp'].includes(ext)) return 'presentation';
+  if (['zip', 'rar', '7z', 'tar', 'gz'].includes(ext)) return 'archive';
+  return 'other';
+}
+
+/** Get the right icon component for a file type */
+function getFileIcon(type: string) {
+  switch (type) {
+    case 'image':        return { Icon: FileImage, bg: 'bg-[#e05c29]/15', text: 'text-[#e05c29]' };
+    case 'pdf':          return { Icon: FileText, bg: 'bg-red-500/15', text: 'text-red-600 dark:text-red-400' };
+    case 'document':     return { Icon: FileText, bg: 'bg-amber-500/15', text: 'text-amber-600 dark:text-amber-400' };
+    case 'spreadsheet':  return { Icon: FileSpreadsheet, bg: 'bg-emerald-500/15', text: 'text-emerald-600 dark:text-emerald-400' };
+    case 'presentation': return { Icon: Presentation, bg: 'bg-[#e05c29]/15', text: 'text-[#e05c29]' };
+    case 'archive':      return { Icon: Archive, bg: 'bg-zinc-500/15', text: 'text-zinc-600 dark:text-zinc-400' };
+    default:             return { Icon: File, bg: 'bg-zinc-500/15', text: 'text-zinc-600 dark:text-zinc-400' };
+  }
+}
+
+/** Format file size */
+function formatSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
 export function AttachmentsSection({ project }: AttachmentsSectionProps) {
   const { dispatch } = useApp();
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0 });
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setSelectedFile(file);
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      setSelectedFiles(prev => [...prev, ...Array.from(files)]);
     }
   };
 
-  const handleAddAttachment = async () => {
-    if (selectedFile) {
-      const loadingToast = toast.loading('Uploading file...');
+  const handleRemoveSelected = (index: number) => {
+    setSelectedFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleUploadAll = async () => {
+    if (selectedFiles.length === 0) return;
+
+    setIsUploading(true);
+    setUploadProgress({ current: 0, total: selectedFiles.length });
+    let successCount = 0;
+    let failCount = 0;
+
+    for (let i = 0; i < selectedFiles.length; i++) {
+      const file = selectedFiles[i];
+      setUploadProgress({ current: i + 1, total: selectedFiles.length });
+
       try {
-        const uploadResult = await uploadAPI.uploadFile(selectedFile, 'attachments');
+        const uploadResult = await uploadAPI.uploadFile(file, 'attachments');
         if (!uploadResult) {
-          toast.dismiss(loadingToast);
-          toast.error('File upload failed');
-          return;
+          failCount++;
+          continue;
         }
 
+        const fileType = getAttachmentType(file.name);
         const result = await projectAPI.addAttachment(project.id, {
-          filename: selectedFile.name,
+          filename: file.name,
           url: uploadResult.publicUrl,
           key: uploadResult.key,
-          type: selectedFile.type.includes('pdf') ? 'pdf' : 'image',
-          size: selectedFile.size,
+          type: fileType,
+          size: file.size,
         });
 
         if (result.success) {
@@ -53,27 +103,30 @@ export function AttachmentsSection({ project }: AttachmentsSectionProps) {
               attachment: {
                 id: savedAttachment.id,
                 filename: savedAttachment.filename,
-                type: savedAttachment.type?.includes('pdf') ? 'pdf' : 'image',
+                type: (savedAttachment.type || fileType) as any,
                 url: savedAttachment.url,
                 uploadedAt: new Date(savedAttachment.createdAt),
               },
               userId: project.pm,
             },
           });
-          toast.dismiss(loadingToast);
-          toast.success('File uploaded successfully');
+          successCount++;
+        } else {
+          failCount++;
         }
       } catch (error) {
-        console.error('Error uploading attachment:', error);
-        toast.dismiss(loadingToast);
-        toast.error('Failed to upload file');
-      }
-
-      setSelectedFile(null);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
+        console.error(`Error uploading ${file.name}:`, error);
+        failCount++;
       }
     }
+
+    if (successCount > 0) toast.success(`${successCount} file${successCount > 1 ? 's' : ''} uploaded`);
+    if (failCount > 0) toast.error(`${failCount} file${failCount > 1 ? 's' : ''} failed to upload`);
+
+    setSelectedFiles([]);
+    setIsUploading(false);
+    setUploadProgress({ current: 0, total: 0 });
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const handleRemoveAttachment = async (attachmentId: string) => {
@@ -107,96 +160,143 @@ export function AttachmentsSection({ project }: AttachmentsSectionProps) {
   return (
     <div className="space-y-4 mt-4">
       <div className="space-y-3">
-        <div className="border dark:border-orange-500/30 rounded-lg p-4 space-y-3 bg-gray-50 dark:bg-[#1a1f2e]">
-          <Label className="dark:text-orange-400">Upload File</Label>
+        {/* Upload area */}
+        <div className="border border-dashed border-zinc-300 dark:border-zinc-700 rounded-xl p-5 space-y-3 bg-zinc-50 dark:bg-zinc-900/50 transition-colors hover:border-[#e05c29]/40">
+          <Label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+            Upload Files
+          </Label>
           <input
             ref={fileInputRef}
             type="file"
             onChange={handleFileSelect}
             className="hidden"
-            accept="image/*,.pdf,.doc,.docx,.txt,.xlsx,.xls"
+            multiple
+            accept="image/*,.pdf,.doc,.docx,.txt,.xlsx,.xls,.pptx,.ppt,.csv,.rtf,.zip,.rar,.7z,.odt,.ods,.odp,.md"
           />
           <div className="flex gap-2 items-center">
             <Button
               type="button"
               variant="outline"
               onClick={() => fileInputRef.current?.click()}
-              className="flex-1 text-white"
+              disabled={isUploading}
+              className="flex-1 rounded-lg text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-700 hover:border-[#e05c29]/40 hover:text-[#e05c29] transition-all duration-200"
             >
               <Upload className="w-4 h-4 mr-2" />
-              {selectedFile ? selectedFile.name : 'Choose File'}
+              {selectedFiles.length > 0 ? `${selectedFiles.length} file${selectedFiles.length > 1 ? 's' : ''} selected` : 'Choose Files'}
             </Button>
-            {selectedFile && (
-              <Button onClick={handleAddAttachment} className="bg-indigo-600 hover:bg-indigo-700">
+            {selectedFiles.length > 0 && (
+              <Button
+                onClick={handleUploadAll}
+                disabled={isUploading}
+                className="rounded-lg bg-gradient-to-r from-[#e05c29] to-orange-400 hover:to-rose-500 text-white shadow-[0_4px_20px_rgba(224,92,41,0.35)] transition-all duration-200"
+              >
                 <Plus className="w-4 h-4 mr-1" />
-                Add
+                {isUploading
+                  ? `Uploading ${uploadProgress.current}/${uploadProgress.total}...`
+                  : `Upload ${selectedFiles.length}`}
               </Button>
             )}
           </div>
-          {selectedFile && (
-            <div className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-2">
-              <span>Selected: {selectedFile.name}</span>
-              <span>({(selectedFile.size / 1024).toFixed(1)} KB)</span>
+
+          {/* Selected files preview */}
+          {selectedFiles.length > 0 && (
+            <div className="space-y-1.5 mt-2">
+              {selectedFiles.map((file, index) => {
+                const fileType = getAttachmentType(file.name);
+                const { Icon, bg, text } = getFileIcon(fileType);
+                return (
+                  <div key={`${file.name}-${index}`} className="flex items-center justify-between px-3 py-2 rounded-lg bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700">
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                      <div className={`p-1.5 rounded-lg ${bg}`}>
+                        <Icon className={`w-3.5 h-3.5 ${text}`} />
+                      </div>
+                      <span className="text-xs font-medium text-zinc-700 dark:text-zinc-300 truncate">{file.name}</span>
+                      <span className="text-[10px] text-zinc-400 whitespace-nowrap">{formatSize(file.size)}</span>
+                    </div>
+                    <button
+                      onClick={() => handleRemoveSelected(index)}
+                      className="text-zinc-400 hover:text-red-500 transition-colors ml-2"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Upload progress bar */}
+          {isUploading && (
+            <div className="space-y-1">
+              <div className="w-full bg-zinc-200 dark:bg-zinc-700 rounded-full h-1.5">
+                <div
+                  className="bg-gradient-to-r from-[#e05c29] to-orange-400 h-1.5 rounded-full transition-all duration-300"
+                  style={{ width: `${(uploadProgress.current / uploadProgress.total) * 100}%` }}
+                />
+              </div>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400 text-center">
+                Uploading {uploadProgress.current} of {uploadProgress.total}…
+              </p>
             </div>
           )}
         </div>
 
+        {/* Existing attachments */}
         {project.attachments.length === 0 ? (
-          <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+          <div className="text-center py-8 text-zinc-400">
             <Paperclip className="w-8 h-8 mx-auto mb-2 opacity-50" />
-            <p>No attachments yet</p>
-            <p className="text-xs mt-1">Upload images, PDFs, or documents</p>
+            <p className="text-sm">No attachments yet</p>
+            <p className="text-xs mt-1">Upload documents, images, spreadsheets, and more</p>
           </div>
         ) : (
           <div className="space-y-2">
-            {project.attachments.map((attachment) => (
-              <div
-                key={attachment.id}
-                className="flex items-center justify-between p-3 border dark:border-orange-500/30 rounded-lg bg-white dark:bg-[#1a1f2e] hover:bg-gray-50 dark:hover:bg-[#232938] transition-colors"
-              >
-                <div className="flex items-center gap-3 flex-1">
-                  <div className={`p-2 rounded ${
-                    attachment.type === 'pdf' ? 'bg-red-100' : 'bg-blue-100'
-                  }`}>
-                    <Paperclip className={`w-4 h-4 ${
-                      attachment.type === 'pdf' ? 'text-red-600' : 'text-blue-600'
-                    }`} />
+            {project.attachments.map((attachment) => {
+              const { Icon, bg, text } = getFileIcon(attachment.type);
+              return (
+                <div
+                  key={attachment.id}
+                  className="flex items-center justify-between p-3 border border-zinc-200 dark:border-zinc-800 rounded-xl bg-white dark:bg-zinc-900 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-all duration-200 group"
+                >
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <div className={`p-2 rounded-lg ${bg}`}>
+                      <Icon className={`w-4 h-4 ${text}`} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100 truncate">{attachment.filename}</p>
+                      <p className="text-xs text-zinc-400">
+                        {new Date(attachment.uploadedAt).toLocaleDateString()} at {new Date(attachment.uploadedAt).toLocaleTimeString()}
+                      </p>
+                    </div>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900 dark:text-orange-400 truncate">{attachment.filename}</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                      {new Date(attachment.uploadedAt).toLocaleDateString()} at {new Date(attachment.uploadedAt).toLocaleTimeString()}
-                    </p>
+                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => window.open(attachment.url, '_blank')}
+                      className="text-[#e05c29] hover:text-[#e05c29] hover:bg-[#e05c29]/10 rounded-lg"
+                    >
+                      View
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleDownloadAttachment(attachment)}
+                      className="text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 rounded-lg"
+                    >
+                      <Download className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleRemoveAttachment(attachment.id)}
+                      className="text-red-500 hover:text-red-600 hover:bg-red-500/10 rounded-lg"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
                   </div>
                 </div>
-                <div className="flex items-center gap-1">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => window.open(attachment.url, '_blank')}
-                    className="text-indigo-600 hover:text-indigo-700"
-                  >
-                    View
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleDownloadAttachment(attachment)}
-                    className="text-green-600 hover:text-green-700 hover:bg-green-50"
-                  >
-                    <Download className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleRemoveAttachment(attachment.id)}
-                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

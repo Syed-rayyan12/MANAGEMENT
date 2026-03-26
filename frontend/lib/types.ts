@@ -11,7 +11,7 @@ export type NotificationType =
   | 'checklist'   // checklist fully completed
   | 'due_date'    // due date reminder
   | 'developer';  // developer changed
-export type AttachmentType = 'image' | 'pdf';
+export type AttachmentType = 'image' | 'pdf' | 'document' | 'spreadsheet' | 'presentation' | 'archive' | 'other';
 
 export interface TeamInfo {
   id: string;
@@ -47,6 +47,7 @@ export interface ProjectManager {
   email: string;
   avatar?: string;
   role?: string;
+  teams?: { id: string; slug: string; name: string }[];
 }
 
 export interface ChecklistItem {

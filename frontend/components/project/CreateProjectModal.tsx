@@ -158,15 +158,15 @@ export function CreateProjectModal({ onClose, initialStatus, initialBoard }: Cre
 
   return (
     <Dialog open={true} onOpenChange={onClose}>
-      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto dark:bg-[#1a1f2e] dark:border-orange-500/30">
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl backdrop-blur-md bg-white/80 dark:bg-zinc-900/80 border border-zinc-200/50 dark:border-white/10 ring-1 ring-[#e05c29]/10 shadow-2xl">
         <DialogHeader>
-          <DialogTitle className="text-2xl font-bold dark:text-orange-400">Create New Project</DialogTitle>
+          <DialogTitle className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">Create New Project</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4 mt-4">
           {/* Project Name */}
           <div>
-            <Label htmlFor="name" className="dark:text-white">Project Name *</Label>
+            <Label htmlFor="name" className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Project Name *</Label>
             <Input
               id="name"
               placeholder="Enter project name"
@@ -178,7 +178,7 @@ export function CreateProjectModal({ onClose, initialStatus, initialBoard }: Cre
 
           {/* Description */}
           <div>
-            <Label htmlFor="description" className="dark:text-white">Description</Label>
+            <Label htmlFor="description" className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Description</Label>
             <Textarea
               id="description"
               placeholder="Enter project description"
@@ -191,7 +191,7 @@ export function CreateProjectModal({ onClose, initialStatus, initialBoard }: Cre
           {/* Status and Priority */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label className="dark:text-white">Status</Label>
+              <Label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Status</Label>
               <Select value={status} onValueChange={(val) => setStatus(val as ProjectStatus)}>
                 <SelectTrigger className="mt-1">
                   <SelectValue placeholder="Select status" />
@@ -207,7 +207,7 @@ export function CreateProjectModal({ onClose, initialStatus, initialBoard }: Cre
             </div>
 
             <div>
-              <Label className="dark:text-white">Priority</Label>
+              <Label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Priority</Label>
               <Select value={priority} onValueChange={(val) => setPriority(val as ProjectPriority)}>
                 <SelectTrigger className="mt-1">
                   <SelectValue placeholder="Select priority" />
@@ -225,12 +225,12 @@ export function CreateProjectModal({ onClose, initialStatus, initialBoard }: Cre
 
           {/* Due Date */}
           <div>
-            <Label className="dark:text-white">Due Date</Label>
+            <Label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Due Date</Label>
             <Popover>
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"
-                  className="w-full justify-start text-left font-normal mt-1 text-white"
+                  className="w-full justify-start text-left font-normal mt-1 text-zinc-900 dark:text-zinc-100"
                 >
                   <CalendarIcon className="mr-2 h-4 w-4 text-gray-400" />
                   {dueDate ? format(dueDate, 'PPP') : 'Pick a date'}
@@ -249,7 +249,7 @@ export function CreateProjectModal({ onClose, initialStatus, initialBoard }: Cre
 
           {/* Members */}
           <div>
-            <Label className="dark:text-white">Members (optional)</Label>
+            <Label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Members (optional)</Label>
             {/* Selected members chips */}
             {selectedMembers.length > 0 && (
               <div className="flex flex-wrap gap-1.5 mt-2 mb-2">
@@ -288,7 +288,7 @@ export function CreateProjectModal({ onClose, initialStatus, initialBoard }: Cre
 
           {/* Image URL */}
           <div>
-            <Label htmlFor="imageUrl" className="dark:text-white">Cover Image URL (optional)</Label>
+            <Label htmlFor="imageUrl" className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Cover Image URL (optional)</Label>
             <Input
               id="imageUrl"
               // placeholder="https://example.com/image.jpg"
@@ -310,10 +310,10 @@ export function CreateProjectModal({ onClose, initialStatus, initialBoard }: Cre
 
           {/* Action Buttons */}
           <div className="flex gap-2 pt-4">
-            <Button onClick={handleCreate} className="flex-1 bg-orange-500 text-white hover:bg-orange-600">
+            <Button onClick={handleCreate} className="flex-1 rounded-lg bg-gradient-to-r from-[#e05c29] to-orange-400 hover:to-rose-500 text-white shadow-[0_4px_20px_rgba(224,92,41,0.35)] transition-all duration-200">
               Create Project
             </Button>
-            <Button onClick={onClose} variant="outline" className="flex-1 text-white">
+            <Button onClick={onClose} variant="outline" className="flex-1 rounded-lg text-zinc-600 dark:text-zinc-300 border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800">
               Cancel
             </Button>
           </div>

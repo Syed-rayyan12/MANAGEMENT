@@ -611,6 +611,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
               email: u.email,
               avatar: u.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${u.name}`,
               role: u.role,
+              teams: u.teams || [],
             }))
           );
         }

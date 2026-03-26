@@ -26,6 +26,12 @@ export function CommentsSection({ project }: CommentsSectionProps) {
 
   const allUsers = getAllUsers();
 
+  // Team-scoped users: only show users belonging to the same team as this project
+  const teamUsers = React.useMemo(() => {
+    if (!project.teamId) return allUsers;
+    return allUsers.filter((u: any) => u.teams?.some((t: any) => t.id === project.teamId));
+  }, [allUsers, project.teamId]);
+
   const handleAddComment = async () => {
     if (newComment.trim() && state.currentUser) {
       try {
@@ -135,7 +141,7 @@ export function CommentsSection({ project }: CommentsSectionProps) {
         const user = allUsers.find(u => u.name.toLowerCase().replace(/\s+/g, '') === username.toLowerCase());
         if (user) {
           return (
-            <span key={index} className="text-indigo-600 font-semibold bg-indigo-50 px-1 rounded">
+            <span key={index} className="text-[#e05c29] font-semibold bg-[#e05c29]/10 px-1 rounded">
               @{user.name}
             </span>
           );
@@ -148,22 +154,22 @@ export function CommentsSection({ project }: CommentsSectionProps) {
   const MentionDropdown = ({ isNewComment }: { isNewComment: boolean }) => (
     <>
       {showMentionDropdown && (
-        <div className="absolute bottom-full left-0 mb-1 w-full bg-white dark:bg-[#1a1f2e] border dark:border-orange-500/30 rounded-lg shadow-lg max-h-40 overflow-y-auto z-50">
-          {allUsers
+        <div className="absolute bottom-full left-0 mb-1 w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-lg shadow-black/10 max-h-40 overflow-y-auto z-50">
+          {teamUsers
             .filter(u => u.name.toLowerCase().includes(mentionSearchQuery))
             .map(user => (
               <button
                 key={user.id}
                 onClick={() => handleSelectMention(user, isNewComment)}
-                className="w-full flex items-center gap-2 p-2 hover:bg-gray-100 dark:hover:bg-[#232938] transition-colors text-left"
+                className="w-full flex items-center gap-2 p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors text-left"
               >
                 <Avatar className="w-6 h-6">
                   <AvatarImage src={user.avatar} />
                   <AvatarFallback>{user.name[0]}</AvatarFallback>
                 </Avatar>
                 <div>
-                  <p className="text-sm font-medium dark:text-orange-400">{user.name}</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">{user.email}</p>
+                  <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">{user.name}</p>
+                  <p className="text-xs text-zinc-400">{user.email}</p>
                 </div>
               </button>
             ))
@@ -184,15 +190,15 @@ export function CommentsSection({ project }: CommentsSectionProps) {
           </div>
         ) : (
           project.comments.map((comment) => (
-            <div key={comment.id} className="flex gap-3 p-3 border dark:border-orange-500/30 rounded-lg bg-gray-50 dark:bg-[#1a1f2e]">
+            <div key={comment.id} className="flex gap-3 p-3 border border-zinc-200 dark:border-zinc-800 rounded-xl bg-zinc-50 dark:bg-zinc-900">
               <Avatar className="w-8 h-8">
                 <AvatarImage src={getUserAvatar(comment.userId)} alt={getUserName(comment.userId)} />
                 <AvatarFallback>{getUserName(comment.userId)[0]}</AvatarFallback>
               </Avatar>
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-1">
-                  <span className="font-semibold text-sm dark:text-orange-400">{getUserName(comment.userId)}</span>
-                  <span className="text-xs text-gray-500 dark:text-gray-400">
+                  <span className="font-semibold text-sm text-zinc-900 dark:text-zinc-100">{getUserName(comment.userId)}</span>
+                  <span className="text-xs text-zinc-400">
                     {new Date(comment.timestamp).toLocaleDateString()} at {new Date(comment.timestamp).toLocaleTimeString()}
                   </span>
                 </div>
@@ -218,7 +224,7 @@ export function CommentsSection({ project }: CommentsSectionProps) {
                   </div>
                 ) : (
                   <>
-                    <p className="text-sm text-gray-700 dark:text-orange-400">{renderCommentWithMentions(comment.content)}</p>
+                    <p className="text-sm text-zinc-700 dark:text-zinc-300">{renderCommentWithMentions(comment.content)}</p>
                     {state.currentUser?.id === comment.userId && (
                       <Button
                         variant="ghost"
@@ -257,7 +263,7 @@ export function CommentsSection({ project }: CommentsSectionProps) {
             <AtSign className="w-3 h-3" />
             Type @ to mention team members
           </p>
-          <Button onClick={handleAddComment} className="bg-orange-500 hover:bg-orange-600 text-white">
+          <Button onClick={handleAddComment} className="rounded-lg bg-gradient-to-r from-[#e05c29] to-orange-400 hover:to-rose-500 text-white shadow-[0_4px_20px_rgba(224,92,41,0.35)] transition-all duration-200">
             <MessageSquare className="w-4 h-4 mr-2" />
             Post Comment
           </Button>

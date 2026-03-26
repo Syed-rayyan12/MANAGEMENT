@@ -10,8 +10,8 @@ const _geist = Geist({ subsets: ['latin'] })
 const _geistMono = Geist_Mono({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'Project Management System',
-  description: 'Enterprise project management platform',
+  title: 'XRM | XpertWebStudio',
+  description: 'XRM — Project & Resource Management by XpertWebStudio',
   generator: 'v0.app',
 }
 

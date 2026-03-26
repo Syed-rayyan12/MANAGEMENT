@@ -54,6 +54,12 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
 
   const allUsers = getAllUsers();
 
+  // Team-scoped users: only show users in the same team as this project
+  const teamUsers = React.useMemo(() => {
+    if (!project.teamId) return allUsers;
+    return allUsers.filter((u: any) => u.teams?.some((t: any) => t.id === project.teamId));
+  }, [allUsers, project.teamId]);
+
   const handleSaveName = async () => {
     if (editingTitle.trim()) {
       dispatch({
@@ -321,13 +327,13 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
   return (
     <>
     <Dialog open={true} onOpenChange={onClose}>
-      <DialogContent className="max-w-7xl max-h-[90vh] overflow-hidden p-0">
+      <DialogContent className="max-w-7xl max-h-[90vh] overflow-hidden p-0 rounded-2xl backdrop-blur-md bg-white/80 dark:bg-zinc-900/80 border border-zinc-200/50 dark:border-white/10 ring-1 ring-[#e05c29]/10 shadow-2xl">
 
         {/* Left-Right Layout */}
         <div className="flex h-full">
 
           {/* Left Sidebar */}
-          <div className="w-96 border-r dark:border-orange-500/30 flex flex-col">
+          <div className="w-96 border-r border-zinc-200 dark:border-zinc-800 flex flex-col">
             {/* Cover Photo Section */}
             <div className="relative group flex-shrink-0">
               {project.image ? (
@@ -350,7 +356,7 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
                   </div>
                 </>
               ) : (
-                <div className="w-full h-32 bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center">
+                <div className="w-full h-32 bg-gradient-to-br from-[#e05c29]/20 via-orange-400/10 to-amber-400/5 flex items-center justify-center">
                   <Button
                     variant="secondary"
                     size="sm"
@@ -384,7 +390,7 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
                   </div>
                 ) : (
                   <h2
-                    className="text-xl font-bold cursor-pointer hover:text-indigo-600 dark:text-orange-400 dark:hover:text-orange-300"
+                    className="text-xl font-semibold cursor-pointer hover:text-[#e05c29] text-zinc-900 dark:text-zinc-100"
                     onClick={() => setEditingName(true)}
                   >
                     {project.name}
@@ -394,7 +400,7 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
 
               {/* Status */}
               <div>
-                <Label className="text-xs font-semibold text-gray-600 dark:text-orange-400">Status</Label>
+                <Label className="text-xs font-medium uppercase tracking-wide text-zinc-400">Status</Label>
                 <Select value={project.status} onValueChange={handleUpdateStatus}>
                   <SelectTrigger className="mt-1">
                     <SelectValue placeholder="Select status" />
@@ -411,7 +417,7 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
 
               {/* Priority */}
               <div>
-                <Label className="text-xs font-semibold text-gray-600 dark:text-orange-400">Priority</Label>
+                <Label className="text-xs font-medium uppercase tracking-wide text-zinc-400">Priority</Label>
                 {canChangePriority ? (
                   <Select value={project.priority} onValueChange={handleUpdatePriority}>
                     <SelectTrigger className="mt-1">
@@ -426,7 +432,7 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
                     </SelectContent>
                   </Select>
                 ) : (
-                  <div className="mt-1 px-3 py-2 rounded-md border border-gray-200 dark:border-[#2d3548] text-sm dark:text-orange-400">
+                  <div className="mt-1 px-3 py-2 rounded-lg border border-zinc-200 dark:border-zinc-700 text-sm text-zinc-900 dark:text-zinc-100">
                     {PRIORITY_STYLES[project.priority]?.label || project.priority}
                   </div>
                 )}
@@ -434,7 +440,7 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
 
               {/* Due Date */}
               <div>
-                <Label className="text-xs font-semibold text-gray-600 dark:text-orange-400">Due Date</Label>
+                <Label className="text-xs font-medium uppercase tracking-wide text-zinc-400">Due Date</Label>
                 <div className="flex items-center gap-2 mt-1">
                   <Input
                     type="date"
@@ -450,32 +456,32 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
 
               {/* Project Manager */}
               <div>
-                <Label className="text-xs font-semibold text-gray-600 dark:text-orange-400 mb-2 block">Project Manager</Label>
-                <div className="flex items-center gap-2 p-3 bg-gray-50 dark:bg-[#1a1f2e] rounded-lg border dark:border-orange-500/30">
+                <Label className="text-xs font-medium uppercase tracking-wide text-zinc-400 mb-2 block">Project Manager</Label>
+                <div className="flex items-center gap-2 p-3 bg-zinc-50 dark:bg-zinc-800 rounded-xl border border-zinc-200 dark:border-zinc-700">
                   <Avatar className="w-8 h-8">
                     <AvatarImage src={getUserAvatar(project.pm)} alt={getUserName(project.pm)} />
                     <AvatarFallback>{getUserName(project.pm)[0]}</AvatarFallback>
                   </Avatar>
-                  <span className="text-sm font-medium dark:text-orange-400">{getUserName(project.pm)}</span>
+                  <span className="text-sm font-medium text-zinc-900 dark:text-zinc-100">{getUserName(project.pm)}</span>
                 </div>
               </div>
 
               {/* Members */}
               <div>
-                <Label className="text-xs font-semibold text-gray-600 dark:text-orange-400 mb-2 block">Members</Label>
+                <Label className="text-xs font-medium uppercase tracking-wide text-zinc-400 mb-2 block">Members</Label>
                 {/* Current members list */}
                 <div className="space-y-1.5 mb-2">
                   {project.labels.map((label) => {
                     const memberUser = allUsers.find(u => u.name === label.name);
                     const mAvatar = memberUser ? getUserAvatar(memberUser.id) : undefined;
                     return (
-                      <div key={label.id} className="flex items-center justify-between p-2 bg-gray-50 dark:bg-[#232938] rounded-lg border dark:border-[#2d3548]">
+                      <div key={label.id} className="flex items-center justify-between p-2 bg-zinc-50 dark:bg-zinc-800 rounded-xl border border-zinc-200 dark:border-zinc-700">
                         <div className="flex items-center gap-2">
                           <Avatar className="w-6 h-6">
                             <AvatarImage src={mAvatar} alt={label.name} />
                             <AvatarFallback className="text-[9px] bg-orange-500 text-white">{label.name.split(' ').map(w=>w[0]).join('').slice(0,2)}</AvatarFallback>
                           </Avatar>
-                          <span className="text-xs font-medium dark:text-orange-400">{label.name}</span>
+                          <span className="text-xs font-medium text-zinc-900 dark:text-zinc-100">{label.name}</span>
                           {memberUser?.role && (
                             <span className={`text-[9px] px-1 py-0.5 rounded font-bold text-white ${
                               memberUser.role === 'PM' ? 'bg-blue-500' :
@@ -503,7 +509,7 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
                       <SelectValue placeholder="Add member..." />
                     </SelectTrigger>
                     <SelectContent>
-                      {allUsers
+                      {teamUsers
                         .filter(u => !project.labels.some(l => l.name === u.name))
                         .map((user) => (
                           <SelectItem key={user.id} value={user.id}>
@@ -536,7 +542,7 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
           <div className="flex-1 overflow-y-auto">
             <div className="p-6">
               <DialogHeader>
-                <DialogTitle className="text-2xl font-bold dark:text-orange-400">Project Details</DialogTitle>
+                <DialogTitle className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">Project Details</DialogTitle>
               </DialogHeader>
 
               <Tabs defaultValue="details" className="mt-6">
@@ -560,7 +566,7 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
                 <TabsContent value="details" className="space-y-6 mt-6">
                   {/* Description */}
                   <div>
-                    <Label className="text-sm font-semibold dark:text-orange-400">Description</Label>
+                    <Label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Description</Label>
                     {editingDescription ? (
                       <div className="space-y-2 mt-2">
                         <Textarea
@@ -577,7 +583,7 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
                     ) : (
                       <div
                         onClick={() => setEditingDescription(true)}
-                        className="mt-2 p-3 border dark:border-orange-500/30 rounded-lg bg-gray-50 dark:bg-[#1a1f2e] cursor-pointer hover:bg-gray-100 dark:hover:bg-[#232938] min-h-24 whitespace-pre-wrap text-sm dark:text-orange-400"
+                        className="mt-2 p-4 border border-zinc-200 dark:border-zinc-800 rounded-xl bg-zinc-50 dark:bg-zinc-900 cursor-pointer hover:bg-zinc-100 dark:hover:bg-zinc-800 min-h-24 whitespace-pre-wrap text-sm text-zinc-700 dark:text-zinc-300 transition-all duration-200"
                       >
                         {project.description || 'Click to add description...'}
                       </div>
@@ -668,7 +674,7 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
                   <div className="flex gap-2">
                     <Button
                       onClick={handleUpdateCoverPhoto}
-                      className="flex-1 bg-indigo-600 hover:bg-indigo-700"
+                      className="flex-1 rounded-lg bg-gradient-to-r from-[#e05c29] to-orange-400 hover:to-rose-500 text-white shadow-[0_4px_20px_rgba(224,92,41,0.35)]"
                     >
                       <Check className="w-4 h-4 mr-2" />
                       Save Cover Photo

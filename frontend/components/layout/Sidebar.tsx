@@ -73,7 +73,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
     <aside
       className={cn(
         'fixed left-0 top-16 h-[calc(100vh-4rem)] z-40 flex flex-col border-r transition-all duration-300 ease-in-out',
-        'bg-white dark:bg-[#0f1419] border-gray-200 dark:border-[#2d3548]',
+        'bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800',
         collapsed ? 'w-16' : 'w-60'
       )}
     >
@@ -102,8 +102,8 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
               className={cn(
                 'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all',
                 isActive
-                  ? 'bg-orange-500/15 text-orange-500 dark:text-orange-400'
-                  : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-[#1a1f2e] hover:text-gray-900 dark:hover:text-white'
+                  ? 'bg-gradient-to-r from-[#e05c29]/15 to-[#e05c29]/5 text-[#e05c29] border-l-2 border-[#e05c29] font-medium'
+                  : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-zinc-100'
               )}
               title={collapsed ? item.label : undefined}
             >
@@ -115,9 +115,9 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
 
         {/* Divider */}
         <div className="my-3 mx-2">
-          <div className="border-t border-gray-200 dark:border-[#2d3548]" />
+          <div className="border-t border-zinc-200 dark:border-zinc-800" />
           {!collapsed && (
-            <span className="block text-[10px] uppercase tracking-wider text-gray-400 dark:text-gray-500 mt-3 mb-1 px-1">
+            <span className="block text-[10px] uppercase tracking-widest text-zinc-400 mt-3 mb-1 px-1">
               Boards
             </span>
           )}
@@ -135,8 +135,8 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
               className={cn(
                 'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all',
                 isActive
-                  ? 'bg-orange-500/15 text-orange-500 dark:text-orange-400'
-                  : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-[#1a1f2e] hover:text-gray-900 dark:hover:text-white'
+                  ? 'bg-gradient-to-r from-[#e05c29]/15 to-[#e05c29]/5 text-[#e05c29] border-l-2 border-[#e05c29] font-medium'
+                  : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-zinc-100'
               )}
               title={collapsed ? board.name : undefined}
             >
@@ -159,7 +159,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
       {/* User info at bottom */}
       {state.currentUser && (
         <div className={cn(
-          'border-t border-gray-200 dark:border-[#2d3548] p-3',
+          'border-t border-zinc-200 dark:border-zinc-800 p-3',
           collapsed ? 'flex justify-center' : ''
         )}>
           <div className={cn('flex items-center gap-3', collapsed && 'justify-center')}>

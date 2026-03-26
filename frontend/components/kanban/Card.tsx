@@ -34,6 +34,12 @@ export function ProjectCard({ project, onCardClick }: ProjectCardProps) {
 
   const allUsers = getAllUsers();
 
+  // Team-scoped users: only show users in the same team as this project
+  const teamUsers = React.useMemo(() => {
+    if (!project.teamId) return allUsers;
+    return allUsers.filter((u: any) => u.teams?.some((t: any) => t.id === project.teamId));
+  }, [allUsers, project.teamId]);
+
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
@@ -212,7 +218,7 @@ export function ProjectCard({ project, onCardClick }: ProjectCardProps) {
     return () => document.removeEventListener('mousedown', handler);
   }, [showQuickEdit]);
 
-  const filteredUsers = allUsers.filter(user =>
+  const filteredUsers = teamUsers.filter(user =>
     user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     user.email.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -221,7 +227,7 @@ export function ProjectCard({ project, onCardClick }: ProjectCardProps) {
     <Card
       ref={setNodeRef}
       style={style}
-      className="group/card relative bg-white dark:bg-[#1a1f2e] dark:border-[#2d3548] cursor-pointer hover:shadow-lg hover:shadow-orange-500/10 dark:hover:shadow-orange-500/20 transition-all p-3 space-y-3"
+      className="group/card relative bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 border-l-2 border-l-[#e05c29] cursor-pointer hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 p-4 space-y-3 rounded-xl"
     >
       {/* Quick-Edit pencil button (visible on hover) */}
       {!isReadOnly && !showQuickEdit && (
@@ -237,7 +243,7 @@ export function ProjectCard({ project, onCardClick }: ProjectCardProps) {
       {showQuickEdit && (
         <div
           ref={quickEditRef}
-          className="absolute inset-0 z-30 bg-white dark:bg-[#1a1f2e] rounded-lg border-2 border-orange-500 p-3 space-y-3 overflow-y-auto"
+          className="absolute inset-0 z-30 bg-white dark:bg-zinc-900 rounded-xl border-2 border-[#e05c29] p-3 space-y-3 overflow-y-auto"
           onClick={(e) => e.stopPropagation()}
         >
           <div className="flex items-center justify-between mb-1">
@@ -315,10 +321,10 @@ export function ProjectCard({ project, onCardClick }: ProjectCardProps) {
       <div
         {...attributes}
         {...listeners}
-        className="cursor-grab active:cursor-grabbing -mx-3 -mt-3 px-3 pt-3 pb-2 border-b border-gray-100 dark:border-[#2d3548]"
+        className="cursor-grab active:cursor-grabbing -mx-4 -mt-4 px-4 pt-3 pb-2 border-b border-zinc-100 dark:border-zinc-800"
       >
         <div className="flex items-center justify-center">
-          <div className="w-8 h-1 bg-gray-300 dark:bg-orange-500/50 rounded-full"></div>
+          <div className="w-8 h-1 bg-zinc-300 dark:bg-zinc-600 rounded-full"></div>
         </div>
       </div>
 
@@ -335,7 +341,7 @@ export function ProjectCard({ project, onCardClick }: ProjectCardProps) {
 
         {/* Title */}
         <div>
-          <h4 className="font-semibold text-gray-900 dark:text-orange-400 line-clamp-2">{project.name}</h4>
+          <h4 className="text-sm font-medium text-zinc-900 dark:text-zinc-100 line-clamp-2">{project.name}</h4>
         </div>
 
         {/* Members */}
@@ -393,12 +399,12 @@ export function ProjectCard({ project, onCardClick }: ProjectCardProps) {
 
         {/* Latest Comment */}
         {project.comments.length > 0 && (
-          <div className="bg-gray-50 dark:bg-[#232938] rounded-lg p-2 border border-gray-200 dark:border-[#2d3548]">
+          <div className="bg-zinc-50 dark:bg-zinc-800 rounded-xl p-2 border border-zinc-200 dark:border-zinc-700">
             <div className="flex items-center gap-1 mb-1">
-              <MessageSquare className="w-3 h-3 text-gray-500 dark:text-orange-400" />
-              <span className="text-xs font-medium text-gray-600 dark:text-orange-400">Latest comment:</span>
+              <MessageSquare className="w-3 h-3 text-zinc-500 dark:text-zinc-400" />
+              <span className="text-xs font-medium text-zinc-600 dark:text-zinc-400">Latest comment:</span>
             </div>
-            <p className="text-xs text-gray-700 dark:text-gray-300 line-clamp-2">
+            <p className="text-xs text-zinc-600 dark:text-zinc-300 line-clamp-2">
               {project.comments[project.comments.length - 1].content}
             </p>
           </div>
@@ -406,7 +412,7 @@ export function ProjectCard({ project, onCardClick }: ProjectCardProps) {
 
         {/* Priority & Due Date */}
         <div className="flex items-center justify-between gap-2 text-xs">
-          <span className={`px-2 py-1 rounded font-medium ${priorityStyle.color} ${priorityStyle.bgColor} dark:bg-orange-500/20 dark:text-orange-400 dark:border dark:border-orange-500/30`}>
+          <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${priorityStyle.color} ${priorityStyle.bgColor}`}>
             {priorityStyle.label}
           </span>
           {isOverdue && (
@@ -446,7 +452,7 @@ export function ProjectCard({ project, onCardClick }: ProjectCardProps) {
         )}
 
         {/* Meta */}
-        <div className="flex items-center justify-between text-xs text-gray-500 dark:text-orange-400">
+        <div className="flex items-center justify-between text-xs text-zinc-500 dark:text-zinc-400">
           <div className="flex items-center gap-3">
             {project.comments.length > 0 && (
               <span className="flex items-center gap-1">
