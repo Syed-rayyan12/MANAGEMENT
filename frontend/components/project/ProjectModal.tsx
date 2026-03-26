@@ -26,11 +26,14 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { X, Calendar, AlertCircle, MessageSquare, Paperclip, Plus, Check, Trash2, Upload, Download, Edit, AtSign, Image as ImageIcon, CheckSquare, Square, Activity, GripVertical } from 'lucide-react';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Progress } from '@/components/ui/progress';
-import { PRIORITY_STYLES, LABEL_COLORS, KANBAN_COLUMNS } from '@/lib/constants';
+import { X, AlertCircle, MessageSquare, Paperclip, Check, Trash2, Upload, Image as ImageIcon, Activity } from 'lucide-react';
+import { PRIORITY_STYLES, KANBAN_COLUMNS } from '@/lib/constants';
 import { format } from 'date-fns';
+
+import { CommentsSection } from './CommentsSection';
+import { ChecklistSection } from './ChecklistSection';
+import { AttachmentsSection } from './AttachmentsSection';
+import { ActivitySection } from './ActivitySection';
 
 interface ProjectModalProps {
   project: Project;
@@ -39,28 +42,15 @@ interface ProjectModalProps {
 
 export function ProjectModal({ project, onClose }: ProjectModalProps) {
   const { state, dispatch, getUserName, getAllUsers, getUserAvatar } = useApp();
-  const { canDeleteProject, canChangePriority, canEditProjectFields, isReadOnly } = usePermissions();
+  const { canDeleteProject, canChangePriority, isReadOnly } = usePermissions();
   const [editingName, setEditingName] = useState(false);
   const [editingDescription, setEditingDescription] = useState(false);
   const [editingTitle, setEditingTitle] = useState(project.name);
   const [editingDesc, setEditingDesc] = useState(project.description);
-  const [newComment, setNewComment] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const fileInputRef = React.useRef<HTMLInputElement>(null);
-  const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
-  const [editCommentContent, setEditCommentContent] = useState('');
-  const [showMentionDropdown, setShowMentionDropdown] = useState(false);
-  const [mentionSearchQuery, setMentionSearchQuery] = useState('');
-  const [mentionPosition, setMentionPosition] = useState(0);
-  const commentInputRef = React.useRef<HTMLTextAreaElement>(null);
   const [showCoverPhotoModal, setShowCoverPhotoModal] = useState(false);
   const [coverPhotoFile, setCoverPhotoFile] = useState<File | null>(null);
   const coverPhotoInputRef = React.useRef<HTMLInputElement>(null);
-
-  // Checklist state
-  const [newCheckItemTitle, setNewCheckItemTitle] = useState('');
-  const [showAddCheckItem, setShowAddCheckItem] = useState(false);
 
   const allUsers = getAllUsers();
 
@@ -123,148 +113,6 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
     }
 
     setEditingDescription(false);
-  };
-
-  const handleAddComment = async () => {
-    if (newComment.trim() && state.currentUser) {
-      // Persist comment to backend first
-      try {
-        const result = await projectAPI.addComment(project.id, newComment);
-        if (result.success) {
-          const savedComment = result.data.comment;
-          const comment = {
-            id: savedComment.id,
-            userId: savedComment.userId,
-            content: savedComment.content,
-            timestamp: new Date(savedComment.createdAt),
-          };
-          
-          dispatch({
-            type: 'ADD_COMMENT',
-            payload: {
-              projectId: project.id,
-              comment,
-              userId: state.currentUser.id,
-            },
-          });
-          toast.success('Comment added');
-        } else {
-          console.error('Error adding comment:', result.message);
-          toast.error('Failed to add comment');
-        }
-      } catch (error) {
-        console.error('Error adding comment:', error);
-        toast.error('Failed to add comment');
-      }
-
-      // Notifications are now handled server-side
-      
-      setNewComment('');
-    }
-  };
-
-  const handleUpdateComment = async (commentId: string) => {
-    if (editCommentContent.trim() && state.currentUser) {
-      // Persist to backend
-      try {
-        await projectAPI.updateComment(project.id, commentId, editCommentContent);
-        toast.success('Comment updated');
-      } catch (error) {
-        console.error('Error updating comment:', error);
-        toast.error('Failed to update comment');
-      }
-
-      dispatch({
-        type: 'UPDATE_COMMENT',
-        payload: {
-          projectId: project.id,
-          commentId,
-          content: editCommentContent,
-          userId: state.currentUser.id,
-        },
-      });
-
-      // Notifications are now handled server-side
-
-      setEditingCommentId(null);
-      setEditCommentContent('');
-    }
-  };
-
-  const extractMentionedUsers = (text: string): string[] => {
-    const mentionRegex = /@([a-zA-Z0-9_]+)/g;
-    const matches = text.match(mentionRegex);
-    if (!matches) return [];
-    
-    const userIds: string[] = [];
-    matches.forEach((match) => {
-      const username = match.substring(1);
-      const user = allUsers.find(u => u.name.toLowerCase().replace(/\s+/g, '') === username.toLowerCase());
-      if (user) {
-        userIds.push(user.id);
-      }
-    });
-    return userIds;
-  };
-
-  const handleCommentChange = (value: string, isNewComment: boolean = true) => {
-    if (isNewComment) {
-      setNewComment(value);
-    } else {
-      setEditCommentContent(value);
-    }
-
-    // Check for @ mention
-    const textarea = commentInputRef.current;
-    if (!textarea) return;
-    
-    const cursorPos = textarea.selectionStart || 0;
-    const textBeforeCursor = value.substring(0, cursorPos);
-    const lastAtIndex = textBeforeCursor.lastIndexOf('@');
-    
-    if (lastAtIndex !== -1) {
-      const textAfterAt = textBeforeCursor.substring(lastAtIndex + 1);
-      if (!textAfterAt.includes(' ') && textAfterAt.length >= 0) {
-        setMentionSearchQuery(textAfterAt.toLowerCase());
-        setMentionPosition(lastAtIndex);
-        setShowMentionDropdown(true);
-        return;
-      }
-    }
-    setShowMentionDropdown(false);
-  };
-
-  const handleSelectMention = (user: typeof allUsers[0], isNewComment: boolean = true) => {
-    const currentText = isNewComment ? newComment : editCommentContent;
-    const beforeMention = currentText.substring(0, mentionPosition);
-    const afterMention = currentText.substring(mentionPosition + mentionSearchQuery.length + 1);
-    const username = user.name.replace(/\s+/g, '');
-    const newText = `${beforeMention}@${username} ${afterMention}`;
-    
-    if (isNewComment) {
-      setNewComment(newText);
-    } else {
-      setEditCommentContent(newText);
-    }
-    setShowMentionDropdown(false);
-  };
-
-  const renderCommentWithMentions = (text: string) => {
-    const parts = text.split(/(@[a-zA-Z0-9_]+)/g);
-    return parts.map((part, index) => {
-      if (part.startsWith('@')) {
-        const username = part.substring(1);
-        const user = allUsers.find(u => u.name.toLowerCase().replace(/\s+/g, '') === username.toLowerCase());
-        if (user) {
-          return (
-            <span key={index} className="text-indigo-600 font-semibold bg-indigo-50 px-1 rounded">
-              @{user.name}
-            </span>
-          );
-        }
-      }
-      return <span key={index}>{part}</span>;
-    });
   };
 
   const handleUpdateDueDate = async (dateString: string) => {
@@ -401,94 +249,6 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
     onClose();
   };
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setSelectedFile(file);
-    }
-  };
-
-  const handleAddAttachment = async () => {
-    if (selectedFile) {
-      const loadingToast = toast.loading('Uploading file...');
-      try {
-        // Upload to R2 CDN
-        const uploadResult = await uploadAPI.uploadFile(selectedFile, 'attachments');
-        if (!uploadResult) {
-          toast.dismiss(loadingToast);
-          toast.error('File upload failed');
-          return;
-        }
-
-        // Persist attachment to backend
-        const result = await projectAPI.addAttachment(project.id, {
-          filename: selectedFile.name,
-          url: uploadResult.publicUrl,
-          key: uploadResult.key,
-          type: selectedFile.type.includes('pdf') ? 'pdf' : 'image',
-          size: selectedFile.size,
-        });
-
-        if (result.success) {
-          const savedAttachment = result.data.attachment;
-          dispatch({
-            type: 'ADD_ATTACHMENT',
-            payload: {
-              projectId: project.id,
-              attachment: {
-                id: savedAttachment.id,
-                filename: savedAttachment.filename,
-                type: savedAttachment.type?.includes('pdf') ? 'pdf' : 'image',
-                url: savedAttachment.url,
-                uploadedAt: new Date(savedAttachment.createdAt),
-              },
-              userId: project.pm,
-            },
-          });
-          toast.dismiss(loadingToast);
-          toast.success('File uploaded successfully');
-        }
-      } catch (error) {
-        console.error('Error uploading attachment:', error);
-        toast.dismiss(loadingToast);
-        toast.error('Failed to upload file');
-      }
-
-      setSelectedFile(null);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
-    }
-  };
-
-  const handleRemoveAttachment = async (attachmentId: string) => {
-    try {
-      await projectAPI.removeAttachment(project.id, attachmentId);
-      toast.success('Attachment removed');
-    } catch (error) {
-      console.error('Error removing attachment:', error);
-      toast.error('Failed to remove attachment');
-    }
-
-    dispatch({
-      type: 'REMOVE_ATTACHMENT',
-      payload: {
-        projectId: project.id,
-        attachmentId,
-        userId: project.pm,
-      },
-    });
-  };
-
-  const handleDownloadAttachment = (attachment: typeof project.attachments[0]) => {
-    const link = document.createElement('a');
-    link.href = attachment.url;
-    link.download = attachment.filename;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
   const handleCoverPhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file && file.type.startsWith('image/')) {
@@ -556,94 +316,16 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
     setShowCoverPhotoModal(false);
   };
 
-  // ─── Checklist handlers ──────────────────────────
-  const checklistProgress = project.checklist.length > 0
-    ? Math.round((project.checklist.filter(i => i.completed).length / project.checklist.length) * 100)
-    : 0;
-
-  const persistChecklist = async (items: typeof project.checklist) => {
-    try {
-      await projectAPI.updateChecklist(
-        project.id,
-        items.map((item, idx) => ({
-          title: item.title,
-          completed: item.completed,
-          position: idx,
-        }))
-      );
-    } catch (error) {
-      console.error('Error updating checklist:', error);
-      toast.error('Failed to save checklist');
-    }
-  };
-
-  const handleAddCheckItem = async () => {
-    if (!newCheckItemTitle.trim()) return;
-    const newItem = {
-      id: `temp_${Date.now()}`,
-      title: newCheckItemTitle.trim(),
-      completed: false,
-    };
-    const updatedChecklist = [...project.checklist, newItem];
-
-    dispatch({
-      type: 'UPDATE_CHECKLIST',
-      payload: {
-        projectId: project.id,
-        checklist: updatedChecklist,
-        userId: state.currentUser?.id || project.pm,
-      },
-    });
-
-    setNewCheckItemTitle('');
-    await persistChecklist(updatedChecklist);
-    toast.success('Checklist item added');
-  };
-
-  const handleToggleCheckItem = async (itemId: string) => {
-    const updatedChecklist = project.checklist.map(item =>
-      item.id === itemId ? { ...item, completed: !item.completed } : item
-    );
-
-    dispatch({
-      type: 'UPDATE_CHECKLIST',
-      payload: {
-        projectId: project.id,
-        checklist: updatedChecklist,
-        userId: state.currentUser?.id || project.pm,
-      },
-    });
-
-    await persistChecklist(updatedChecklist);
-  };
-
-  const handleDeleteCheckItem = async (itemId: string) => {
-    const updatedChecklist = project.checklist.filter(item => item.id !== itemId);
-
-    dispatch({
-      type: 'UPDATE_CHECKLIST',
-      payload: {
-        projectId: project.id,
-        checklist: updatedChecklist,
-        userId: state.currentUser?.id || project.pm,
-      },
-    });
-
-    await persistChecklist(updatedChecklist);
-    toast.success('Checklist item removed');
-  };
-
-  const priorityStyle = PRIORITY_STYLES[project.priority];
   const isOverdue = project.dueDate && new Date(project.dueDate) < new Date() && project.status !== 'completed';
 
-  return ( 
+  return (
     <>
     <Dialog open={true} onOpenChange={onClose}>
       <DialogContent className="max-w-7xl max-h-[90vh] overflow-hidden p-0">
-        
+
         {/* Left-Right Layout */}
         <div className="flex h-full">
-          
+
           {/* Left Sidebar */}
           <div className="w-96 border-r dark:border-orange-500/30 flex flex-col">
             {/* Cover Photo Section */}
@@ -692,7 +374,7 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
                       value={editingTitle}
                       onChange={(e) => setEditingTitle(e.target.value)}
                       className="font-bold"
-                      autoFocus 
+                      autoFocus
 
                     />
                     <div className="flex gap-2">
@@ -838,7 +520,7 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
 
               {/* Delete Button */}
               {canDeleteProject && (
-                <Button 
+                <Button
                   variant="destructive"
                   onClick={() => setShowDeleteConfirm(true)}
                   className="w-full"
@@ -903,366 +585,22 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
                   </div>
 
                   {/* Checklist */}
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <Label className="text-sm font-semibold dark:text-orange-400 flex items-center gap-2">
-                        <CheckSquare className="w-4 h-4" />
-                        Checklist
-                        {project.checklist.length > 0 && (
-                          <span className="text-xs text-gray-500 dark:text-gray-400">
-                            ({project.checklist.filter(i => i.completed).length}/{project.checklist.length})
-                          </span>
-                        )}
-                      </Label>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setShowAddCheckItem(!showAddCheckItem)}
-                        className="h-7 text-xs"
-                      >
-                        <Plus className="w-3 h-3 mr-1" /> Add Item
-                      </Button>
-                    </div>
-
-                    {project.checklist.length > 0 && (
-                      <div className="mb-3">
-                        <div className="flex items-center gap-2 mb-1">
-                          <Progress value={checklistProgress} className="flex-1 h-2" />
-                          <span className="text-xs font-medium text-gray-500 dark:text-orange-400 min-w-[36px] text-right">
-                            {checklistProgress}%
-                          </span>
-                        </div>
-                      </div>
-                    )}
-
-                    <div className="space-y-1">
-                      {project.checklist.map((item) => (
-                        <div
-                          key={item.id}
-                          className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-[#232938] group transition-colors"
-                        >
-                          <Checkbox
-                            checked={item.completed}
-                            onCheckedChange={() => handleToggleCheckItem(item.id)}
-                            className="data-[state=checked]:bg-orange-500 data-[state=checked]:border-orange-500"
-                          />
-                          <span className={`flex-1 text-sm ${item.completed ? 'line-through text-gray-400 dark:text-gray-500' : 'text-gray-700 dark:text-gray-300'}`}>
-                            {item.title}
-                          </span>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDeleteCheckItem(item.id)}
-                            className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 text-red-500 hover:text-red-600 transition-opacity"
-                          >
-                            <X className="w-3 h-3" />
-                          </Button>
-                        </div>
-                      ))}
-                    </div>
-
-                    {project.checklist.length === 0 && !showAddCheckItem && (
-                      <div className="text-center py-6 text-gray-400 dark:text-gray-500">
-                        <CheckSquare className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                        <p className="text-sm">No checklist items</p>
-                        <p className="text-xs mt-1">Break down this project into smaller tasks</p>
-                      </div>
-                    )}
-
-                    {showAddCheckItem && (
-                      <div className="flex items-center gap-2 mt-2">
-                        <Input
-                          placeholder="Add a checklist item..."
-                          value={newCheckItemTitle}
-                          onChange={(e) => setNewCheckItemTitle(e.target.value)}
-                          onKeyDown={(e) => { if (e.key === 'Enter') handleAddCheckItem(); }}
-                          autoFocus
-                          className="flex-1"
-                        />
-                        <Button size="sm" onClick={handleAddCheckItem} className="bg-orange-500 hover:bg-orange-600 text-white">
-                          Add
-                        </Button>
-                        <Button size="sm" variant="outline" onClick={() => { setShowAddCheckItem(false); setNewCheckItemTitle(''); }}>
-                          Cancel
-                        </Button>
-                      </div>
-                    )}
-                  </div>
+                  <ChecklistSection project={project} />
                 </TabsContent>
 
                 {/* Comments Tab */}
-                <TabsContent value="comments" className="space-y-4 mt-4">
-                  <div className="space-y-4 max-h-96 overflow-y-auto">
-                    {project.comments.length === 0 ? (
-                      <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                        <MessageSquare className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                        <p>No comments yet</p>
-                        <p className="text-xs mt-1">Start a conversation about this project</p>
-                      </div>
-                    ) : (
-                      project.comments.map((comment) => (
-                        <div key={comment.id} className="flex gap-3 p-3 border dark:border-orange-500/30 rounded-lg bg-gray-50 dark:bg-[#1a1f2e]">
-                          <Avatar className="w-8 h-8">
-                            <AvatarImage src={getUserAvatar(comment.userId)} alt={getUserName(comment.userId)} />
-                            <AvatarFallback>{getUserName(comment.userId)[0]}</AvatarFallback>
-                          </Avatar>
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-1">
-                              <span className="font-semibold text-sm dark:text-orange-400">{getUserName(comment.userId)}</span>
-                              <span className="text-xs text-gray-500 dark:text-gray-400">
-                                {new Date(comment.timestamp).toLocaleDateString()} at {new Date(comment.timestamp).toLocaleTimeString()}
-                              </span>
-                            </div>
-                            {editingCommentId === comment.id ? (
-                              <div className="space-y-2">
-                                <div className="relative">
-                                  <Textarea
-                                    ref={commentInputRef}
-                                    value={editCommentContent}
-                                    onChange={(e) => handleCommentChange(e.target.value, false)}
-                                    className="min-h-20"
-                                    placeholder="Type @ to mention someone"
-                                  />
-                                  {showMentionDropdown && (
-                                    <div className="absolute bottom-full left-0 mb-1 w-full bg-white dark:bg-[#1a1f2e] border dark:border-orange-500/30 rounded-lg shadow-lg max-h-40 overflow-y-auto z-50">
-                                      {allUsers
-                                        .filter(u => u.name.toLowerCase().includes(mentionSearchQuery))
-                                        .map(user => (
-                                          <button
-                                            key={user.id}
-                                            onClick={() => handleSelectMention(user, false)}
-                                            className="w-full flex items-center gap-2 p-2 hover:bg-gray-100 dark:hover:bg-[#232938] transition-colors text-left"
-                                          >
-                                            <Avatar className="w-6 h-6">
-                                              <AvatarImage src={user.avatar} />
-                                              <AvatarFallback>{user.name[0]}</AvatarFallback>
-                                            </Avatar>
-                                            <div>
-                                              <p className="text-sm font-medium dark:text-orange-400">{user.name}</p>
-                                              <p className="text-xs text-gray-500 dark:text-gray-400">{user.email}</p>
-                                            </div>
-                                          </button>
-                                        ))
-                                      }
-                                    </div>
-                                  )}
-                                </div>
-                                <div className="flex gap-2">
-                                  <Button size="sm" onClick={() => handleUpdateComment(comment.id)}>Save</Button>
-                                  <Button size="sm" variant="outline" onClick={() => {
-                                    setEditingCommentId(null);
-                                    setEditCommentContent('');
-                                  }}>Cancel</Button>
-                                </div>
-                              </div>
-                            ) : (
-                              <>
-                                <p className="text-sm text-gray-700 dark:text-orange-400">{renderCommentWithMentions(comment.content)}</p>
-                                {state.currentUser?.id === comment.userId && (
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => {
-                                      setEditingCommentId(comment.id);
-                                      setEditCommentContent(comment.content);
-                                    }}
-                                    className="mt-2 h-7 text-xs"
-                                  >
-                                    <Edit className="w-3 h-3 mr-1" />
-                                    Edit
-                                  </Button>
-                                )}
-                              </>
-                            )}
-                          </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-
-                  <div className="border-t pt-4 space-y-2">
-                    <div className="relative">
-                      <Textarea
-                        ref={commentInputRef}
-                        placeholder="Add a comment... (Type @ to mention someone)"
-                        value={newComment}
-                        onChange={(e) => handleCommentChange(e.target.value, true)}
-                        className="min-h-20"
-                      />
-                      {showMentionDropdown && (
-                        <div className="absolute bottom-full left-0 mb-1 w-full bg-white dark:bg-[#1a1f2e] border dark:border-orange-500/30 rounded-lg shadow-lg max-h-40 overflow-y-auto z-50">
-                          {allUsers
-                            .filter(u => u.name.toLowerCase().includes(mentionSearchQuery))
-                            .map(user => (
-                              <button
-                                key={user.id}
-                                onClick={() => handleSelectMention(user, true)}
-                                className="w-full flex items-center gap-2 p-2 hover:bg-gray-100 dark:hover:bg-[#232938] transition-colors text-left"
-                              >
-                                <Avatar className="w-6 h-6">
-                                  <AvatarImage src={user.avatar} />
-                                  <AvatarFallback>{user.name[0]}</AvatarFallback>
-                                </Avatar>
-                                <div>
-                                  <p className="text-sm font-medium dark:text-orange-400">{user.name}</p>
-                                  <p className="text-xs text-gray-500 dark:text-gray-400">{user.email}</p>
-                                </div>
-                              </button>
-                            ))
-                          }
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <p className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
-                        <AtSign className="w-3 h-3" />
-                        Type @ to mention team members
-                      </p>
-                      <Button onClick={handleAddComment} className="bg-orange-500 hover:bg-orange-600 text-white">
-                        <MessageSquare className="w-4 h-4 mr-2" />
-                        Post Comment
-                      </Button>
-                    </div>
-                  </div>
+                <TabsContent value="comments">
+                  <CommentsSection project={project} />
                 </TabsContent>
 
                 {/* Attachments Tab */}
-                <TabsContent value="attachments" className="space-y-4 mt-4">
-                  <div className="space-y-3">
-                    <div className="border dark:border-orange-500/30 rounded-lg p-4 space-y-3 bg-gray-50 dark:bg-[#1a1f2e]">
-                      <Label className="dark:text-orange-400">Upload File</Label>
-                      <input
-                        ref={fileInputRef}
-                        type="file"
-                        onChange={handleFileSelect}
-                        className="hidden"
-                        accept="image/*,.pdf,.doc,.docx,.txt,.xlsx,.xls"
-                      />
-                      <div className="flex gap-2 items-center">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          onClick={() => fileInputRef.current?.click()}
-                          className="flex-1 text-white"
-                        >
-                          <Upload className="w-4 h-4 mr-2" />
-                          {selectedFile ? selectedFile.name : 'Choose File'}
-                        </Button>
-                        {selectedFile && (
-                          <Button onClick={handleAddAttachment} className="bg-indigo-600 hover:bg-indigo-700">
-                            <Plus className="w-4 h-4 mr-1" />
-                            Add
-                          </Button>
-                        )}
-                      </div>
-                      {selectedFile && (
-                        <div className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-2">
-                          <span>Selected: {selectedFile.name}</span>
-                          <span>({(selectedFile.size / 1024).toFixed(1)} KB)</span>
-                        </div>
-                      )}
-                    </div>
-
-                    {project.attachments.length === 0 ? (
-                      <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                        <Paperclip className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                        <p>No attachments yet</p>
-                        <p className="text-xs mt-1">Upload images, PDFs, or documents</p>
-                      </div>
-                    ) : (
-                      <div className="space-y-2">
-                        {project.attachments.map((attachment) => (
-                          <div
-                            key={attachment.id}
-                            className="flex items-center justify-between p-3 border dark:border-orange-500/30 rounded-lg bg-white dark:bg-[#1a1f2e] hover:bg-gray-50 dark:hover:bg-[#232938] transition-colors"
-                          >
-                            <div className="flex items-center gap-3 flex-1">
-                              <div className={`p-2 rounded ${
-                                attachment.type === 'pdf' ? 'bg-red-100' : 'bg-blue-100'
-                              }`}>
-                                <Paperclip className={`w-4 h-4 ${
-                                  attachment.type === 'pdf' ? 'text-red-600' : 'text-blue-600'
-                                }`} />
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium text-gray-900 dark:text-orange-400 truncate">{attachment.filename}</p>
-                                <p className="text-xs text-gray-500 dark:text-gray-400">
-                                  {new Date(attachment.uploadedAt).toLocaleDateString()} at {new Date(attachment.uploadedAt).toLocaleTimeString()}
-                                </p>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => window.open(attachment.url, '_blank')}
-                                className="text-indigo-600 hover:text-indigo-700"
-                              >
-                                View
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleDownloadAttachment(attachment)}
-                                className="text-green-600 hover:text-green-700 hover:bg-green-50"
-                              >
-                                <Download className="w-4 h-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleRemoveAttachment(attachment.id)}
-                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </Button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
+                <TabsContent value="attachments">
+                  <AttachmentsSection project={project} />
                 </TabsContent>
 
                 {/* Activity Tab */}
-                <TabsContent value="activity" className="space-y-4 mt-4">
-                  {project.activityLog.length === 0 ? (
-                    <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                      <Activity className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                      <p>No activity yet</p>
-                      <p className="text-xs mt-1">Actions on this project will appear here</p>
-                    </div>
-                  ) : (
-                    <div className="relative">
-                      {/* Timeline line */}
-                      <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-gray-200 dark:bg-orange-500/20" />
-
-                      <div className="space-y-4">
-                        {[...project.activityLog].reverse().map((log) => (
-                          <div key={log.id} className="flex items-start gap-3 relative pl-10">
-                            {/* Timeline dot */}
-                            <div className="absolute left-3 top-1.5 w-3 h-3 rounded-full bg-orange-500 border-2 border-white dark:border-[#0f1219]" />
-
-                            <div className="flex-1 p-3 rounded-lg bg-gray-50 dark:bg-[#1a1f2e] border dark:border-orange-500/20">
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-2">
-                                  <Avatar className="w-5 h-5">
-                                    <AvatarImage src={getUserAvatar(log.userId)} />
-                                    <AvatarFallback className="text-[8px]">{getUserName(log.userId)[0]}</AvatarFallback>
-                                  </Avatar>
-                                  <span className="text-xs font-semibold dark:text-orange-400">{getUserName(log.userId)}</span>
-                                </div>
-                                <span className="text-xs text-gray-400 dark:text-gray-500">
-                                  {new Date(log.timestamp).toLocaleDateString()} {new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                </span>
-                              </div>
-                              <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">{log.action}</p>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+                <TabsContent value="activity">
+                  <ActivitySection project={project} />
                 </TabsContent>
               </Tabs>
             </div>
@@ -1296,7 +634,7 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
                 </Button>
               </div>
             )}
-            
+
             <div className="border-t pt-4 space-y-3">
               <Label className="dark:text-orange-400">
                 {project.image ? 'Change Cover Photo' : 'Upload Cover Photo'}
@@ -1317,7 +655,7 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
                 <Upload className="w-4 h-4 mr-2" />
                 {coverPhotoFile ? coverPhotoFile.name : 'Choose Image'}
               </Button>
-              
+
               {coverPhotoFile && (
                 <div className="space-y-3">
                   <div className="relative w-full h-48 rounded-lg border overflow-hidden">
