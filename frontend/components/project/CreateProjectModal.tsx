@@ -113,7 +113,7 @@ export function CreateProjectModal({ onClose, initialStatus, initialBoard }: Cre
           boardId: p.boardId || initialBoard,
           board: p.board ? { id: p.board.id, name: p.board.name } : undefined,
           teamId: p.teamId,
-          team: p.team ? { id: p.team.id, name: p.team.name } : undefined,
+          team: p.team ? { id: p.team.id, slug: p.team.slug, name: p.team.name } : undefined,
           status: p.status || status,
           priority: (p.priority || 'MEDIUM').toLowerCase() as ProjectPriority,
           dueDate: dueDate || null,
