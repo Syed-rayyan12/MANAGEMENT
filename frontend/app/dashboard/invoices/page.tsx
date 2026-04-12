@@ -93,7 +93,7 @@ export default function InvoicesPage() {
     try {
       const result = await invoiceAPI.getAll();
       if (result.success) {
-        setInvoices(result.data);
+        setInvoices(Array.isArray(result.data) ? result.data : []);
       }
     } catch (error: any) {
       toast.error(error.message || 'Failed to fetch invoices');
@@ -175,7 +175,7 @@ export default function InvoicesPage() {
       if (result.success) {
         toast.success('Invoice cancelled');
         setInvoices((prev) =>
-          prev.map((inv) => (inv.id === id ? { ...inv, status: 'CANCELLED' as InvoiceStatus } : inv))
+          prev.map((inv) => (inv.id === id ? result.data : inv))
         );
       } else {
         toast.error(result.message || 'Failed to cancel invoice');
