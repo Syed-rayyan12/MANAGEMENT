@@ -72,9 +72,9 @@ export function LoginForm() {
       <Card className="w-full max-w-md shadow-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
         <CardHeader className="text-center">
           <div className="mx-auto mb-2 w-12 h-12 rounded-xl bg-gradient-to-br from-[#e05c29] to-orange-400 flex items-center justify-center text-white font-bold text-xl shadow-[0_4px_20px_rgba(224,92,41,0.35)]">
-            P
+            X
           </div>
-          <CardTitle className="text-3xl font-semibold text-zinc-900 dark:text-zinc-100">ProManage</CardTitle>
+          <CardTitle className="text-3xl font-semibold text-zinc-900 dark:text-zinc-100">XRM</CardTitle>
           <CardDescription className="text-zinc-500 dark:text-zinc-400">Enterprise Project Management System</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">

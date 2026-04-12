@@ -67,9 +67,9 @@ export function Navbar({ searchQuery, onSearchChange, onMenuToggle }: NavbarProp
             </Button>
           )}
           <div className="w-8 h-8 bg-gradient-to-br from-[#e05c29] to-orange-400 rounded-lg flex items-center justify-center text-white font-bold text-sm shadow-[0_4px_20px_rgba(224,92,41,0.35)]">
-            P
+            X
           </div>
-          <h1 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100 hidden sm:block">ProManage</h1>
+          <h1 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100 hidden sm:block">XRM</h1>
         </div>
 
         {/* Search Bar */}
