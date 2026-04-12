@@ -228,8 +228,9 @@ export function Board({ searchQuery = '', filterPriority = 'all', filterAssignee
     const trueOriginal = existing?.savedFromStatus ?? dragOriginalStatus ?? project.status;
 
     const toastId = `move-${projectId}`;
+    const targetLabel = allColumns.find(c => c.status === newStatus)?.label || newStatus;
     toast.dismiss(toastId);
-    toast.info(`Card will be saved shortly — move again to reset`, {
+    toast.info(`Moving card to "${targetLabel}" — saving in a moment...`, {
       id: toastId,
       duration: 1500,
     });

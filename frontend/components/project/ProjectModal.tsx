@@ -191,7 +191,7 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
     // Update backend
     try {
       const token = localStorage.getItem('token');
-      await fetch(`${API_BASE_URL}/projects/${project.id}`, {
+      const response = await fetch(`${API_BASE_URL}/projects/${project.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -199,8 +199,14 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
         },
         body: JSON.stringify({ status: newStatus })
       });
+      if (response.ok) {
+        toast.success(`Status updated to "${newStatus.replace(/-/g, ' ')}"`);
+      } else {
+        toast.error('Failed to update status');
+      }
     } catch (error) {
       console.error('Error updating status:', error);
+      toast.error('Failed to update status');
     }
   };
 
@@ -322,7 +328,8 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
     setShowCoverPhotoModal(false);
   };
 
-  const isOverdue = project.dueDate && new Date(project.dueDate) < new Date() && project.status !== 'completed';
+  const isCompleted = project.status.includes('completed') || project.status.includes('done');
+  const isOverdue = project.dueDate && new Date(project.dueDate) < new Date() && !isCompleted;
 
   return (
     <>
@@ -446,12 +453,17 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
                     type="date"
                     value={project.dueDate ? format(new Date(project.dueDate), 'yyyy-MM-dd') : ''}
                     onChange={(e) => handleUpdateDueDate(e.target.value)}
+                    min={format(new Date(), 'yyyy-MM-dd')}
+                    disabled={isCompleted}
                     className="flex-1"
                   />
                   {isOverdue && (
                     <AlertCircle className="w-4 h-4 text-red-600" />
                   )}
                 </div>
+                {isCompleted && (
+                  <p className="text-xs text-zinc-400 mt-1">Due date is locked for completed projects</p>
+                )}
               </div>
 
               {/* Project Manager */}
@@ -547,17 +559,17 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
 
               <Tabs defaultValue="details" className="mt-6">
                 <TabsList className="grid w-full grid-cols-4">
-                  <TabsTrigger value="details" className='text-white '>Details</TabsTrigger>
-                  <TabsTrigger value="comments" className='text-white'>
-                    <MessageSquare className="w-4 h-4 mr-2 text-white" />
+                  <TabsTrigger value="details">Details</TabsTrigger>
+                  <TabsTrigger value="comments">
+                    <MessageSquare className="w-4 h-4 mr-2" />
                     Comments ({project.comments.length})
                   </TabsTrigger>
-                  <TabsTrigger value="attachments" className='text-white'>
-                    <Paperclip className="w-4 h-4 mr-2 text-white" />
+                  <TabsTrigger value="attachments">
+                    <Paperclip className="w-4 h-4 mr-2" />
                     Files ({project.attachments.length})
                   </TabsTrigger>
-                  <TabsTrigger value="activity" className='text-white'>
-                    <Activity className="w-4 h-4 mr-2 text-white" />
+                  <TabsTrigger value="activity">
+                    <Activity className="w-4 h-4 mr-2" />
                     Activity
                   </TabsTrigger>
                 </TabsList>

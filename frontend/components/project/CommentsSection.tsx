@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Project, ProjectManager } from '@/lib/types';
 import { projectAPI } from '@/lib/api-service';
 import { toast } from 'sonner';
@@ -25,12 +25,27 @@ export function CommentsSection({ project }: CommentsSectionProps) {
   const commentInputRef = React.useRef<HTMLTextAreaElement>(null);
 
   const allUsers = getAllUsers();
+  const mentionDropdownRef = React.useRef<HTMLDivElement>(null);
 
   // Team-scoped users: only show users belonging to the same team as this project
   const teamUsers = React.useMemo(() => {
     if (!project.teamId) return allUsers;
-    return allUsers.filter((u: any) => u.teams?.some((t: any) => t.id === project.teamId));
+    const scoped = allUsers.filter((u: any) => u.teams?.some((t: any) => t.id === project.teamId));
+    return scoped.length > 0 ? scoped : allUsers;
   }, [allUsers, project.teamId]);
+
+  // Close mention dropdown on click outside
+  useEffect(() => {
+    if (!showMentionDropdown) return;
+    const handler = (e: MouseEvent) => {
+      if (mentionDropdownRef.current && !mentionDropdownRef.current.contains(e.target as Node) &&
+          commentInputRef.current && !commentInputRef.current.contains(e.target as Node)) {
+        setShowMentionDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [showMentionDropdown]);
 
   const handleAddComment = async () => {
     if (newComment.trim() && state.currentUser) {
@@ -154,7 +169,7 @@ export function CommentsSection({ project }: CommentsSectionProps) {
   const MentionDropdown = ({ isNewComment }: { isNewComment: boolean }) => (
     <>
       {showMentionDropdown && (
-        <div className="absolute bottom-full left-0 mb-1 w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-lg shadow-black/10 max-h-40 overflow-y-auto z-50">
+        <div ref={mentionDropdownRef} className="absolute bottom-full left-0 mb-1 w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-lg shadow-black/10 max-h-40 overflow-y-auto z-50">
           {teamUsers
             .filter(u => u.name.toLowerCase().includes(mentionSearchQuery))
             .map(user => (
