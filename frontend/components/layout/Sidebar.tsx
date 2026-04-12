@@ -10,6 +10,7 @@ import {
   ChevronLeft,
   ChevronRight,
   User,
+  FileText,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { BOARD_METADATA, DEFAULT_BOARD_METADATA } from '@/lib/constants';
@@ -55,6 +56,9 @@ export function Sidebar({ collapsed, onToggle, isMobile = false, mobileOpen = fa
     fetchBoards();
   }, [state.currentUser]);
 
+  const userRole = state.currentUser?.role;
+  const canAccessInvoices = userRole === 'PM' || userRole === 'TL' || userRole === 'EXECUTIVE';
+
   const navItems = [
     {
       id: 'dashboard',
@@ -70,6 +74,13 @@ export function Sidebar({ collapsed, onToggle, isMobile = false, mobileOpen = fa
       href: '/dashboard/my-work',
       match: (p: string) => p === '/dashboard/my-work',
     },
+    ...(canAccessInvoices ? [{
+      id: 'invoices',
+      label: 'Invoices',
+      icon: FileText,
+      href: '/dashboard/invoices',
+      match: (p: string) => p === '/dashboard/invoices',
+    }] : []),
   ];
 
   return (

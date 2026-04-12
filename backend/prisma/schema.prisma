@@ -26,6 +26,14 @@ enum ProjectPriority {
   CRITICAL
 }
 
+enum InvoiceStatus {
+  PENDING
+  PAID
+  CANCELLED
+  REFUNDED
+  FAILED
+}
+
 // ─── ORGANIZATION ───────────────────────────────────
 
 model Organization {
@@ -49,6 +57,7 @@ model Team {
   organization   Organization @relation(fields: [organizationId], references: [id])
   members        TeamMember[]
   projects       Project[]
+  invoices       Invoice[]
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
 
@@ -120,6 +129,7 @@ model User {
   activities       ActivityLog[]
   notifications    Notification[]
   teamMembers      TeamMember[]
+  invoices         Invoice[]
 
   @@map("users")
 }
@@ -258,4 +268,38 @@ model Notification {
 
   @@index([userId, read])
   @@map("notifications")
+}
+
+// ─── INVOICES ─────────────────────────────────────
+
+model Invoice {
+  id              String        @id @default(uuid())
+  clientName      String
+  clientEmail     String?
+  description     String
+  amount          Decimal       @db.Decimal(10, 2)
+  currency        String        @default("GBP")
+  status          InvoiceStatus @default(PENDING)
+  paypalInvoiceId String?       @unique // PayPal invoice ID
+  paymentLink     String?       // PayPal payment URL
+  paidAt          DateTime?
+
+  // Who created this invoice
+  createdById     String
+  createdBy       User          @relation(fields: [createdById], references: [id])
+
+  // Team association (for visibility scoping)
+  teamId          String
+  team            Team          @relation(fields: [teamId], references: [id])
+
+  // Webhook idempotency
+  lastWebhookEventId String?
+
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@index([createdById])
+  @@index([teamId])
+  @@index([status])
+  @@map("invoices")
 }

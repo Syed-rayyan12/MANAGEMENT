@@ -45,6 +45,10 @@ export function usePermissions() {
     canUploadAttachment: isPM || isTL || isProd,
     canManageChecklist: isPM || isTL || isProd,
 
+    // Invoices
+    canAccessInvoices: isPM || isTL || isExec,
+    canCreateInvoice: isPM || isTL || isExec,
+
     // Drag and drop
     canDragCards: isPM || isTL || isProd,
 

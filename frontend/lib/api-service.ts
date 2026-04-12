@@ -325,6 +325,35 @@ export const teamAPI = {
   },
 };
 
+// Invoice APIs
+export const invoiceAPI = {
+  create: async (data: {
+    clientName: string;
+    clientEmail?: string;
+    description: string;
+    amount: number;
+    teamId: string;
+  }) => {
+    const response = await apiFetch(`${API_BASE_URL}/invoices`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+    return await response.json();
+  },
+
+  getAll: async () => {
+    const response = await apiFetch(`${API_BASE_URL}/invoices`);
+    return await response.json();
+  },
+
+  cancel: async (id: string) => {
+    const response = await apiFetch(`${API_BASE_URL}/invoices/${id}/cancel`, {
+      method: 'POST',
+    });
+    return await response.json();
+  },
+};
+
 // Board APIs
 export const boardAPI = {
   getAll: async () => {

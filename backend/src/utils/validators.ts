@@ -68,6 +68,19 @@ export const updateChecklistSchema = z.object({
   })),
 });
 
+// ─── Invoices ──────────────────────────────────────
+
+export const createInvoiceSchema = z.object({
+  clientName: z.string().min(1, 'Client name is required').max(200),
+  clientEmail: z.string().email('Invalid email').max(254).optional().nullable(),
+  description: z.string().min(1, 'Description is required').max(1000),
+  amount: z.union([z.string(), z.number()])
+    .transform((val) => typeof val === 'string' ? parseFloat(val) : val)
+    .refine((val) => !isNaN(val) && val > 0, 'Amount must be a positive number')
+    .refine((val) => val <= 999999.99, 'Amount cannot exceed 999,999.99'),
+  teamId: z.string().min(1, 'Team ID is required'),
+});
+
 // ─── Upload ────────────────────────────────────────
 
 export const presignSchema = z.object({

@@ -128,6 +128,38 @@ export interface CurrentUser {
   teams?: TeamInfo[];
 }
 
+// ─── Invoices ──────────────────────────────────────
+
+export type InvoiceStatus = 'PENDING' | 'PAID' | 'CANCELLED' | 'REFUNDED' | 'FAILED';
+
+export interface Invoice {
+  id: string;
+  clientName: string;
+  clientEmail: string | null;
+  description: string;
+  amount: string; // Decimal comes as string from Prisma
+  currency: string;
+  status: InvoiceStatus;
+  paypalInvoiceId: string | null;
+  paymentLink: string | null;
+  paidAt: string | null;
+  createdById: string;
+  createdBy: {
+    id: string;
+    name: string;
+    email: string;
+    role: string;
+  };
+  teamId: string;
+  team: {
+    id: string;
+    name: string;
+    slug: string;
+  };
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface AppState {
   projects: Project[];
   currentUser: CurrentUser | null;

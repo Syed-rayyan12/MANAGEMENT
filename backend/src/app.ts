@@ -12,6 +12,8 @@ import userRoutes from './routes/user.routes';
 import notificationRoutes from './routes/notification.routes';
 import teamRoutes from './routes/team.routes';
 import boardRoutes from './routes/board.routes';
+import invoiceRoutes from './routes/invoice.routes';
+import webhookRoutes from './routes/webhook.routes';
 
 // Load environment variables
 dotenv.config();
@@ -85,6 +87,8 @@ app.use('/api/users', apiLimiter, userRoutes);
 app.use('/api/notifications', apiLimiter, notificationRoutes);
 app.use('/api/teams', apiLimiter, teamRoutes);
 app.use('/api/boards', apiLimiter, boardRoutes);
+app.use('/api/invoices', apiLimiter, invoiceRoutes);
+app.use('/api/webhooks', webhookRoutes); // No rate limit — PayPal needs reliable delivery
 
 // ─── 404 handler ───────────────────────────────────
 app.use((_req: Request, res: Response) => {
