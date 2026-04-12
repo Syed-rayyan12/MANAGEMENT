@@ -55,18 +55,18 @@ export function Column({ status, label, color, projects, onCardClick, onAddCard 
   return (
     <div
       ref={setNodeRef}
-      className={`flex flex-col rounded-lg p-4 min-w-[320px] h-[calc(100vh-200px)] transition-colors ${
+      className={`flex flex-col rounded-xl p-4 w-[320px] min-w-[320px] max-w-[320px] h-[calc(100vh-200px)] transition-colors ${
         isOver
-          ? 'bg-orange-50 dark:bg-orange-500/10 border-2 border-dashed border-orange-400 dark:border-orange-500'
-          : 'bg-gray-100 dark:bg-[#1a1f2e] dark:border dark:border-[#2d3548]'
+          ? 'bg-orange-50 dark:bg-[#e05c29]/10 border-2 border-dashed border-[#e05c29]/40'
+          : 'bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800'
       }`}
     >
       {/* Fixed Header */}
       <div className="mb-4 flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-2">
           <div className="w-3 h-3 rounded-full" style={{ backgroundColor: color }}></div>
-          <h3 className="font-semibold text-gray-900 dark:text-orange-400">{label}</h3>
-          <span className="bg-gray-300 dark:bg-orange-500/20 text-gray-700 dark:text-orange-400 text-xs font-medium px-2 py-1 rounded-full border dark:border-orange-500/30">
+          <h3 className="font-semibold text-zinc-700 dark:text-zinc-300 text-sm">{label}</h3>
+          <span className="bg-zinc-200 dark:bg-zinc-700 text-zinc-500 dark:text-zinc-400 text-xs font-medium px-2 py-0.5 rounded-full">
             {projects.length}
           </span>
         </div>

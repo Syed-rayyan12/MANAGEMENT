@@ -6,6 +6,7 @@ import { useApp } from '@/contexts/useApp';
 import { Navbar } from '@/components/layout/Navbar';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 const SearchContext = createContext<{
   searchQuery: string;
@@ -29,19 +30,35 @@ export default function DashboardLayout({
   const [searchQuery, setSearchQuery] = useState('');
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const isMobile = useIsMobile();
 
-  // Persist sidebar state
+  // Auto-collapse sidebar on mobile
   useEffect(() => {
-    const stored = localStorage.getItem('sidebar-collapsed');
-    if (stored === 'true') setSidebarCollapsed(true);
-  }, []);
+    if (isMobile) {
+      setSidebarCollapsed(true);
+      setMobileMenuOpen(false);
+    }
+  }, [isMobile]);
+
+  // Persist sidebar state (desktop only)
+  useEffect(() => {
+    if (!isMobile) {
+      const stored = localStorage.getItem('sidebar-collapsed');
+      if (stored === 'true') setSidebarCollapsed(true);
+    }
+  }, [isMobile]);
 
   const handleSidebarToggle = () => {
-    setSidebarCollapsed((prev) => {
-      const next = !prev;
-      localStorage.setItem('sidebar-collapsed', String(next));
-      return next;
-    });
+    if (isMobile) {
+      setMobileMenuOpen((prev) => !prev);
+    } else {
+      setSidebarCollapsed((prev) => {
+        const next = !prev;
+        localStorage.setItem('sidebar-collapsed', String(next));
+        return next;
+      });
+    }
   };
 
   useEffect(() => {
@@ -93,10 +110,27 @@ export default function DashboardLayout({
 
   return (
     <SearchContext.Provider value={{ searchQuery, setSearchQuery }}>
-      <Navbar searchQuery={searchQuery} onSearchChange={setSearchQuery} />
-      <Sidebar collapsed={sidebarCollapsed} onToggle={handleSidebarToggle} />
+      <Navbar searchQuery={searchQuery} onSearchChange={setSearchQuery} onMenuToggle={isMobile ? handleSidebarToggle : undefined} />
+
+      {/* Mobile overlay */}
+      {isMobile && mobileMenuOpen && (
+        <div
+          className="fixed inset-0 bg-black/40 z-30 md:hidden"
+          onClick={() => setMobileMenuOpen(false)}
+        />
+      )}
+
+      <Sidebar
+        collapsed={isMobile ? !mobileMenuOpen : sidebarCollapsed}
+        onToggle={handleSidebarToggle}
+        isMobile={isMobile}
+        mobileOpen={mobileMenuOpen}
+        onMobileClose={() => setMobileMenuOpen(false)}
+      />
       <main
-        className={`min-h-screen relative transition-all duration-300 bg-zinc-50 dark:bg-zinc-950 ${sidebarCollapsed ? 'ml-16' : 'ml-60'}`}
+        className={`min-h-screen relative transition-all duration-300 bg-zinc-50 dark:bg-zinc-950 pt-16 ${
+          isMobile ? 'ml-0' : sidebarCollapsed ? 'ml-16' : 'ml-60'
+        }`}
       >
         <ErrorBoundary>
           {children}

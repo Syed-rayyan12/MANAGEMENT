@@ -229,7 +229,7 @@ export function ProjectCard({ project, onCardClick }: ProjectCardProps) {
     <Card
       ref={setNodeRef}
       style={style}
-      className="group/card relative bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 border-l-2 border-l-[#e05c29] cursor-pointer hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 p-4 space-y-3 rounded-xl"
+      className="group/card relative bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 border-l-2 border-l-[#e05c29] cursor-pointer hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 p-4 space-y-3 rounded-xl overflow-hidden w-full"
     >
       {/* Quick-Edit pencil button (visible on hover) */}
       {!isReadOnly && !showQuickEdit && (

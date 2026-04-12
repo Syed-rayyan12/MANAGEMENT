@@ -54,10 +54,11 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
 
   const allUsers = getAllUsers();
 
-  // Team-scoped users: only show users in the same team as this project
+  // Team-scoped users: prefer same team, fall back to all users
   const teamUsers = React.useMemo(() => {
     if (!project.teamId) return allUsers;
-    return allUsers.filter((u: any) => u.teams?.some((t: any) => t.id === project.teamId));
+    const scoped = allUsers.filter((u: any) => u.teams?.some((t: any) => t.id === project.teamId));
+    return scoped.length > 0 ? scoped : allUsers;
   }, [allUsers, project.teamId]);
 
   const handleSaveName = async () => {
@@ -482,7 +483,7 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
               <div>
                 <Label className="text-xs font-medium uppercase tracking-wide text-zinc-400 mb-2 block">Members</Label>
                 {/* Current members list */}
-                <div className="space-y-1.5 mb-2">
+                <div className="space-y-1.5 mb-2 max-h-48 overflow-y-auto">
                   {project.labels.map((label) => {
                     const memberUser = allUsers.find(u => u.name === label.name);
                     const mAvatar = memberUser ? getUserAvatar(memberUser.id) : undefined;

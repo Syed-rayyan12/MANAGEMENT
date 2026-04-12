@@ -15,7 +15,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Search, LogOut, Settings, User, Moon, Sun } from 'lucide-react';
+import { Search, LogOut, Settings, User, Moon, Sun, Menu } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { NotificationsPanel } from './NotificationsPanel';
 import { useTheme } from 'next-themes';
@@ -23,9 +23,10 @@ import { useTheme } from 'next-themes';
 interface NavbarProps {
   searchQuery: string;
   onSearchChange: (query: string) => void;
+  onMenuToggle?: () => void;
 }
 
-export function Navbar({ searchQuery, onSearchChange }: NavbarProps) {
+export function Navbar({ searchQuery, onSearchChange, onMenuToggle }: NavbarProps) {
   const router = useRouter();
   const { state, dispatch } = useApp();
   const { theme, setTheme } = useTheme();
@@ -56,25 +57,30 @@ export function Navbar({ searchQuery, onSearchChange }: NavbarProps) {
   if (!state.currentUser) return null;
 
   return (
-    <header className="bg-white dark:bg-[#0f1419] dark:border-[#2d3548] border-b border-gray-200 sticky top-0 z-50 dark:shadow-lg dark:shadow-orange-500/5">
-      <div className="flex items-center justify-between h-16 px-6 gap-4">
-        {/* Logo */}
+    <header className="fixed top-0 left-0 right-0 bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800 z-50">
+      <div className="flex items-center justify-between h-16 px-4 md:px-6 gap-2 md:gap-4">
+        {/* Mobile menu + Logo */}
         <div className="flex items-center gap-2 min-w-fit">
-          <div className="w-8 h-8 bg-orange-500 dark:bg-orange-500 rounded-lg flex items-center justify-center text-white font-bold text-sm shadow-lg dark:shadow-orange-500/50">
+          {onMenuToggle && (
+            <Button variant="ghost" size="icon" onClick={onMenuToggle} className="md:hidden">
+              <Menu className="w-5 h-5 text-zinc-600 dark:text-zinc-400" />
+            </Button>
+          )}
+          <div className="w-8 h-8 bg-gradient-to-br from-[#e05c29] to-orange-400 rounded-lg flex items-center justify-center text-white font-bold text-sm shadow-[0_4px_20px_rgba(224,92,41,0.35)]">
             P
           </div>
-          <h1 className="text-xl font-bold text-gray-900 dark:text-orange-400">ProManage</h1>
+          <h1 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100 hidden sm:block">ProManage</h1>
         </div>
 
         {/* Search Bar */}
-        <div className="flex-1 max-w-md">
+        <div className="flex-1 max-w-md hidden sm:block">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-zinc-400 w-4 h-4" />
             <Input
               placeholder="Search projects..."
               value={searchQuery}
               onChange={(e) => onSearchChange(e.target.value)}
-              className="pl-9 bg-gray-50 dark:bg-[#1a1f2e] dark:border-[#2d3548] dark:text-orange-400 dark:placeholder-orange-500/50 border-gray-300 dark:focus:border-orange-500"
+              className="pl-9"
             />
           </div>
         </div>

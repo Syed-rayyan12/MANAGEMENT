@@ -17,6 +17,9 @@ import { BOARD_METADATA, DEFAULT_BOARD_METADATA } from '@/lib/constants';
 interface SidebarProps {
   collapsed: boolean;
   onToggle: () => void;
+  isMobile?: boolean;
+  mobileOpen?: boolean;
+  onMobileClose?: () => void;
 }
 
 
@@ -25,7 +28,7 @@ interface BoardItem {
   name: string;
 }
 
-export function Sidebar({ collapsed, onToggle }: SidebarProps) {
+export function Sidebar({ collapsed, onToggle, isMobile = false, mobileOpen = false, onMobileClose }: SidebarProps) {
   const router = useRouter();
   const pathname = usePathname();
   const { state } = useApp();
@@ -74,7 +77,9 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
       className={cn(
         'fixed left-0 top-16 h-[calc(100vh-4rem)] z-40 flex flex-col border-r transition-all duration-300 ease-in-out',
         'bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800',
-        collapsed ? 'w-16' : 'w-60'
+        isMobile
+          ? cn('w-60', mobileOpen ? 'translate-x-0' : '-translate-x-full')
+          : collapsed ? 'w-16' : 'w-60'
       )}
     >
       {/* Toggle button */}
@@ -98,7 +103,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
           return (
             <button
               key={item.id}
-              onClick={() => router.push(item.href)}
+              onClick={() => { router.push(item.href); onMobileClose?.(); }}
               className={cn(
                 'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all',
                 isActive
@@ -131,7 +136,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
           return (
             <button
               key={board.slug}
-              onClick={() => router.push(`/dashboard/${board.slug}`)}
+              onClick={() => { router.push(`/dashboard/${board.slug}`); onMobileClose?.(); }}
               className={cn(
                 'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all',
                 isActive
