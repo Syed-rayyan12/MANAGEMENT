@@ -109,9 +109,10 @@ export default function InvoicesPage() {
       try {
         const result = await teamAPI.getMyTeams();
         if (result.success) {
-          setTeams(result.data);
-          if (result.data.length === 1) {
-            setSelectedTeamId(result.data[0].id);
+          const teamList = result.data.teams || result.data;
+          setTeams(teamList);
+          if (teamList.length === 1) {
+            setSelectedTeamId(teamList[0].id);
           }
         }
       } catch (error) {
