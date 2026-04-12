@@ -90,13 +90,18 @@ const getTypeConfig = (type: string) =>
     text: 'text-gray-600 dark:text-gray-400',
   };
 
+const NOTIF_PAGE_SIZE = 15;
+
 export function NotificationsPanel() {
   const { state, dispatch } = useApp();
+  const [visibleCount, setVisibleCount] = React.useState(NOTIF_PAGE_SIZE);
 
   const unreadNotifications = state.notifications.filter((n) => !n.read);
   const sortedNotifications = [...state.notifications].sort(
     (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
   );
+  const visibleNotifications = sortedNotifications.slice(0, visibleCount);
+  const hasMore = sortedNotifications.length > visibleCount;
 
   const handleMarkAsRead = async (notificationId: string) => {
     dispatch({ type: 'MARK_NOTIFICATION_READ', payload: notificationId });
@@ -167,7 +172,7 @@ export function NotificationsPanel() {
               <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">No notifications yet</p>
             </div>
           ) : (
-            sortedNotifications.slice(0, 30).map((notification) => {
+            visibleNotifications.map((notification) => {
               const cfg = getTypeConfig(notification.type);
               return (
                 <DropdownMenuItem
@@ -203,11 +208,18 @@ export function NotificationsPanel() {
             })
           )}
 
-          {sortedNotifications.length > 30 && (
+          {hasMore && (
             <div className="px-4 py-2 text-center border-t dark:border-[#2d3548]">
-              <p className="text-xs text-gray-400">
-                Showing 30 of {sortedNotifications.length}
-              </p>
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setVisibleCount((c) => c + NOTIF_PAGE_SIZE);
+                }}
+                className="text-xs font-medium text-[#e05c29] hover:text-orange-600 dark:hover:text-orange-300 transition-colors"
+              >
+                Load more ({sortedNotifications.length - visibleCount} remaining)
+              </button>
             </div>
           )}
         </div>

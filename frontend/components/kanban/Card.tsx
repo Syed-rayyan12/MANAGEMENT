@@ -208,16 +208,23 @@ export function ProjectCard({ project, onCardClick }: ProjectCardProps) {
     setShowQuickEdit(false);
   };
 
-  // Close quick-edit on outside click
+  // Close quick-edit on outside click or Escape key
   useEffect(() => {
     if (!showQuickEdit) return;
-    const handler = (e: MouseEvent) => {
+    const handleClick = (e: MouseEvent) => {
       if (quickEditRef.current && !quickEditRef.current.contains(e.target as Node)) {
         setShowQuickEdit(false);
       }
     };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setShowQuickEdit(false);
+    };
+    document.addEventListener('mousedown', handleClick);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handleClick);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
   }, [showQuickEdit]);
 
   const filteredUsers = teamUsers.filter(user =>
@@ -316,6 +323,7 @@ export function ProjectCard({ project, onCardClick }: ProjectCardProps) {
           >
             Save
           </button>
+          <p className="text-[10px] text-center text-gray-400">Press Esc or click outside to close</p>
         </div>
       )}
 

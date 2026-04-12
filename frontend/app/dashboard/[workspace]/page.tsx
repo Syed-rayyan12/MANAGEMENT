@@ -48,9 +48,12 @@ export default function WorkspacePage() {
 
   const boardSlug = params.workspace as string;
   const projectId = searchParams.get('project');
+  const [boardLoading, setBoardLoading] = useState(true);
 
   // Fetch board by slug to get board info + columns
   useEffect(() => {
+    setBoardLoading(true);
+    setBoardId(null);
     const fetchBoard = async () => {
       try {
         const result = await boardAPI.getBySlug(boardSlug);
@@ -73,6 +76,8 @@ export default function WorkspacePage() {
         }
       } catch (error) {
         console.error('Error fetching board:', error);
+      } finally {
+        setBoardLoading(false);
       }
     };
     fetchBoard();
@@ -231,7 +236,7 @@ export default function WorkspacePage() {
 
       {/* Kanban Board */}
       <div>
-        {isLoading ? (
+        {isLoading || boardLoading ? (
           <BoardSkeleton />
         ) : (
           <ErrorBoundary>

@@ -86,6 +86,17 @@ export default function DashboardPage() {
       </div>
 
       {/* Board Cards Grid */}
+      {boards.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-24 text-center">
+          <div className="w-20 h-20 rounded-full bg-orange-500/10 flex items-center justify-center mb-6">
+            <ArrowLeft className="w-10 h-10 text-orange-500/40 rotate-180" />
+          </div>
+          <h2 className="text-xl font-semibold text-zinc-700 dark:text-zinc-300 mb-2">No workspaces yet</h2>
+          <p className="text-sm text-zinc-500 dark:text-zinc-400 max-w-md">
+            Workspaces will appear here once they are set up. Contact your team lead or administrator to get started.
+          </p>
+        </div>
+      ) : (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 ">
         {boards.map((board) => {
           const meta = BOARD_METADATA[board.slug] || DEFAULT_BOARD_METADATA;
@@ -133,6 +144,7 @@ export default function DashboardPage() {
               );
             })}
           </div>
+      )}
     </div>
     </ErrorBoundary>
   );

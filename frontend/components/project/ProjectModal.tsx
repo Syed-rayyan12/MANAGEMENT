@@ -26,7 +26,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { X, AlertCircle, MessageSquare, Paperclip, Check, Trash2, Upload, Image as ImageIcon, Activity } from 'lucide-react';
+import { X, AlertCircle, MessageSquare, Paperclip, Check, Trash2, Upload, Image as ImageIcon, Activity, Loader2 } from 'lucide-react';
 import { PRIORITY_STYLES, KANBAN_COLUMNS } from '@/lib/constants';
 import { format } from 'date-fns';
 
@@ -48,6 +48,9 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
   const [editingTitle, setEditingTitle] = useState(project.name);
   const [editingDesc, setEditingDesc] = useState(project.description);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [addingMember, setAddingMember] = useState(false);
+  const [removingMemberId, setRemovingMemberId] = useState<string | null>(null);
   const [showCoverPhotoModal, setShowCoverPhotoModal] = useState(false);
   const [coverPhotoFile, setCoverPhotoFile] = useState<File | null>(null);
   const coverPhotoInputRef = React.useRef<HTMLInputElement>(null);
@@ -156,6 +159,7 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
       toast.info(`${user.name} is already a member`);
       return;
     }
+    setAddingMember(true);
     try {
       const result = await projectAPI.addLabel(project.id, user.name, '#ff6600');
       if (result.success) {
@@ -167,16 +171,20 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
     } catch (error) {
       console.error('Error adding member:', error);
       toast.error('Failed to add member');
+    } finally {
+      setAddingMember(false);
     }
   };
 
   const handleRemoveMember = async (labelId: string) => {
+    setRemovingMemberId(labelId);
     try {
       await projectAPI.removeLabel(project.id, labelId);
     } catch (error) {
       console.error('Error removing member:', error);
     }
     dispatch({ type: 'UPDATE_PROJECT', payload: { ...project, labels: project.labels.filter(l => l.id !== labelId), updatedAt: new Date() } });
+    setRemovingMemberId(null);
   };
 
   const handleUpdateStatus = async (newStatus: string) => {
@@ -244,22 +252,23 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
   };
 
   const handleDeleteProject = async () => {
+    setDeleting(true);
     try {
       await projectAPI.delete(project.id);
       toast.success('Project deleted');
+      dispatch({
+        type: 'DELETE_PROJECT',
+        payload: {
+          projectId: project.id,
+          userId: project.pm,
+        },
+      });
+      onClose();
     } catch (error) {
       console.error('Error deleting project:', error);
       toast.error('Failed to delete project');
+      setDeleting(false);
     }
-
-    dispatch({
-      type: 'DELETE_PROJECT',
-      payload: {
-        projectId: project.id,
-        userId: project.pm,
-      },
-    });
-    onClose();
   };
 
   const handleCoverPhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -335,13 +344,13 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
   return (
     <>
     <Dialog open={true} onOpenChange={onClose}>
-      <DialogContent className="max-w-7xl max-h-[90vh] overflow-hidden p-0 rounded-2xl backdrop-blur-md bg-white/80 dark:bg-zinc-900/80 border border-zinc-200/50 dark:border-white/10 ring-1 ring-[#e05c29]/10 shadow-2xl">
+      <DialogContent className="max-w-7xl h-[90vh] overflow-hidden p-0 gap-0 flex flex-col rounded-2xl backdrop-blur-md bg-white/80 dark:bg-zinc-900/80 border border-zinc-200/50 dark:border-white/10 ring-1 ring-[#e05c29]/10 shadow-2xl">
 
         {/* Left-Right Layout */}
-        <div className="flex h-full">
+        <div className="flex flex-1 min-h-0">
 
           {/* Left Sidebar */}
-          <div className="w-96 border-r border-zinc-200 dark:border-zinc-800 flex flex-col">
+          <div className="w-96 border-r border-zinc-200 dark:border-zinc-800 flex flex-col min-h-0">
             {/* Cover Photo Section */}
             <div className="relative group flex-shrink-0">
               {project.image ? (
@@ -504,8 +513,16 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
                           )}
                         </div>
                         {!isReadOnly && (
-                          <button onClick={() => handleRemoveMember(label.id)} className="text-gray-400 hover:text-red-400 transition-colors">
-                            <X className="w-3.5 h-3.5" />
+                          <button
+                            onClick={() => handleRemoveMember(label.id)}
+                            disabled={removingMemberId === label.id}
+                            className="text-gray-400 hover:text-red-400 transition-colors disabled:opacity-50"
+                          >
+                            {removingMemberId === label.id ? (
+                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            ) : (
+                              <X className="w-3.5 h-3.5" />
+                            )}
                           </button>
                         )}
                       </div>
@@ -517,9 +534,9 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
                 </div>
                 {/* Add member dropdown */}
                 {!isReadOnly && (
-                  <Select onValueChange={(val) => handleAddMember(val)}>
+                  <Select onValueChange={(val) => handleAddMember(val)} disabled={addingMember}>
                     <SelectTrigger className="mt-1">
-                      <SelectValue placeholder="Add member..." />
+                      <SelectValue placeholder={addingMember ? 'Adding...' : 'Add member...'} />
                     </SelectTrigger>
                     <SelectContent>
                       {teamUsers
@@ -552,7 +569,7 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
           </div>
 
           {/* Right Content Area */}
-          <div className="flex-1 overflow-y-auto">
+          <div className="flex-1 min-h-0 overflow-y-auto">
             <div className="p-6">
               <DialogHeader>
                 <DialogTitle className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">Project Details</DialogTitle>
@@ -727,14 +744,23 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
             <Button
               variant="outline"
               onClick={() => setShowDeleteConfirm(false)}
+              disabled={deleting}
             >
               Cancel
             </Button>
             <Button
               onClick={handleDeleteProject}
+              disabled={deleting}
               className="bg-red-600 hover:bg-red-700"
             >
-              Delete Project
+              {deleting ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                'Delete Project'
+              )}
             </Button>
           </div>
         </div>

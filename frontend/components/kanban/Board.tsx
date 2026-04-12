@@ -340,8 +340,24 @@ export function Board({ searchQuery = '', filterPriority = 'all', filterAssignee
 
   const selectedProject = state.projects.find((p) => p.id === selectedProjectId);
 
+  const totalProjectCount = state.projects.filter((p) => !boardId || p.boardId === boardId).length;
+  const isFiltered = searchQuery || filterPriority !== 'all' || filterAssignee !== 'all';
+
   return (
     <>
+      {/* Search / filter feedback */}
+      {isFiltered && (
+        <div className="mb-4 flex items-center gap-2 text-sm text-zinc-500 dark:text-zinc-400">
+          <span>
+            Showing <span className="font-semibold text-zinc-700 dark:text-zinc-200">{filteredProjects.length}</span> of{' '}
+            <span className="font-semibold text-zinc-700 dark:text-zinc-200">{totalProjectCount}</span> projects
+          </span>
+          {filteredProjects.length === 0 && (
+            <span className="text-amber-600 dark:text-amber-400">— No projects match your filters</span>
+          )}
+        </div>
+      )}
+
       <DndContext
         sensors={sensors}
         collisionDetection={closestCorners}
