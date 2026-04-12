@@ -78,10 +78,10 @@ export default function DashboardLayout({
   // Show loading while checking auth
   if (isCheckingAuth) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 to-black">
+      <div className="min-h-screen flex items-center justify-center bg-zinc-50 dark:bg-zinc-950">
         <div className="text-center">
-          <div className="w-16 h-16 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-white">Loading...</p>
+          <div className="w-16 h-16 border-4 border-[#e05c29] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-zinc-900 dark:text-zinc-100">Loading...</p>
         </div>
       </div>
     );
@@ -95,23 +95,12 @@ export default function DashboardLayout({
     <SearchContext.Provider value={{ searchQuery, setSearchQuery }}>
       <Navbar searchQuery={searchQuery} onSearchChange={setSearchQuery} />
       <Sidebar collapsed={sidebarCollapsed} onToggle={handleSidebarToggle} />
-      <main 
-        className={`min-h-screen relative transition-all duration-300 ${sidebarCollapsed ? 'ml-16' : 'ml-60'}`}
-        style={{
-          backgroundImage: `linear-gradient(rgba(26, 31, 46, 0.92), rgba(0, 0, 0, 0.92)), url('https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=1200&q=80')`,
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          backgroundAttachment: 'fixed',
-          backdropFilter: 'blur(3px)',
-          WebkitBackdropFilter: 'blur(3px)'
-        }}
+      <main
+        className={`min-h-screen relative transition-all duration-300 bg-zinc-50 dark:bg-zinc-950 ${sidebarCollapsed ? 'ml-16' : 'ml-60'}`}
       >
-        <div className="absolute inset-0 backdrop-blur-sm pointer-events-none"></div>
-        <div className="relative z-10">
-          <ErrorBoundary>
-            {children}
-          </ErrorBoundary>
-        </div>
+        <ErrorBoundary>
+          {children}
+        </ErrorBoundary>
       </main>
     </SearchContext.Provider>
   );

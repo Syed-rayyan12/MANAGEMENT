@@ -99,8 +99,8 @@ export default function WorkspacePage() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-orange-400">{displayName}</h1>
-            <p className="text-gray-600 dark:text-gray-400 mt-1">Manage your {displayName.toLowerCase()} projects</p>
+            <h1 className="text-3xl font-semibold text-zinc-900 dark:text-zinc-100">{displayName}</h1>
+            <p className="text-zinc-500 dark:text-zinc-400 mt-1">Manage your {displayName.toLowerCase()} projects</p>
           </div>
         </div>
         <div className='flex items-center justify-between gap-5'>
@@ -108,8 +108,8 @@ export default function WorkspacePage() {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="sm">
-                  <Filter className="w-4 h-4 mr-2 text-white" />
-                  <span className='text-white'>
+                  <Filter className="w-4 h-4 mr-2 text-zinc-600 dark:text-zinc-400" />
+                  <span className="text-zinc-700 dark:text-zinc-300">
                     Filter: {filterPriority === 'all' ? 'All' : filterPriority}
                   </span>
                 </Button>
@@ -128,8 +128,8 @@ export default function WorkspacePage() {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="sm">
-                  <SortAsc className="w-4 h-4 mr-2 text-white" />
-                  <span className='text-white'>
+                  <SortAsc className="w-4 h-4 mr-2 text-zinc-600 dark:text-zinc-400" />
+                  <span className="text-zinc-700 dark:text-zinc-300">
                     Sort: {sortBy === 'date' ? 'Date' : sortBy === 'name' ? 'Name' : 'Priority'}
                   </span>
                 </Button>
@@ -146,8 +146,8 @@ export default function WorkspacePage() {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="sm">
-                  <Users className="w-4 h-4 mr-2 text-white" />
-                  <span className='text-white'>
+                  <Users className="w-4 h-4 mr-2 text-zinc-600 dark:text-zinc-400" />
+                  <span className="text-zinc-700 dark:text-zinc-300">
                     Assignee: {filterAssignee === 'all' ? 'All' : getUserName(filterAssignee)}
                   </span>
                 </Button>
@@ -286,14 +286,14 @@ function AddColumnModal({ onClose, onAdd }: { onClose: () => void; onAdd: (name:
 
   return (
     <Dialog open={true} onOpenChange={onClose}>
-      <DialogContent className="max-w-md dark:bg-[#1a1f2e] dark:border-orange-500/30">
+      <DialogContent className="max-w-md bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
         <DialogHeader>
-          <DialogTitle className="text-2xl font-bold dark:text-orange-400">Add New Column</DialogTitle>
+          <DialogTitle className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">Add New Column</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4 mt-4">
           <div>
-            <Label htmlFor="columnName" className="dark:text-white">Column Name *</Label>
+            <Label htmlFor="columnName" className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Column Name *</Label>
             <Input
               id="columnName"
               placeholder="Enter column name"
@@ -304,7 +304,7 @@ function AddColumnModal({ onClose, onAdd }: { onClose: () => void; onAdd: (name:
           </div>
 
           <div>
-            <Label htmlFor="columnColor" className="dark:text-white">Column Color</Label>
+            <Label htmlFor="columnColor" className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Column Color</Label>
             <div className="mt-2 flex gap-2">
               {['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'].map((color) => (
                 <button
@@ -320,10 +320,10 @@ function AddColumnModal({ onClose, onAdd }: { onClose: () => void; onAdd: (name:
           </div>
 
           <div className="flex gap-2 pt-4">
-            <Button onClick={handleAddColumn} className="flex-1 bg-orange-500 text-white hover:bg-orange-600">
+            <Button onClick={handleAddColumn} className="flex-1 text-white bg-gradient-to-r from-[#e05c29] to-orange-400 hover:to-rose-500 shadow-[0_4px_20px_rgba(224,92,41,0.35)]">
               Add Column
             </Button>
-            <Button onClick={onClose} variant="outline" className="flex-1 text-white">
+            <Button onClick={onClose} variant="outline" className="flex-1 text-zinc-700 dark:text-zinc-300">
               Cancel
             </Button>
           </div>

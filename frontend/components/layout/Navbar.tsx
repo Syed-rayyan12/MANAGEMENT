@@ -109,17 +109,17 @@ export function Navbar({ searchQuery, onSearchChange }: NavbarProps) {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
               <DropdownMenuLabel className="flex flex-col">
-                <span className="font-semibold text-white">{state.currentUser.name}</span>
-                <span className="text-xs text-white">{state.currentUser.email}</span>
+                <span className="font-semibold text-zinc-900 dark:text-zinc-100">{state.currentUser.name}</span>
+                <span className="text-xs text-zinc-500 dark:text-zinc-400">{state.currentUser.email}</span>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="gap-2 hover:bg-[#1a1f2e] opacity-50 cursor-not-allowed" disabled>
-                <User className="w-4 h-4 text-orange-500 " />
-                <span className='text-white text-[12px]'>Profile <span className="text-[10px] text-gray-500">(Coming soon)</span></span>
+              <DropdownMenuItem className="gap-2 opacity-50 cursor-not-allowed" disabled>
+                <User className="w-4 h-4 text-[#e05c29]" />
+                <span className="text-zinc-700 dark:text-zinc-300 text-[12px]">Profile <span className="text-[10px] text-zinc-400">(Coming soon)</span></span>
               </DropdownMenuItem>
-              <DropdownMenuItem className="gap-2 hover:bg-[#1a1f2e] opacity-50 cursor-not-allowed" disabled>
-                <Settings className="w-4 h-4 text-orange-500 " />
-                <span className='text-white text-[12px]'>Settings <span className="text-[10px] text-gray-500">(Coming soon)</span></span>
+              <DropdownMenuItem className="gap-2 opacity-50 cursor-not-allowed" disabled>
+                <Settings className="w-4 h-4 text-[#e05c29]" />
+                <span className="text-zinc-700 dark:text-zinc-300 text-[12px]">Settings <span className="text-[10px] text-zinc-400">(Coming soon)</span></span>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={handleLogout} className="gap-2 text-red-600">

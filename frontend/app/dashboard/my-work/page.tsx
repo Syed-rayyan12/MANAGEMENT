@@ -90,8 +90,8 @@ export default function MyWorkPage() {
               <Briefcase className="w-5 h-5 text-orange-500" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold text-gray-900 dark:text-orange-400">My Work</h1>
-              <p className="text-gray-600 dark:text-gray-400 mt-0.5">
+              <h1 className="text-3xl font-semibold text-zinc-900 dark:text-zinc-100">My Work</h1>
+              <p className="text-zinc-500 dark:text-zinc-400 mt-0.5">
                 All tasks assigned to you across boards
               </p>
             </div>
@@ -103,8 +103,8 @@ export default function MyWorkPage() {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm">
-                <Filter className="w-4 h-4 mr-2 text-white" />
-                <span className="text-white">
+                <Filter className="w-4 h-4 mr-2 text-zinc-600 dark:text-zinc-400" />
+                <span className="text-zinc-700 dark:text-zinc-300">
                   Priority: {filterPriority === 'all' ? 'All' : filterPriority}
                 </span>
               </Button>
@@ -123,8 +123,8 @@ export default function MyWorkPage() {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm">
-                <Briefcase className="w-4 h-4 mr-2 text-white" />
-                <span className="text-white">
+                <Briefcase className="w-4 h-4 mr-2 text-zinc-600 dark:text-zinc-400" />
+                <span className="text-zinc-700 dark:text-zinc-300">
                   Board: {filterBoard === 'all' ? 'All' : boardOptions.find(b => b.id === filterBoard)?.name || filterBoard}
                 </span>
               </Button>
@@ -144,8 +144,8 @@ export default function MyWorkPage() {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm">
-                <SortAsc className="w-4 h-4 mr-2 text-white" />
-                <span className="text-white">
+                <SortAsc className="w-4 h-4 mr-2 text-zinc-600 dark:text-zinc-400" />
+                <span className="text-zinc-700 dark:text-zinc-300">
                   Sort: {sortBy === 'date' ? 'Date' : sortBy === 'name' ? 'Name' : 'Priority'}
                 </span>
               </Button>
@@ -164,11 +164,11 @@ export default function MyWorkPage() {
       {/* Stats Row */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
         {[
-          { label: 'Total', value: stats.total, color: 'text-white', bg: 'bg-gray-500/20 border-gray-500/30' },
-          { label: 'To Do', value: stats.todo, color: 'text-gray-400', bg: 'bg-gray-500/10 border-gray-500/20' },
-          { label: 'In Progress', value: stats.inProgress, color: 'text-blue-400', bg: 'bg-blue-500/10 border-blue-500/20' },
-          { label: 'Completed', value: stats.completed, color: 'text-green-400', bg: 'bg-green-500/10 border-green-500/20' },
-          { label: 'Overdue', value: stats.overdue, color: 'text-red-400', bg: 'bg-red-500/10 border-red-500/20' },
+          { label: 'Total', value: stats.total, color: 'text-zinc-900 dark:text-zinc-100', bg: 'bg-zinc-500/10 border-zinc-500/20' },
+          { label: 'To Do', value: stats.todo, color: 'text-zinc-600 dark:text-zinc-400', bg: 'bg-zinc-500/10 border-zinc-500/20' },
+          { label: 'In Progress', value: stats.inProgress, color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-500/10 border-amber-500/20' },
+          { label: 'Completed', value: stats.completed, color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-500/20' },
+          { label: 'Overdue', value: stats.overdue, color: 'text-red-600 dark:text-red-400', bg: 'bg-red-500/10 border-red-500/20' },
         ].map((s) => (
           <div
             key={s.label}

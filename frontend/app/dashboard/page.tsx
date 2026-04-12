@@ -80,8 +80,8 @@ export default function DashboardPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-orange-400">Welcome to Your Workspace</h1>
-          <p className="text-gray-600 dark:text-gray-400 mt-1">Select a workspace to manage your projects</p>
+          <h1 className="text-3xl font-semibold text-zinc-900 dark:text-zinc-100">Welcome to Your Workspace</h1>
+          <p className="text-zinc-500 dark:text-zinc-400 mt-1">Select a workspace to manage your projects</p>
         </div>
       </div>
 
@@ -94,7 +94,7 @@ export default function DashboardPage() {
             <button
               key={board.slug}
               onClick={() => router.push(`/dashboard/${board.slug}`)}
-              className={`group relative rounded-2xl border-2 dark:border-orange-500/30 hover:border-transparent transition-all duration-300 hover:shadow-2xl hover:scale-105 overflow-hidden flex flex-col`}
+              className="group relative rounded-2xl border border-zinc-200 dark:border-zinc-800 hover:border-transparent bg-white dark:bg-zinc-900 transition-all duration-300 hover:shadow-2xl hover:scale-105 overflow-hidden flex flex-col"
             >
                   {/* Image at Top */}
                   <div className="relative w-full h-40 overflow-hidden">
@@ -111,17 +111,17 @@ export default function DashboardPage() {
                   <div className="p-6 space-y-4 flex-1 flex flex-col">
                     {/* Content */}
                     <div className="text-left space-y-2 flex-1">
-                      <h3 className="text-xl font-bold text-gray-900 dark:text-orange-400  ">
+                      <h3 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">
                         {board.name}
                       </h3>
-                      <p className="text-sm text-gray-600 dark:text-gray-400 min-h-[40px]">
+                      <p className="text-sm text-zinc-500 dark:text-zinc-400 min-h-[40px]">
                         {meta.description}
                       </p>
                     </div>
 
                     {/* Stats */}
-                    <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-orange-500/20">
-                      <span className="text-sm font-semibold text-gray-600 dark:text-gray-400">
+                    <div className="flex items-center justify-between pt-4 border-t border-zinc-200 dark:border-zinc-800">
+                      <span className="text-sm font-semibold text-zinc-600 dark:text-zinc-400">
                         {board.projectCount} Projects
                       </span>
                       <div className={`w-8 h-8 rounded-full border border-orange-500/30 ${meta.gradient} flex items-center justify-center group-hover:scale-110 transition-transform`}>

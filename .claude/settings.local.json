@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Bash(find 'C:\\\\Users\\\\Tayyab Anwar\\\\Downloads\\\\MANAGEMENT-main\\\\MANAGEMENT-main\\\\.claude' -type f -name *.json -o -name *.md)"
+      "Bash(find 'C:\\\\Users\\\\Tayyab Anwar\\\\Downloads\\\\MANAGEMENT-main\\\\MANAGEMENT-main\\\\.claude' -type f -name *.json -o -name *.md)",
+      "Bash(npx next:*)"
     ]
   }
 }

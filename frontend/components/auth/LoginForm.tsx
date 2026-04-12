@@ -68,16 +68,19 @@ export function LoginForm() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-900 p-4">
-      <Card className="w-full max-w-md shadow-xl">
+    <div className="min-h-screen flex items-center justify-center bg-zinc-50 dark:bg-zinc-950 p-4">
+      <Card className="w-full max-w-md shadow-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
         <CardHeader className="text-center">
-          <CardTitle className="text-3xl font-bold text-white">ProManage</CardTitle>
-          <CardDescription className="text-white">Enterprise Project Management System</CardDescription>
+          <div className="mx-auto mb-2 w-12 h-12 rounded-xl bg-gradient-to-br from-[#e05c29] to-orange-400 flex items-center justify-center text-white font-bold text-xl shadow-[0_4px_20px_rgba(224,92,41,0.35)]">
+            P
+          </div>
+          <CardTitle className="text-3xl font-semibold text-zinc-900 dark:text-zinc-100">ProManage</CardTitle>
+          <CardDescription className="text-zinc-500 dark:text-zinc-400">Enterprise Project Management System</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="username" className='text-white'>Username</Label>
+              <Label htmlFor="username" className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Username</Label>
               <Input
                 id="username"
                 type="text"
@@ -87,16 +90,12 @@ export function LoginForm() {
                   setUsername(e.target.value);
                   setError('');
                 }}
-                className="border-gray-300 text-white placeholder:text-gray-400 focus:none"
                 required
               />
-              {/* <p className="text-xs text-gray-400 mt-1">
-                Format: <span className="text-orange-400">role.username</span> (e.g., pm.azharrajput, tl.mustufa)
-              </p> */}
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password" className='text-white'>Password</Label>
+              <Label htmlFor="password" className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Password</Label>
               <Input
                 id="password"
                 type="password"
@@ -106,19 +105,18 @@ export function LoginForm() {
                   setPassword(e.target.value);
                   setError('');
                 }}
-                className="border-gray-300 text-white placeholder:text-gray-400 focus:none"
                 required
               />
             </div>
 
             {error && (
-              <div className="flex items-center gap-2 text-red-600 text-sm bg-red-50 p-3 rounded-md">
+              <div className="flex items-center gap-2 text-red-600 dark:text-red-400 text-sm bg-red-500/15 p-3 rounded-lg">
                 <AlertCircle size={16} />
                 {error}
               </div>
             )}
 
-            <Button type="submit" className="w-full bg-orange-500 hover:bg-[#047857] text-white" disabled={isLoading}>
+            <Button type="submit" className="w-full text-white bg-gradient-to-r from-[#e05c29] to-orange-400 hover:to-rose-500 shadow-[0_4px_20px_rgba(224,92,41,0.35)] transition-all duration-200" disabled={isLoading}>
               {isLoading ? 'Logging in...' : 'Sign In'}
             </Button>
           </form>

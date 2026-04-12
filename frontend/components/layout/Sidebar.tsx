@@ -168,7 +168,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
             </div>
             {!collapsed && (
               <div className="min-w-0">
-                <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100 truncate">
                   {state.currentUser.name}
                 </p>
                 <p className="text-[11px] text-gray-500 dark:text-gray-400 truncate">
