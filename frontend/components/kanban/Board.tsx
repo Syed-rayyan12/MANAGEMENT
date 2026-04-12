@@ -45,7 +45,7 @@ export function Board({ searchQuery = '', filterPriority = 'all', filterAssignee
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(projectIdFromUrl);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [originalStatus, setOriginalStatus] = useState<string | null>(null);
-  const { state, dispatch } = useApp();
+  const { state, dispatch, getUserName } = useApp();
   const { canDragCards } = usePermissions();
 
   // Debounced save: card must settle in a column for 1.5s before hitting backend
@@ -101,7 +101,7 @@ export function Board({ searchQuery = '', filterPriority = 'all', filterAssignee
       const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                            p.description.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesPriority = filterPriority === 'all' || p.priority === filterPriority;
-      const matchesAssignee = filterAssignee === 'all' || p.developer === filterAssignee || p.pm === filterAssignee;
+      const matchesAssignee = filterAssignee === 'all' || p.developer === filterAssignee || p.pm === filterAssignee || p.labels.some(l => l.name === getUserName(filterAssignee));
       const matchesBoard = !boardId || p.boardId === boardId;
       return matchesSearch && matchesPriority && matchesAssignee && matchesBoard;
     });

@@ -50,22 +50,27 @@ export default function MyWorkPage() {
     fetchBoards();
   }, []);
 
-  // Get projects assigned to me (as developer or PM)
+  const currentUserName = state.currentUser?.name || '';
+
+  // Get projects assigned to me (as developer, PM, or member via labels)
   const myProjects = useMemo(() => {
     if (!currentUserId) return [];
     return state.projects.filter(
-      (p) => p.developer === currentUserId || p.pm === currentUserId
+      (p) => p.developer === currentUserId || p.pm === currentUserId || p.labels.some(l => l.name === currentUserName)
     );
-  }, [state.projects, currentUserId]);
+  }, [state.projects, currentUserId, currentUserName]);
 
-  // Stats
+  // Stats — use inclusive matching to handle dynamic board column keys
   const stats = useMemo(() => {
     const total = myProjects.length;
-    const todo = myProjects.filter((p) => p.status === 'todo').length;
-    const inProgress = myProjects.filter((p) => p.status === 'in-progress').length;
-    const completed = myProjects.filter((p) => p.status === 'completed').length;
+    const todo = myProjects.filter((p) => p.status.includes('todo') || p.status.includes('to-do')).length;
+    const inProgress = myProjects.filter((p) =>
+      p.status.includes('progress') || p.status.includes('revision') ||
+      (!p.status.includes('todo') && !p.status.includes('to-do') && !p.status.includes('completed') && !p.status.includes('done'))
+    ).length;
+    const completed = myProjects.filter((p) => p.status.includes('completed') || p.status.includes('done')).length;
     const overdue = myProjects.filter(
-      (p) => p.dueDate && new Date(p.dueDate) < new Date() && p.status !== 'completed'
+      (p) => p.dueDate && new Date(p.dueDate) < new Date() && !p.status.includes('completed') && !p.status.includes('done')
     ).length;
     return { total, todo, inProgress, completed, overdue };
   }, [myProjects]);

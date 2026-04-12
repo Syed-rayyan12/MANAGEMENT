@@ -34,10 +34,12 @@ export function ProjectCard({ project, onCardClick }: ProjectCardProps) {
 
   const allUsers = getAllUsers();
 
-  // Team-scoped users: only show users in the same team as this project
+  // Team-scoped users: prefer users in the same team, but fall back to all users
   const teamUsers = React.useMemo(() => {
     if (!project.teamId) return allUsers;
-    return allUsers.filter((u: any) => u.teams?.some((t: any) => t.id === project.teamId));
+    const scoped = allUsers.filter((u: any) => u.teams?.some((t: any) => t.id === project.teamId));
+    // Fall back to all users if team filtering returns empty
+    return scoped.length > 0 ? scoped : allUsers;
   }, [allUsers, project.teamId]);
 
   const style = {
@@ -472,9 +474,9 @@ export function ProjectCard({ project, onCardClick }: ProjectCardProps) {
 
       {/* Add Member Modal */}
       <Dialog open={showTagModal} onOpenChange={setShowTagModal}>
-        <DialogContent className="dark:bg-[#1a1f2e] dark:border-orange-500/30" onClick={(e) => e.stopPropagation()}>
+        <DialogContent className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800" onClick={(e) => e.stopPropagation()}>
           <DialogHeader>
-            <DialogTitle className="text-white">Add Member</DialogTitle>
+            <DialogTitle className="text-zinc-900 dark:text-zinc-100">Add Member</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <Input
@@ -529,7 +531,7 @@ export function ProjectCard({ project, onCardClick }: ProjectCardProps) {
                     </Avatar>
                     <div className="flex-1 text-left">
                       <div className="flex items-center gap-2">
-                        <p className="text-sm font-medium text-gray-900 dark:text-white">{user.name}</p>
+                        <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">{user.name}</p>
                         <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold text-white ${
                           user.role === 'PM' ? 'bg-blue-500' :
                           user.role === 'TL' ? 'bg-green-500' :
