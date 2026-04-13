@@ -12,7 +12,9 @@
       "Bash(find 'C:\\\\Users\\\\Tayyab Anwar\\\\Downloads\\\\MANAGEMENT-main\\\\MANAGEMENT-main\\\\backend/src' -type f \\\\\\(-name *.ts -o -name *.prisma \\\\\\))",
       "mcp__plugin_context7_context7__resolve-library-id",
       "mcp__plugin_context7_context7__query-docs",
-      "Bash(DATABASE_URL=\"postgresql://postgres:PJEGMQUYGIBPANktROhvDhjrGrzmosnP@metro.proxy.rlwy.net:26362/railway\" npx prisma migrate deploy)"
+      "Bash(DATABASE_URL=\"postgresql://postgres:PJEGMQUYGIBPANktROhvDhjrGrzmosnP@metro.proxy.rlwy.net:26362/railway\" npx prisma migrate deploy)",
+      "Bash(railway:*)",
+      "Bash(grep \"=$\")"
     ]
   }
 }
