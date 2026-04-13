@@ -279,10 +279,11 @@ model Invoice {
   description     String
   amount          Decimal       @db.Decimal(10, 2)
   currency        String        @default("GBP")
-  status          InvoiceStatus @default(PENDING)
-  paypalInvoiceId String?       @unique // PayPal invoice ID
-  paymentLink     String?       // PayPal payment URL
-  paidAt          DateTime?
+  status              InvoiceStatus @default(PENDING)
+  squarePaymentLinkId String?       @unique // Square payment link ID
+  squareOrderId       String?       // Square order ID (for webhook matching)
+  paymentLink         String?       // Square checkout URL
+  paidAt              DateTime?
 
   // Who created this invoice
   createdById     String

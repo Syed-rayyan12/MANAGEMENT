@@ -88,7 +88,7 @@ app.use('/api/notifications', apiLimiter, notificationRoutes);
 app.use('/api/teams', apiLimiter, teamRoutes);
 app.use('/api/boards', apiLimiter, boardRoutes);
 app.use('/api/invoices', apiLimiter, invoiceRoutes);
-app.use('/api/webhooks', webhookRoutes); // No rate limit — PayPal needs reliable delivery
+app.use('/api/webhooks', webhookRoutes); // No rate limit — Square needs reliable delivery
 
 // ─── 404 handler ───────────────────────────────────
 app.use((_req: Request, res: Response) => {

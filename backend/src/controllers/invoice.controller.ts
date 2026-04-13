@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import prisma from '../lib/prisma';
-import { createAndSendInvoice, cancelInvoice, verifyWebhookSignature } from '../utils/paypal';
+import { createPaymentLink, deletePaymentLink, verifyWebhookSignature } from '../utils/square';
 
 // ─── Create Invoice ───────────────────────────────
 
@@ -20,8 +20,8 @@ export const createInvoice = async (req: Request, res: Response) => {
       }
     }
 
-    // Call PayPal to create and send the invoice
-    const paypalResult = await createAndSendInvoice({
+    // Call Square to create a payment link
+    const squareResult = await createPaymentLink({
       clientName,
       clientEmail: clientEmail || undefined,
       description,
@@ -37,8 +37,9 @@ export const createInvoice = async (req: Request, res: Response) => {
         description,
         amount: parseFloat(amount),
         currency: 'GBP',
-        paypalInvoiceId: paypalResult.invoiceId,
-        paymentLink: paypalResult.paymentLink,
+        squarePaymentLinkId: squareResult.paymentLinkId,
+        squareOrderId: squareResult.orderId,
+        paymentLink: squareResult.paymentLink,
         status: 'PENDING',
         createdById: user.id,
         teamId,
@@ -143,9 +144,13 @@ export const cancelInvoiceHandler = async (req: Request, res: Response) => {
       return;
     }
 
-    // Cancel on PayPal
-    if (invoice.paypalInvoiceId) {
-      await cancelInvoice(invoice.paypalInvoiceId);
+    // Delete the payment link on Square (this also cancels the order)
+    if (invoice.squarePaymentLinkId) {
+      try {
+        await deletePaymentLink(invoice.squarePaymentLinkId);
+      } catch (error: any) {
+        console.warn('Square delete payment link failed (continuing):', error.message);
+      }
     }
 
     // Update in DB
@@ -176,48 +181,44 @@ export const cancelInvoiceHandler = async (req: Request, res: Response) => {
   }
 };
 
-// ─── PayPal Webhook Handler ───────────────────────
+// ─── Square Webhook Handler ─────────────────────
 
-export const handlePayPalWebhook = async (req: Request, res: Response) => {
+export const handleSquareWebhook = async (req: Request, res: Response) => {
   try {
-    const webhookId = process.env.PAYPAL_WEBHOOK_ID;
+    const signatureKey = process.env.SQUARE_WEBHOOK_SIGNATURE_KEY;
+    const notificationUrl = process.env.SQUARE_WEBHOOK_URL;
 
-    // Verify webhook signature if webhook ID is configured
-    if (webhookId) {
-      const isValid = await verifyWebhookSignature({
-        authAlgo: req.headers['paypal-auth-algo'] as string,
-        certUrl: req.headers['paypal-cert-url'] as string,
-        transmissionId: req.headers['paypal-transmission-id'] as string,
-        transmissionSig: req.headers['paypal-transmission-sig'] as string,
-        transmissionTime: req.headers['paypal-transmission-time'] as string,
-        webhookId,
-        webhookEvent: req.body,
-      });
+    // Verify webhook signature if signature key is configured
+    if (signatureKey && notificationUrl) {
+      const signature = req.headers['x-square-hmacsha256-signature'] as string;
+      const rawBody = typeof req.body === 'string' ? req.body : JSON.stringify(req.body);
 
-      if (!isValid) {
-        console.warn('PayPal webhook signature verification failed');
+      if (!signature || !verifyWebhookSignature(signature, rawBody, notificationUrl, signatureKey)) {
+        console.warn('Square webhook signature verification failed');
         res.status(401).json({ success: false, message: 'Invalid webhook signature' });
         return;
       }
     }
 
     const event = req.body;
-    const eventType = event.event_type;
-    const eventId = event.id;
-    const resource = event.resource;
+    const eventType = event.type;
+    const eventId = event.event_id;
 
-    // Extract PayPal invoice ID from the resource
-    const paypalInvoiceId = resource?.id;
+    // We care about payment.completed and payment.updated events
+    // Square fires these when someone pays via a checkout link
+    const payment = event.data?.object?.payment;
 
-    if (!paypalInvoiceId) {
-      // Not an invoice event we care about
+    if (!payment?.order_id) {
+      // Not a payment event with an order — acknowledge and skip
       res.status(200).json({ success: true, message: 'Event acknowledged' });
       return;
     }
 
-    // Find the invoice in our DB
-    const invoice = await prisma.invoice.findUnique({
-      where: { paypalInvoiceId },
+    const squareOrderId = payment.order_id;
+
+    // Find the invoice in our DB by the Square order ID
+    const invoice = await prisma.invoice.findFirst({
+      where: { squareOrderId },
     });
 
     if (!invoice) {
@@ -232,39 +233,30 @@ export const handlePayPalWebhook = async (req: Request, res: Response) => {
       return;
     }
 
-    // Map PayPal event types to our statuses
+    // Map Square event types to our statuses
     let newStatus: 'PAID' | 'CANCELLED' | 'REFUNDED' | 'FAILED' | null = null;
     let paidAt: Date | null = null;
 
-    switch (eventType) {
-      case 'INVOICING.INVOICE.PAID':
+    if (eventType === 'payment.completed' || eventType === 'payment.updated') {
+      const paymentStatus = payment.status;
+      if (paymentStatus === 'COMPLETED') {
         newStatus = 'PAID';
         paidAt = new Date();
-        break;
-      case 'INVOICING.INVOICE.CANCELLED':
+      } else if (paymentStatus === 'FAILED') {
+        newStatus = 'FAILED';
+      } else if (paymentStatus === 'CANCELED' || paymentStatus === 'CANCELLED') {
         newStatus = 'CANCELLED';
-        break;
-      case 'INVOICING.INVOICE.REFUNDED':
+      }
+    } else if (eventType === 'refund.created' || eventType === 'refund.updated') {
+      const refundStatus = event.data?.object?.refund?.status;
+      if (refundStatus === 'COMPLETED') {
         newStatus = 'REFUNDED';
-        break;
-      case 'INVOICING.INVOICE.UPDATED':
-        // Check if the status in the resource indicates payment
-        if (resource?.status === 'PAID') {
-          newStatus = 'PAID';
-          paidAt = new Date();
-        } else if (resource?.status === 'CANCELLED') {
-          newStatus = 'CANCELLED';
-        }
-        break;
-      default:
-        // Event type we don't handle
-        res.status(200).json({ success: true, message: 'Event type not handled' });
-        return;
+      }
     }
 
     if (newStatus) {
       await prisma.invoice.update({
-        where: { paypalInvoiceId },
+        where: { id: invoice.id },
         data: {
           status: newStatus,
           paidAt: paidAt || undefined,
@@ -275,8 +267,8 @@ export const handlePayPalWebhook = async (req: Request, res: Response) => {
 
     res.status(200).json({ success: true, message: 'Webhook processed' });
   } catch (error: any) {
-    console.error('PayPal webhook error:', error.message);
-    // Always return 200 to PayPal to prevent retries on our processing errors
+    console.error('Square webhook error:', error.message);
+    // Always return 200 to Square to prevent retries on our processing errors
     res.status(200).json({ success: true, message: 'Webhook received' });
   }
 };

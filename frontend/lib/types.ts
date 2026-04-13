@@ -140,7 +140,7 @@ export interface Invoice {
   amount: string; // Decimal comes as string from Prisma
   currency: string;
   status: InvoiceStatus;
-  paypalInvoiceId: string | null;
+  squarePaymentLinkId: string | null;
   paymentLink: string | null;
   paidAt: string | null;
   createdById: string;

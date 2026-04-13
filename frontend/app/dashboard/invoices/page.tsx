@@ -273,7 +273,7 @@ export default function InvoicesPage() {
         <div>
           <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">Invoices</h1>
           <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
-            Generate and track PayPal payment links
+            Generate and track payment links
           </p>
         </div>
         {canCreateInvoice && (

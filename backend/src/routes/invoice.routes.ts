@@ -13,7 +13,7 @@ const router = Router();
 router.use(authenticate);
 router.use(authorizeRoles('TL', 'PM', 'EXECUTIVE'));
 
-// ─── Create a new invoice (generates PayPal payment link) ──
+// ─── Create a new invoice (generates Square payment link) ──
 router.post('/', validate(createInvoiceSchema), createInvoice);
 
 // ─── Get all invoices (scoped by role/team) ────────────────

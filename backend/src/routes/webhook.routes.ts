@@ -1,10 +1,10 @@
 import { Router } from 'express';
-import { handlePayPalWebhook } from '../controllers/invoice.controller';
+import { handleSquareWebhook } from '../controllers/invoice.controller';
 
 const router = Router();
 
-// PayPal webhook — no auth middleware (PayPal calls this directly)
+// Square webhook — no auth middleware (Square calls this directly)
 // Signature verification is done inside the handler
-router.post('/paypal', handlePayPalWebhook);
+router.post('/square', handleSquareWebhook);
 
 export default router;
