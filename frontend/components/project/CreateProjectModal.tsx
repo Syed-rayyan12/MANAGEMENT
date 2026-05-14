@@ -3,7 +3,7 @@
 import { API_BASE_URL, projectAPI, clientAPI } from '@/lib/api-service';
 import { toast } from 'sonner';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '@/contexts/useApp';
 import {
   Dialog,
