@@ -54,6 +54,7 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
   const [showCoverPhotoModal, setShowCoverPhotoModal] = useState(false);
   const [coverPhotoFile, setCoverPhotoFile] = useState<File | null>(null);
   const coverPhotoInputRef = React.useRef<HTMLInputElement>(null);
+  const [submittingChange, setSubmittingChange] = useState(false);
 
   const allUsers = getAllUsers();
 
@@ -248,6 +249,40 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
       });
     } catch (error) {
       console.error('Error updating priority:', error);
+    }
+  };
+
+  const handleChangeType = async (changeType: string) => {
+    if (!changeType || changeType === 'NONE') return;
+    setSubmittingChange(true);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_BASE_URL}/projects/${project.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ changeType }),
+      });
+      if (response.ok) {
+        dispatch({
+          type: 'UPDATE_PROJECT',
+          payload: {
+            ...project,
+            minorChanges: changeType === 'MINOR' ? (project.minorChanges || 0) + 1 : (project.minorChanges || 0),
+            majorChanges: changeType === 'MAJOR' ? (project.majorChanges || 0) + 1 : (project.majorChanges || 0),
+          },
+        });
+        toast.success(`${changeType === 'MINOR' ? 'Minor' : 'Major'} change recorded`);
+      } else {
+        toast.error('Failed to record change');
+      }
+    } catch (error) {
+      console.error('Error recording change:', error);
+      toast.error('Failed to record change');
+    } finally {
+      setSubmittingChange(false);
     }
   };
 
@@ -454,6 +489,27 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
                   </div>
                 )}
               </div>
+
+              {/* Record Change */}
+              {!isReadOnly && (
+                <div>
+                  <Label className="text-xs font-medium uppercase tracking-wide text-zinc-400">Record Change</Label>
+                  <Select onValueChange={handleChangeType} disabled={submittingChange} value="">
+                    <SelectTrigger className="mt-1">
+                      <SelectValue placeholder={submittingChange ? 'Saving...' : 'None'} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="MINOR">Minor Change</SelectItem>
+                      <SelectItem value="MAJOR">Major Change</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {((project.minorChanges || 0) > 0 || (project.majorChanges || 0) > 0) && (
+                    <p className="mt-1 text-xs text-zinc-500">
+                      Minor: {project.minorChanges || 0} | Major: {project.majorChanges || 0}
+                    </p>
+                  )}
+                </div>
+              )}
 
               {/* Due Date */}
               <div>

@@ -31,5 +31,15 @@ export function validateEnv(): void {
     process.exit(1);
   }
 
+  // Warn if Google Sheets is partially configured
+  const SHEETS_VARS = ['GOOGLE_SHEETS_CLIENT_EMAIL', 'GOOGLE_SHEETS_PRIVATE_KEY', 'GOOGLE_SHEETS_SPREADSHEET_ID'];
+  const presentSheets = SHEETS_VARS.filter((k) => process.env[k]);
+  if (presentSheets.length > 0 && presentSheets.length < SHEETS_VARS.length) {
+    const missing = SHEETS_VARS.filter((k) => !process.env[k]);
+    console.warn(`⚠️  Partial Google Sheets config — sync disabled. Missing: ${missing.join(', ')}`);
+  } else if (presentSheets.length === SHEETS_VARS.length) {
+    console.log('📊 Google Sheets sync enabled');
+  }
+
   console.log('✅ Environment variables validated');
 }

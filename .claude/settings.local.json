@@ -14,7 +14,10 @@
       "mcp__plugin_context7_context7__query-docs",
       "Bash(DATABASE_URL=\"postgresql://postgres:PJEGMQUYGIBPANktROhvDhjrGrzmosnP@metro.proxy.rlwy.net:26362/railway\" npx prisma migrate deploy)",
       "Bash(railway:*)",
-      "Bash(grep \"=$\")"
+      "Bash(grep \"=$\")",
+      "Bash(curl:*)",
+      "Bash(grep -r \"google\\\\|sheets\\\\|gsheet\\\\|stripe\\\\|paypal\" /f/downloads-new/MANAGEMENT-main/MANAGEMENT-main --include=*.ts --include=*.tsx --include=*.json)",
+      "Bash(npm install:*)"
     ]
   }
 }

@@ -29,6 +29,7 @@ export const updateProjectSchema = z.object({
   dueDate: z.string().optional().nullable(),
   developerId: z.string().uuid().optional().nullable(),
   image: z.string().url().optional().nullable(),
+  changeType: z.enum(['NONE', 'MINOR', 'MAJOR']).optional(),
 });
 
 // ─── Comments ──────────────────────────────────────

@@ -146,6 +146,11 @@ model Project {
   image       String?
   position    Int             @default(0)
 
+  // Change tracking (synced to Google Sheets)
+  minorChanges      Int       @default(0)
+  majorChanges      Int       @default(0)
+  majorChangeReason String?
+
   // Board relation (which service board: logo, web design, etc.)
   boardId     String
   board       Board           @relation(fields: [boardId], references: [id], onDelete: Cascade)

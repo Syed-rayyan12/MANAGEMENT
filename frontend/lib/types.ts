@@ -117,6 +117,9 @@ export interface Project {
   activityLog: ActivityLog[];
   createdAt: Date;
   updatedAt: Date;
+  minorChanges?: number;
+  majorChanges?: number;
+  majorChangeReason?: string;
 }
 
 export interface CurrentUser {

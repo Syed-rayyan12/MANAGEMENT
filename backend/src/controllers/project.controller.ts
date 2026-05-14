@@ -1,6 +1,16 @@
 import { Request, Response } from 'express';
 import { createNotification, createManyNotifications } from './notification.controller';
 import prisma from '../lib/prisma';
+import { format } from 'date-fns';
+import {
+  appendProjectRow,
+  findRowByCrmId,
+  updateCell,
+  getCellValue,
+  incrementCell,
+  getBoardRole,
+  SHEET_COLUMNS,
+} from '../utils/googleSheets';
 
 // Shared include for loading project relations
 const projectIncludes = {
@@ -215,6 +225,29 @@ export const createProject = async (req: Request, res: Response): Promise<void> 
       }));
     await createManyNotifications(prodNotifItems);
 
+    // ── Google Sheets sync (fire-and-forget) ─────────
+    (async () => {
+      try {
+        const initialColumn = await prisma.boardColumn.findFirst({
+          where: { boardId, key: project.status },
+          select: { name: true },
+        });
+        await appendProjectRow({
+          projectName: project.name,
+          pmName: pm.name,
+          assignedTo: (project as any).developer?.name || '',
+          role: getBoardRole(board.name),
+          taskType: board.name,
+          dateAssigned: format(project.createdAt, 'MM/dd/yyyy'),
+          eta: project.dueDate ? format(new Date(project.dueDate), 'MM/dd/yyyy') : '',
+          status: initialColumn?.name || 'To Do',
+          crmId: project.id,
+        });
+      } catch (err) {
+        console.error('[GoogleSheets] createProject sync failed:', err);
+      }
+    })();
+
     res.status(201).json({
       success: true,
       message: `Project created on board`,
@@ -300,6 +333,10 @@ export const updateProject = async (req: Request, res: Response): Promise<void> 
       if (!dev) { res.status(404).json({ success: false, message: 'Developer not found' }); return; }
     }
 
+    // Extract changeType before Prisma update — it's a transient trigger, not a DB field
+    const changeType: string | undefined = updateData.changeType;
+    delete updateData.changeType;
+
     const finalData = {
       ...updateData,
       dueDate: updateData.dueDate ? new Date(updateData.dueDate) : undefined,
@@ -363,6 +400,73 @@ export const updateProject = async (req: Request, res: Response): Promise<void> 
       }
     }
 
+    // ── Google Sheets sync (fire-and-forget) ─────────
+
+    // Change tracking sync (Minor / Major)
+    if (changeType && changeType !== 'NONE') {
+      (async () => {
+        try {
+          const row = await findRowByCrmId(id);
+          if (!row) return;
+
+          if (changeType === 'MINOR') {
+            await prisma.project.update({ where: { id }, data: { minorChanges: { increment: 1 } } });
+            await incrementCell(row, SHEET_COLUMNS.MINOR_CHANGES);
+          } else if (changeType === 'MAJOR') {
+            const latestComment = await prisma.comment.findFirst({
+              where: { projectId: id },
+              orderBy: { createdAt: 'desc' },
+              select: { content: true },
+            });
+            const currentProject = await prisma.project.findUnique({
+              where: { id },
+              select: { majorChanges: true, majorChangeReason: true },
+            });
+            const newCount = (currentProject?.majorChanges || 0) + 1;
+            const reasonEntry = `${newCount}) ${latestComment?.content || 'No comment provided'}`;
+            const existingReason = currentProject?.majorChangeReason || '';
+            const updatedReason = existingReason ? `${existingReason}\n${reasonEntry}` : reasonEntry;
+
+            await prisma.project.update({
+              where: { id },
+              data: { majorChanges: { increment: 1 }, majorChangeReason: updatedReason },
+            });
+
+            const newMajorCount = await incrementCell(row, SHEET_COLUMNS.MAJOR_CHANGES);
+            const existingSheetReason = await getCellValue(row, SHEET_COLUMNS.MAJOR_CHANGE_REASON);
+            const sheetEntry = `${newMajorCount}) ${latestComment?.content || 'No comment provided'}`;
+            const updatedSheetReason = existingSheetReason
+              ? `${existingSheetReason}\n${sheetEntry}`
+              : sheetEntry;
+            await updateCell(row, SHEET_COLUMNS.MAJOR_CHANGE_REASON, updatedSheetReason);
+          }
+        } catch (err) {
+          console.error('[GoogleSheets] change tracking sync failed:', err);
+        }
+      })();
+    }
+
+    // Status change sync
+    if (updateData.status && updateData.status !== existing.status) {
+      (async () => {
+        try {
+          const row = await findRowByCrmId(id);
+          if (!row) return;
+          const colInfo = await prisma.boardColumn.findFirst({
+            where: { boardId: existing.boardId, key: updateData.status },
+            select: { name: true },
+          });
+          await updateCell(row, SHEET_COLUMNS.STATUS, colInfo?.name || updateData.status);
+          if (updateData.status === 'completed') {
+            await updateCell(row, SHEET_COLUMNS.ACTUAL_COMPLETION, format(new Date(), 'MM/dd/yyyy'));
+            await updateCell(row, SHEET_COLUMNS.SIGN_OFF, 'Signed Off');
+          }
+        } catch (err) {
+          console.error('[GoogleSheets] status sync failed:', err);
+        }
+      })();
+    }
+
     res.status(200).json({ success: true, message: 'Project updated', data: { project } });
   } catch (error) {
     console.error('Update project error:', error);
@@ -382,7 +486,19 @@ export const deleteProject = async (req: Request, res: Response): Promise<void> 
       return;
     }
 
+    const deletedProjectId = existing.id;
     await prisma.project.delete({ where: { id } });
+
+    // ── Google Sheets sync (fire-and-forget) ─────────
+    (async () => {
+      try {
+        const row = await findRowByCrmId(deletedProjectId);
+        if (!row) return;
+        await updateCell(row, SHEET_COLUMNS.STATUS, 'Deleted');
+      } catch (err) {
+        console.error('[GoogleSheets] delete sync failed:', err);
+      }
+    })();
 
     if (req.user) {
       await prisma.activityLog.create({
@@ -675,6 +791,31 @@ export const reorderProjects = async (req: Request, res: Response): Promise<void
         });
       })
     );
+
+    // ── Google Sheets sync (fire-and-forget) ─────────
+    for (const item of orderedIds) {
+      if (item.status) {
+        const itemId = item.id;
+        const itemStatus = item.status;
+        (async () => {
+          try {
+            const row = await findRowByCrmId(itemId);
+            if (!row) return;
+            const colInfo = await prisma.boardColumn.findFirst({
+              where: { key: itemStatus },
+              select: { name: true },
+            });
+            await updateCell(row, SHEET_COLUMNS.STATUS, colInfo?.name || itemStatus);
+            if (itemStatus === 'completed') {
+              await updateCell(row, SHEET_COLUMNS.ACTUAL_COMPLETION, format(new Date(), 'MM/dd/yyyy'));
+              await updateCell(row, SHEET_COLUMNS.SIGN_OFF, 'Signed Off');
+            }
+          } catch (err) {
+            console.error('[GoogleSheets] reorder status sync failed:', err);
+          }
+        })();
+      }
+    }
 
     res.status(200).json({ success: true, message: 'Projects reordered' });
   } catch (error) {
