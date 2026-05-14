@@ -57,13 +57,14 @@ export const getDashboardOverview = async (req: Request, res: Response): Promise
 
     // Recent projects
     const recentProjects = await prisma.project.findMany({
-      where,
-      take: 5,
       orderBy: { createdAt: 'desc' },
+      take: 5,
       include: {
-        pm: { select: { id: true, name: true } },
-        developer: { select: { id: true, name: true } },
-        board: { select: { id: true, name: true } },
+        assignments: {
+          include: { user: { select: { id: true, name: true, avatar: true } } },
+          take: 3,
+        },
+        board: { select: { name: true, slug: true } },
       },
     });
 
@@ -100,50 +101,55 @@ export const getMyDashboardStats = async (req: Request, res: Response): Promise<
       return;
     }
 
-    const userId = req.user.id;
+    const user = req.user;
 
-    // Get all boards
-    const boards = await prisma.board.findMany({ select: { id: true, name: true, slug: true } });
+    // Get all project IDs the user is assigned to
+    const myAssignments = await prisma.projectAssignment.findMany({
+      where: { userId: user.id },
+      select: { projectId: true },
+    });
+    const myProjectIds = myAssignments.map(a => a.projectId);
 
-    // Managed/Assigned counts per board
-    const boardBreakdown: Record<string, { name: string; managed: number; assigned: number }> = {};
-    for (const board of boards) {
-      const [managed, assigned] = await Promise.all([
-        prisma.project.count({ where: { pmId: userId, boardId: board.id } }),
-        prisma.project.count({ where: { developerId: userId, boardId: board.id } }),
-      ]);
-      if (managed > 0 || assigned > 0) {
-        boardBreakdown[board.slug] = {
-          name: board.name,
-          managed,
-          assigned,
-        };
+    // Get board breakdown for assigned projects
+    const boardBreakdown = await prisma.project.groupBy({
+      by: ['boardId'],
+      where: { id: { in: myProjectIds } },
+      _count: { id: true },
+    });
+
+    const boardIds = boardBreakdown.map(b => b.boardId);
+    const boardsInfo = await prisma.board.findMany({
+      where: { id: { in: boardIds } },
+      select: { id: true, name: true, slug: true },
+    });
+
+    const breakdown: Record<string, { name: string; count: number }> = {};
+    for (const b of boardBreakdown) {
+      const info = boardsInfo.find(bi => bi.id === b.boardId);
+      if (info) {
+        breakdown[info.slug] = { name: info.name, count: b._count.id };
       }
     }
 
-    const totalManaged = await prisma.project.count({ where: { pmId: userId } });
-    const totalAssigned = await prisma.project.count({ where: { developerId: userId } });
-
     // Recent projects for this user
     const myRecentProjects = await prisma.project.findMany({
-      where: { OR: [{ pmId: userId }, { developerId: userId }] },
-      take: 5,
+      where: { id: { in: myProjectIds } },
       orderBy: { createdAt: 'desc' },
+      take: 5,
       include: {
-        pm: { select: { id: true, name: true } },
-        developer: { select: { id: true, name: true } },
-        board: { select: { id: true, name: true } },
+        assignments: {
+          include: { user: { select: { id: true, name: true, avatar: true } } },
+        },
+        board: { select: { name: true, slug: true } },
       },
     });
 
     res.status(200).json({
       success: true,
-      message: 'User dashboard stats retrieved successfully',
       data: {
         myBoardStats: {
-          breakdown: boardBreakdown,
-          totalManaged,
-          totalAssigned,
+          breakdown,
+          totalProjects: myProjectIds.length,
         },
         myRecentProjects,
       },
