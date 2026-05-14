@@ -160,6 +160,128 @@ async function main() {
     console.log(`✅ PROD: ${u.name} (${u.specialization})`);
   }
 
+  // ─── 5. Create Sample Projects with Assignments ─────
+  console.log('\nCreating sample projects with assignments...');
+
+  // Fetch created users for reference
+  const azhar = await prisma.user.findUnique({ where: { email: 'pm.azhar@company.com' } });
+  const mujtaba = await prisma.user.findUnique({ where: { email: 'pm.mujtaba@company.com' } });
+  const rehan = await prisma.user.findUnique({ where: { email: 'pm.rehan@company.com' } });
+  const huzaifa = await prisma.user.findUnique({ where: { email: 'pm.huzaifa@company.com' } });
+  const aqsa = await prisma.user.findUnique({ where: { email: 'pm.aqsa@company.com' } });
+  const abubakar = await prisma.user.findUnique({ where: { email: 'prod1@company.com' } });
+  const arshan = await prisma.user.findUnique({ where: { email: 'prod2@company.com' } });
+  const syedTaha = await prisma.user.findUnique({ where: { email: 'prod3@company.com' } });
+  const syedMuslim = await prisma.user.findUnique({ where: { email: 'prod4@company.com' } });
+  const syedRayyan = await prisma.user.findUnique({ where: { email: 'prod5@company.com' } });
+  const tahir = await prisma.user.findUnique({ where: { email: 'prod6@company.com' } });
+  const binSaud = await prisma.user.findUnique({ where: { email: 'prod7@company.com' } });
+  const qasim = await prisma.user.findUnique({ where: { email: 'prod8@company.com' } });
+  const syedAkbar = await prisma.user.findUnique({ where: { email: 'prod9@company.com' } });
+  const anas = await prisma.user.findUnique({ where: { email: 'prod10@company.com' } });
+  const shakeeb = await prisma.user.findUnique({ where: { email: 'prod11@company.com' } });
+
+  if (azhar && mujtaba && rehan && huzaifa && aqsa && abubakar && arshan && syedTaha && syedMuslim && syedRayyan && tahir && binSaud && qasim && syedAkbar && anas && shakeeb) {
+    const boards = {
+      logo: await prisma.board.findUnique({ where: { slug: 'logo-design' } }),
+      webDesign: await prisma.board.findUnique({ where: { slug: 'web-design' } }),
+      webDev: await prisma.board.findUnique({ where: { slug: 'web-development' } }),
+      content: await prisma.board.findUnique({ where: { slug: 'content' } }),
+    };
+
+    const sampleProjects = [
+      // Team 1, Web Dev board — multiple assignments
+      { name: 'ABC Corp Website', boardSlug: 'web-development', teamSlug: 'team-1', status: 'completed', priority: 'HIGH' as const, minorChanges: 5, majorChanges: 2, assignments: [
+        { userId: azhar!.id, role: 'PRIMARY' as const, status: 'DONE' as const },
+        { userId: abubakar!.id, role: 'PRIMARY' as const, status: 'DONE' as const },
+        { userId: arshan!.id, role: 'PRIMARY' as const, status: 'DONE' as const },
+        { userId: syedAkbar!.id, role: 'COLLABORATOR' as const, status: 'DONE' as const },
+      ]},
+      { name: 'XYZ Landing Page', boardSlug: 'web-development', teamSlug: 'team-1', status: 'in-progress', priority: 'MEDIUM' as const, minorChanges: 2, majorChanges: 0, assignments: [
+        { userId: azhar!.id, role: 'PRIMARY' as const, status: 'ACTIVE' as const },
+        { userId: syedTaha!.id, role: 'PRIMARY' as const, status: 'ACTIVE' as const },
+        { userId: binSaud!.id, role: 'COLLABORATOR' as const, status: 'DONE' as const },
+      ]},
+      { name: 'StartupHub Platform', boardSlug: 'web-development', teamSlug: 'team-1', status: 'live', priority: 'CRITICAL' as const, minorChanges: 8, majorChanges: 3, assignments: [
+        { userId: mujtaba!.id, role: 'PRIMARY' as const, status: 'DONE' as const },
+        { userId: syedRayyan!.id, role: 'PRIMARY' as const, status: 'DONE' as const },
+        { userId: arshan!.id, role: 'COLLABORATOR' as const, status: 'DONE' as const },
+        { userId: shakeeb!.id, role: 'PRIMARY' as const, status: 'DONE' as const },
+        { userId: tahir!.id, role: 'COLLABORATOR' as const, status: 'DONE' as const },
+      ]},
+      // Team 2, Logo board
+      { name: 'TechVenture Logo', boardSlug: 'logo-design', teamSlug: 'team-2', status: 'completed', priority: 'MEDIUM' as const, minorChanges: 3, majorChanges: 1, assignments: [
+        { userId: rehan!.id, role: 'PRIMARY' as const, status: 'DONE' as const },
+        { userId: syedMuslim!.id, role: 'PRIMARY' as const, status: 'DONE' as const },
+        { userId: qasim!.id, role: 'COLLABORATOR' as const, status: 'DONE' as const },
+      ]},
+      { name: 'GreenLeaf Branding', boardSlug: 'logo-design', teamSlug: 'team-2', status: 'in-progress', priority: 'LOW' as const, minorChanges: 1, majorChanges: 0, assignments: [
+        { userId: rehan!.id, role: 'PRIMARY' as const, status: 'ACTIVE' as const },
+        { userId: qasim!.id, role: 'PRIMARY' as const, status: 'ACTIVE' as const },
+      ]},
+      // Team 1, Web Design board
+      { name: 'FoodDelivery App UI', boardSlug: 'web-design', teamSlug: 'team-1', status: 'revisions', priority: 'HIGH' as const, minorChanges: 4, majorChanges: 2, assignments: [
+        { userId: mujtaba!.id, role: 'PRIMARY' as const, status: 'ACTIVE' as const },
+        { userId: arshan!.id, role: 'PRIMARY' as const, status: 'ACTIVE' as const },
+        { userId: binSaud!.id, role: 'PRIMARY' as const, status: 'ACTIVE' as const },
+      ]},
+      // Team 2, Content board
+      { name: 'TechBlog Launch Content', boardSlug: 'content', teamSlug: 'team-2', status: 'completed', priority: 'MEDIUM' as const, minorChanges: 2, majorChanges: 0, assignments: [
+        { userId: rehan!.id, role: 'PRIMARY' as const, status: 'DONE' as const },
+        { userId: tahir!.id, role: 'PRIMARY' as const, status: 'DONE' as const },
+        { userId: anas!.id, role: 'COLLABORATOR' as const, status: 'DONE' as const },
+      ]},
+      { name: 'SaaS Product Copy', boardSlug: 'content', teamSlug: 'team-2', status: 'in-progress', priority: 'HIGH' as const, minorChanges: 0, majorChanges: 0, assignments: [
+        { userId: aqsa!.id, role: 'PRIMARY' as const, status: 'ACTIVE' as const },
+        { userId: anas!.id, role: 'PRIMARY' as const, status: 'ACTIVE' as const },
+      ]},
+      // More web dev for richer KPI data
+      { name: 'E-Commerce Platform', boardSlug: 'web-development', teamSlug: 'team-2', status: 'in-progress', priority: 'CRITICAL' as const, minorChanges: 6, majorChanges: 1, assignments: [
+        { userId: rehan!.id, role: 'PRIMARY' as const, status: 'ACTIVE' as const },
+        { userId: abubakar!.id, role: 'PRIMARY' as const, status: 'ACTIVE' as const },
+        { userId: syedRayyan!.id, role: 'COLLABORATOR' as const, status: 'ACTIVE' as const },
+        { userId: arshan!.id, role: 'COLLABORATOR' as const, status: 'DONE' as const },
+        { userId: syedAkbar!.id, role: 'PRIMARY' as const, status: 'ACTIVE' as const },
+      ]},
+      { name: 'Portfolio Revamp', boardSlug: 'web-development', teamSlug: 'team-1', status: 'live', priority: 'MEDIUM' as const, minorChanges: 3, majorChanges: 1, assignments: [
+        { userId: azhar!.id, role: 'PRIMARY' as const, status: 'DONE' as const },
+        { userId: syedTaha!.id, role: 'PRIMARY' as const, status: 'DONE' as const },
+        { userId: shakeeb!.id, role: 'COLLABORATOR' as const, status: 'DONE' as const },
+      ]},
+    ];
+
+    for (const proj of sampleProjects) {
+      const board = boards[proj.boardSlug === 'web-development' ? 'webDev' : proj.boardSlug === 'web-design' ? 'webDesign' : proj.boardSlug === 'logo-design' ? 'logo' : 'content'];
+      if (!board) continue;
+
+      const project = await prisma.project.create({
+        data: {
+          name: proj.name,
+          boardId: board.id,
+          teamId: teams[proj.teamSlug].id,
+          status: proj.status,
+          priority: proj.priority,
+          minorChanges: proj.minorChanges,
+          majorChanges: proj.majorChanges,
+        },
+      });
+
+      for (const a of proj.assignments) {
+        await prisma.projectAssignment.create({
+          data: {
+            projectId: project.id,
+            userId: a.userId,
+            role: a.role,
+            status: a.status,
+            completedAt: a.status === 'DONE' ? new Date() : null,
+          },
+        });
+      }
+
+      console.log(`✅ Project: ${proj.name} (${proj.assignments.length} members)`);
+    }
+  }
+
   console.log('\n✅ Database seeded successfully!');
   console.log('\n📋 Login Credentials (all passwords: password123):');
   console.log('\n🔹 Sales Team 1: Ali (TL), Azhar Rajput (PM), Mujtaba (PM)');
