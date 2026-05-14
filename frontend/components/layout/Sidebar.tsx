@@ -11,6 +11,7 @@ import {
   ChevronRight,
   User,
   FileText,
+  Shield,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { BOARD_METADATA, DEFAULT_BOARD_METADATA } from '@/lib/constants';
@@ -58,6 +59,7 @@ export function Sidebar({ collapsed, onToggle, isMobile = false, mobileOpen = fa
 
   const userRole = state.currentUser?.role;
   const canAccessInvoices = userRole === 'PM' || userRole === 'TL' || userRole === 'EXECUTIVE';
+  const canAccessAdmin = userRole === 'EXECUTIVE';
 
   const navItems = [
     {
@@ -80,6 +82,13 @@ export function Sidebar({ collapsed, onToggle, isMobile = false, mobileOpen = fa
       icon: FileText,
       href: '/dashboard/invoices',
       match: (p: string) => p === '/dashboard/invoices',
+    }] : []),
+    ...(canAccessAdmin ? [{
+      id: 'admin',
+      label: 'Management',
+      icon: Shield,
+      href: '/dashboard/admin',
+      match: (p: string) => p.startsWith('/dashboard/admin'),
     }] : []),
   ];
 
