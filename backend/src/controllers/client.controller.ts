@@ -19,7 +19,7 @@ export const getClients = async (_req: Request, res: Response): Promise<void> =>
       orderBy: { name: 'asc' },
     });
 
-    res.status(200).json({ success: true, data: { clients } });
+    res.status(200).json({ success: true, message: 'Data retrieved successfully', data: { clients } });
   } catch (error) {
     console.error('Get clients error:', error);
     res.status(500).json({ success: false, message: 'Internal server error' });
@@ -32,7 +32,7 @@ export const createClient = async (req: Request, res: Response): Promise<void> =
   try {
     const { name, contactEmail } = req.body;
 
-    const org = await prisma.organization.findFirst();
+    const org = await prisma.organization.findFirst({ orderBy: { createdAt: 'asc' } });
     if (!org) {
       res.status(500).json({ success: false, message: 'No organization found' });
       return;

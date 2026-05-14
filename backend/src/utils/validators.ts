@@ -98,7 +98,7 @@ export const presignSchema = z.object({
 export const createEmployeeSchema = z.object({
   name: z.string().min(1, 'Name is required').max(200),
   email: z.string().email('Invalid email').max(254),
-  username: z.string().min(1, 'Username is required').max(100),
+  username: z.string().min(1, 'Username is required').max(100).transform(v => v.toLowerCase().trim()),
   role: z.enum(['PM', 'TL', 'PRODUCTION', 'EXECUTIVE']),
   specialization: z.enum(['LOGO_DESIGNER', 'FIGMA_DESIGNER', 'DEVELOPER', 'CONTENT_WRITER', 'QA']).optional(),
   teamId: z.string().uuid().optional(),

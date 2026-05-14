@@ -58,6 +58,7 @@ export const getKPIs = async (_req: Request, res: Response): Promise<void> => {
 
     res.status(200).json({
       success: true,
+      message: 'Data retrieved successfully',
       data: {
         kpis: {
           totalRevenueAllTime,
@@ -101,28 +102,57 @@ export const getEmployees = async (_req: Request, res: Response): Promise<void> 
       orderBy: { name: 'asc' },
     });
 
+    // Batched aggregations to avoid N+1 queries
+    const [
+      pmActiveProjects,
+      pmCompletedProjects,
+      pmRevenue,
+      prodActiveProjects,
+      prodCompletedProjects,
+    ] = await Promise.all([
+      prisma.project.groupBy({
+        by: ['pmId'],
+        _count: { id: true },
+        where: { status: { notIn: ['completed', 'live'] } },
+      }),
+      prisma.project.groupBy({
+        by: ['pmId'],
+        _count: { id: true },
+        where: { status: 'completed' },
+      }),
+      prisma.invoice.groupBy({
+        by: ['createdById'],
+        _sum: { amount: true },
+        where: { status: 'PAID' },
+      }),
+      prisma.project.groupBy({
+        by: ['developerId'],
+        _count: { id: true },
+        where: { developerId: { not: null }, status: { notIn: ['completed', 'live'] } },
+      }),
+      prisma.project.groupBy({
+        by: ['developerId'],
+        _count: { id: true },
+        where: { developerId: { not: null }, status: 'completed' },
+      }),
+    ]);
+
+    const pmActiveMap = new Map(pmActiveProjects.map((r) => [r.pmId, r._count.id]));
+    const pmCompletedMap = new Map(pmCompletedProjects.map((r) => [r.pmId, r._count.id]));
+    const pmRevenueMap = new Map(pmRevenue.map((r) => [r.createdById, Number(r._sum.amount) || 0]));
+    const prodActiveMap = new Map(prodActiveProjects.map((r) => [r.developerId!, r._count.id]));
+    const prodCompletedMap = new Map(prodCompletedProjects.map((r) => [r.developerId!, r._count.id]));
+
     const employees = await Promise.all(
       users.map(async (user) => {
         const teams = user.teamMembers.map((m) => m.team);
         let stats: Record<string, unknown> = {};
 
         if (user.role === 'PM') {
-          const [activeProjects, completedProjects, revenueResult] = await Promise.all([
-            prisma.project.count({
-              where: { pmId: user.id, status: { notIn: ['completed', 'live'] } },
-            }),
-            prisma.project.count({
-              where: { pmId: user.id, status: 'completed' },
-            }),
-            prisma.invoice.aggregate({
-              _sum: { amount: true },
-              where: { createdById: user.id, status: 'PAID' },
-            }),
-          ]);
           stats = {
-            activeProjects,
-            completedProjects,
-            totalRevenue: Number(revenueResult._sum.amount) || 0,
+            activeProjects: pmActiveMap.get(user.id) || 0,
+            completedProjects: pmCompletedMap.get(user.id) || 0,
+            totalRevenue: pmRevenueMap.get(user.id) || 0,
           };
         } else if (user.role === 'TL') {
           const teamIds = teams.map((t) => t.id);
@@ -131,15 +161,10 @@ export const getEmployees = async (_req: Request, res: Response): Promise<void> 
             : 0;
           stats = { teamMembersCount };
         } else if (user.role === 'PRODUCTION') {
-          const [activeProjects, completedProjects] = await Promise.all([
-            prisma.project.count({
-              where: { developerId: user.id, status: { notIn: ['completed', 'live'] } },
-            }),
-            prisma.project.count({
-              where: { developerId: user.id, status: 'completed' },
-            }),
-          ]);
-          stats = { activeProjects, completedProjects };
+          stats = {
+            activeProjects: prodActiveMap.get(user.id) || 0,
+            completedProjects: prodCompletedMap.get(user.id) || 0,
+          };
         }
 
         const { teamMembers: _tm, ...userWithoutTeamMembers } = user;
@@ -147,7 +172,7 @@ export const getEmployees = async (_req: Request, res: Response): Promise<void> 
       })
     );
 
-    res.status(200).json({ success: true, data: { employees } });
+    res.status(200).json({ success: true, message: 'Data retrieved successfully', data: { employees } });
   } catch (error) {
     console.error('Get employees error:', error);
     res.status(500).json({ success: false, message: 'Internal server error' });
@@ -360,6 +385,7 @@ export const getEmployeePerformance = async (req: Request, res: Response): Promi
     const { teamMembers: _tm, ...userInfo } = user;
     res.status(200).json({
       success: true,
+      message: 'Data retrieved successfully',
       data: {
         performance: {
           user: { ...userInfo, teams },
@@ -369,6 +395,21 @@ export const getEmployeePerformance = async (req: Request, res: Response): Promi
     });
   } catch (error) {
     console.error('Get employee performance error:', error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+};
+
+// ─── Admin Teams ────────────────────────────────────
+
+export const getAdminTeams = async (_req: Request, res: Response): Promise<void> => {
+  try {
+    const teams = await prisma.team.findMany({
+      select: { id: true, name: true, slug: true },
+      orderBy: { name: 'asc' },
+    });
+    res.json({ success: true, message: 'Teams retrieved successfully', data: { teams } });
+  } catch (error) {
+    console.error('Get admin teams error:', error);
     res.status(500).json({ success: false, message: 'Internal server error' });
   }
 };
@@ -453,6 +494,14 @@ export const deleteEmployee = async (req: Request, res: Response): Promise<void>
     if (!user) {
       res.status(404).json({ success: false, message: 'Employee not found' });
       return;
+    }
+
+    if (user.role === 'EXECUTIVE') {
+      const execCount = await prisma.user.count({ where: { role: 'EXECUTIVE' } });
+      if (execCount <= 1) {
+        res.status(400).json({ success: false, message: 'Cannot delete the last executive account' });
+        return;
+      }
     }
 
     if (user.role === 'PM') {
