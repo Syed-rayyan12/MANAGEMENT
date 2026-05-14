@@ -19,6 +19,7 @@ export const createProjectSchema = z.object({
   dueDate: z.string().optional().nullable(),
   developerId: z.string().optional().nullable(),
   image: z.string().url().optional().nullable(),
+  clientId: z.string().uuid().optional().nullable(),
 });
 
 export const updateProjectSchema = z.object({
@@ -30,6 +31,7 @@ export const updateProjectSchema = z.object({
   developerId: z.string().uuid().optional().nullable(),
   image: z.string().url().optional().nullable(),
   changeType: z.enum(['NONE', 'MINOR', 'MAJOR']).optional(),
+  clientId: z.string().uuid().optional().nullable(),
 });
 
 // ─── Comments ──────────────────────────────────────
@@ -89,6 +91,24 @@ export const presignSchema = z.object({
   contentType: z.string().min(1).max(100),
   fileSize: z.number().positive().max(50 * 1024 * 1024), // 50MB max
   folder: z.string().max(100).optional(),
+});
+
+// ─── Admin ─────────────────────────────────────────
+
+export const createEmployeeSchema = z.object({
+  name: z.string().min(1, 'Name is required').max(200),
+  email: z.string().email('Invalid email').max(254),
+  username: z.string().min(1, 'Username is required').max(100),
+  role: z.enum(['PM', 'TL', 'PRODUCTION', 'EXECUTIVE']),
+  specialization: z.enum(['LOGO_DESIGNER', 'FIGMA_DESIGNER', 'DEVELOPER', 'CONTENT_WRITER', 'QA']).optional(),
+  teamId: z.string().uuid().optional(),
+});
+
+// ─── Clients ───────────────────────────────────────
+
+export const createClientSchema = z.object({
+  name: z.string().min(1, 'Client name is required').max(200),
+  contactEmail: z.string().email('Invalid email').max(254).optional().nullable(),
 });
 
 // ─── Middleware factory ────────────────────────────

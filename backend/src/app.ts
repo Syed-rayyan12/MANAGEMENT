@@ -14,6 +14,8 @@ import teamRoutes from './routes/team.routes';
 import boardRoutes from './routes/board.routes';
 import invoiceRoutes from './routes/invoice.routes';
 import webhookRoutes from './routes/webhook.routes';
+import adminRoutes from './routes/admin.routes';
+import clientRoutes from './routes/client.routes';
 
 // Load environment variables
 dotenv.config();
@@ -89,6 +91,8 @@ app.use('/api/teams', apiLimiter, teamRoutes);
 app.use('/api/boards', apiLimiter, boardRoutes);
 app.use('/api/invoices', apiLimiter, invoiceRoutes);
 app.use('/api/webhooks', webhookRoutes); // No rate limit — Square needs reliable delivery
+app.use('/api/admin', apiLimiter, adminRoutes);
+app.use('/api/clients', apiLimiter, clientRoutes);
 
 // ─── 404 handler ───────────────────────────────────
 app.use((_req: Request, res: Response) => {
