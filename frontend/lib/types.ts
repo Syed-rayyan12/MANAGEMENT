@@ -210,7 +210,7 @@ export interface KPIData {
   completedProjects: number;
   liveProjects: number;
   projectsByBoard: { id: string; name: string; slug: string; _count: { projects: number } }[];
-  revenueByTeam: { id: string; name: string; slug: string; invoices: { amount: string }[] }[];
+  revenueByTeam: { id: string; name: string; slug: string; totalRevenue: number }[];
   newClientsThisMonth: number;
 }
 

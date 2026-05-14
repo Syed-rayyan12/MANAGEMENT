@@ -38,10 +38,9 @@ export function AdminOverview() {
 
   if (!kpis) return null;
 
-  // Compute revenue by team totals
   const teamRevenues = kpis.revenueByTeam.map(t => ({
     name: t.name,
-    revenue: t.invoices.reduce((sum, inv) => sum + parseFloat(inv.amount), 0),
+    revenue: t.totalRevenue,
   }));
 
   return (
