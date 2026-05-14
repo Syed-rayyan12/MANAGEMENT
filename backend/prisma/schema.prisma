@@ -34,6 +34,14 @@ enum InvoiceStatus {
   FAILED
 }
 
+enum Specialization {
+  LOGO_DESIGNER
+  FIGMA_DESIGNER
+  DEVELOPER
+  CONTENT_WRITER
+  QA
+}
+
 // ─── ORGANIZATION ───────────────────────────────────
 
 model Organization {
@@ -41,10 +49,26 @@ model Organization {
   name      String
   teams     Team[]
   boards    Board[]
+  clients   Client[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@map("organizations")
+}
+
+// ─── CLIENTS ────────────────────────────────────────
+
+model Client {
+  id             String       @id @default(uuid())
+  name           String
+  contactEmail   String?
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  projects       Project[]
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@map("clients")
 }
 
 // ─── TEAMS (sales teams — for project ownership / visibility) ──
@@ -112,15 +136,16 @@ model BoardColumn {
 // ─── USERS ──────────────────────────────────────────
 
 model User {
-  id        String   @id @default(uuid())
-  username  String   @unique
-  email     String   @unique
-  password  String
-  role      UserRole
-  name      String
-  avatar    String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id             String          @id @default(uuid())
+  username       String          @unique
+  email          String          @unique
+  password       String
+  role           UserRole
+  name           String
+  avatar         String?
+  specialization Specialization?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
 
   // Relations
   managedProjects  Project[]       @relation("ProjectManager")
@@ -164,6 +189,10 @@ model Project {
   pm          User            @relation("ProjectManager", fields: [pmId], references: [id])
   developerId String?
   developer   User?           @relation("ProjectDeveloper", fields: [developerId], references: [id])
+
+  // Client relation (optional — for cross-board linking)
+  clientId    String?
+  client      Client?         @relation(fields: [clientId], references: [id])
 
   // Child relations
   comments    Comment[]

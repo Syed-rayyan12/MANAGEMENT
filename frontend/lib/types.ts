@@ -120,6 +120,8 @@ export interface Project {
   minorChanges?: number;
   majorChanges?: number;
   majorChangeReason?: string;
+  clientId?: string | null;
+  client?: { id: string; name: string; contactEmail: string | null } | null;
 }
 
 export interface CurrentUser {
@@ -129,6 +131,7 @@ export interface CurrentUser {
   role?: string;
   avatar?: string;
   teams?: TeamInfo[];
+  specialization?: Specialization;
 }
 
 // ─── Invoices ──────────────────────────────────────
@@ -162,6 +165,87 @@ export interface Invoice {
   createdAt: string;
   updatedAt: string;
 }
+
+// ─── Admin ─────────────────────────────────────────
+
+export type Specialization = 'LOGO_DESIGNER' | 'FIGMA_DESIGNER' | 'DEVELOPER' | 'CONTENT_WRITER' | 'QA';
+
+export interface Client {
+  id: string;
+  name: string;
+  contactEmail: string | null;
+  organizationId: string;
+  projects?: {
+    id: string;
+    name: string;
+    status: string;
+    board?: { name: string; slug: string };
+  }[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Employee {
+  id: string;
+  username: string;
+  email: string;
+  name: string;
+  role: string;
+  specialization?: Specialization;
+  avatar?: string;
+  teams: { id: string; name: string; slug: string }[];
+  createdAt: string;
+  // Basic stats (from getEmployees)
+  activeProjects?: number;
+  completedProjects?: number;
+  totalRevenue?: number;
+  teamMembersCount?: number;
+}
+
+export interface KPIData {
+  totalRevenueAllTime: number;
+  totalRevenueThisMonth: number;
+  totalProjects: number;
+  activeProjects: number;
+  completedProjects: number;
+  liveProjects: number;
+  projectsByBoard: { id: string; name: string; slug: string; _count: { projects: number } }[];
+  revenueByTeam: { id: string; name: string; slug: string; invoices: { amount: string }[] }[];
+  newClientsThisMonth: number;
+}
+
+export interface PMPerformance {
+  activeProjects: number;
+  completedProjects: number;
+  totalRevenue: number;
+  revenueThisMonth: number;
+  projectsByBoard: { boardId: string; boardName: string; count: number }[];
+  recentProjects: { id: string; name: string; status: string; board?: { name: string } }[];
+}
+
+export interface TLPerformance {
+  teamMembersCount: number;
+  teamActiveProjects: number;
+  teamCompletedProjects: number;
+  teamRevenue: number;
+  teamMembers: { id: string; name: string; role: string; activeProjects: number }[];
+}
+
+export interface ProductionPerformance {
+  specialization?: Specialization;
+  activeProjects: number;
+  completedProjects: number;
+  liveProjects: number;
+  projectsByBoard: { boardId: string; boardName: string; count: number }[];
+  totalMinorChanges: number;
+  totalMajorChanges: number;
+}
+
+export type EmployeePerformance =
+  | ({ role: 'PM' } & PMPerformance)
+  | ({ role: 'TL' } & TLPerformance)
+  | ({ role: 'PRODUCTION' } & ProductionPerformance)
+  | { role: 'EXECUTIVE' };
 
 export interface AppState {
   projects: Project[];

@@ -371,3 +371,64 @@ export const boardAPI = {
     return await response.json();
   },
 };
+
+// Admin APIs (Executive only)
+export const adminAPI = {
+  getKPIs: async () => {
+    const response = await apiFetch(`${API_BASE_URL}/admin/kpis`);
+    return await response.json();
+  },
+
+  getEmployees: async () => {
+    const response = await apiFetch(`${API_BASE_URL}/admin/employees`);
+    return await response.json();
+  },
+
+  getEmployeePerformance: async (id: string) => {
+    const response = await apiFetch(`${API_BASE_URL}/admin/employees/${id}/performance`);
+    return await response.json();
+  },
+
+  createEmployee: async (data: {
+    name: string;
+    email: string;
+    username: string;
+    role: string;
+    specialization?: string;
+    teamId?: string;
+  }) => {
+    const response = await apiFetch(`${API_BASE_URL}/admin/employees`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+    return await response.json();
+  },
+
+  deleteEmployee: async (id: string) => {
+    const response = await apiFetch(`${API_BASE_URL}/admin/employees/${id}`, {
+      method: 'DELETE',
+    });
+    return await response.json();
+  },
+
+  getTeams: async () => {
+    const response = await apiFetch(`${API_BASE_URL}/admin/teams`);
+    return await response.json();
+  },
+};
+
+// Client APIs
+export const clientAPI = {
+  getAll: async () => {
+    const response = await apiFetch(`${API_BASE_URL}/clients`);
+    return await response.json();
+  },
+
+  create: async (data: { name: string; contactEmail?: string | null }) => {
+    const response = await apiFetch(`${API_BASE_URL}/clients`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+    return await response.json();
+  },
+};

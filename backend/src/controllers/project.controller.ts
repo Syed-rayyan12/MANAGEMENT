@@ -30,6 +30,7 @@ const projectIncludes = {
   },
   board: { select: { id: true, name: true, slug: true } },
   team: { select: { id: true, name: true, slug: true } },
+  client: { select: { id: true, name: true, contactEmail: true } },
 };
 
 /**
@@ -106,7 +107,7 @@ export const getAllProjects = async (req: Request, res: Response): Promise<void>
 
 export const createProject = async (req: Request, res: Response): Promise<void> => {
   try {
-    let { name, boardId, description, priority, dueDate, pmId, developerId, image, status } = req.body;
+    let { name, boardId, description, priority, dueDate, pmId, developerId, image, status, clientId } = req.body;
 
     const projectPmId = pmId || req.user?.id;
 
@@ -173,6 +174,7 @@ export const createProject = async (req: Request, res: Response): Promise<void> 
         pmId: projectPmId,
         developerId: developerId || null,
         image: image || null,
+        clientId: clientId || null,
       },
       include: projectIncludes,
     });

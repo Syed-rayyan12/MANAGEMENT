@@ -54,6 +54,7 @@ export function usePermissions() {
 
     // General
     isReadOnly: isExec,
+    canAccessAdmin: isExec,
 
     // Helpers
     role,
