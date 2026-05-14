@@ -18,6 +18,7 @@ import {
   getActivityLogs,
 } from '../controllers/project.controller';
 import { authenticate, authorizeRoles } from '../middlewares/auth.middleware';
+import assignmentRoutes from './assignment.routes';
 import {
   validate,
   createProjectSchema,
@@ -65,6 +66,9 @@ router.delete('/:id/comments/:commentId', deleteComment);
 
 // ─── Checklist ─────────────────────────────────────
 router.put('/:id/checklist', validate(updateChecklistSchema), updateChecklist);
+
+// ─── Assignment routes (nested under /api/projects/:id/assignments) ────────────
+router.use('/:id/assignments', assignmentRoutes);
 
 // ─── Labels ────────────────────────────────────────
 router.post('/:id/labels', validate(addLabelSchema), addLabel);
