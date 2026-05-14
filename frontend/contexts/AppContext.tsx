@@ -543,6 +543,8 @@ function mapApiProject(p: any): Project {
     board: p.board ? { id: p.board.id, name: p.board.name, slug: p.board.slug } : undefined,
     teamId: p.teamId || p.team?.id || undefined,
     team: p.team ? { id: p.team.id, name: p.team.name, slug: p.team.slug } : undefined,
+    clientId: p.clientId || null,
+    client: p.client ? { id: p.client.id, name: p.client.name, contactEmail: p.client.contactEmail } : null,
     image: p.image || null,
     position: p.position ?? 0,
     labels: (p.labels || []).map((pl: any) => {

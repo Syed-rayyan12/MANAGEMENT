@@ -1,9 +1,9 @@
 
 'use client';
-import { API_BASE_URL, projectAPI } from '@/lib/api-service';
+import { API_BASE_URL, projectAPI, clientAPI } from '@/lib/api-service';
 import { toast } from 'sonner';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useApp } from '@/contexts/useApp';
 import {
   Dialog,
@@ -22,7 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Project, ProjectStatus, ProjectPriority } from '@/lib/types';
+import { Project, ProjectStatus, ProjectPriority, Client } from '@/lib/types';
 import { DEFAULT_KANBAN_COLUMNS, PRIORITY_STYLES } from '@/lib/constants';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -45,8 +45,18 @@ export function CreateProjectModal({ onClose, initialStatus, initialBoard }: Cre
   const [dueDate, setDueDate] = useState<Date | undefined>(undefined);
   const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
   const [imageUrl, setImageUrl] = useState('');
+  const [clients, setClients] = useState<Client[]>([]);
+  const [selectedClientId, setSelectedClientId] = useState<string>('');
+  const [showNewClientInput, setShowNewClientInput] = useState(false);
+  const [newClientName, setNewClientName] = useState('');
 
   const allUsers = getAllUsers();
+
+  useEffect(() => {
+    clientAPI.getAll()
+      .then(r => { if (r.success) setClients(r.data.clients || []); })
+      .catch(() => {});
+  }, []);
 
   const handleCreate = async () => {
     if (!name.trim()) {
@@ -73,7 +83,8 @@ export function CreateProjectModal({ onClose, initialStatus, initialBoard }: Cre
         priority: priorityMap[priority],
         status,
         dueDate: dueDate ? format(dueDate, 'yyyy-MM-dd') : undefined,
-        image: imageUrl.trim() || undefined
+        image: imageUrl.trim() || undefined,
+        clientId: (selectedClientId && selectedClientId !== 'none') ? selectedClientId : undefined,
       };
 
       const response = await fetch(`${API_BASE_URL}/projects`, {
@@ -121,6 +132,7 @@ export function CreateProjectModal({ onClose, initialStatus, initialBoard }: Cre
           position: 0,
           pm: state.currentUser.id,
           developer: null,
+          clientId: (selectedClientId && selectedClientId !== 'none') ? selectedClientId : null,
           labels: addedLabels,
           checklist: [],
           comments: [],
@@ -186,6 +198,68 @@ export function CreateProjectModal({ onClose, initialStatus, initialBoard }: Cre
               onChange={(e) => setDescription(e.target.value)}
               className="mt-1 min-h-24 placeholder:text-gray-400 "
             />
+          </div>
+
+          {/* Client */}
+          <div>
+            <Label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Client (optional)</Label>
+            <Select
+              value={selectedClientId}
+              onValueChange={(val) => {
+                if (val === 'new-client') {
+                  setShowNewClientInput(true);
+                  setSelectedClientId('');
+                } else {
+                  setShowNewClientInput(false);
+                  setSelectedClientId(val);
+                }
+              }}
+            >
+              <SelectTrigger className="mt-1">
+                <SelectValue placeholder="No client" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">No client</SelectItem>
+                {clients.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                ))}
+                <SelectItem value="new-client">+ Create new client</SelectItem>
+              </SelectContent>
+            </Select>
+            {showNewClientInput && (
+              <div className="mt-2 flex gap-2">
+                <input
+                  type="text"
+                  placeholder="Client name"
+                  value={newClientName}
+                  onChange={e => setNewClientName(e.target.value)}
+                  className="flex-1 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 py-2 text-sm placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-[#e05c29]/30 focus:border-[#e05c29]"
+                />
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (!newClientName.trim()) return;
+                    try {
+                      const result = await clientAPI.create({ name: newClientName.trim() });
+                      if (result.success) {
+                        const newClient = result.data.client;
+                        setClients(prev => [...prev, newClient]);
+                        setSelectedClientId(newClient.id);
+                        setShowNewClientInput(false);
+                        setNewClientName('');
+                      } else {
+                        toast.error(result.message || 'Failed to create client');
+                      }
+                    } catch (err: any) {
+                      toast.error(err.message || 'Failed to create client');
+                    }
+                  }}
+                  className="rounded-lg px-3 py-2 text-sm font-medium text-white bg-gradient-to-r from-[#e05c29] to-orange-400 hover:to-rose-500 transition-all"
+                >
+                  Add
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Status and Priority */}
