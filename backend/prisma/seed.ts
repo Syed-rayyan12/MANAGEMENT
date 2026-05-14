@@ -63,6 +63,28 @@ async function main() {
     console.log(`✅ Board: ${b.name}`);
   }
 
+  // ─── 3b. Add "Live" column to Web Development board ──
+  const webDevBoard = await prisma.board.findUnique({ where: { slug: 'web-development' } });
+  if (webDevBoard) {
+    const existingLiveCol = await prisma.boardColumn.findUnique({
+      where: { boardId_key: { boardId: webDevBoard.id, key: 'live' } },
+    });
+    if (!existingLiveCol) {
+      await prisma.boardColumn.create({
+        data: {
+          name: 'Live',
+          key: 'live',
+          color: '#8B5CF6',
+          position: 4,
+          boardId: webDevBoard.id,
+        },
+      });
+      console.log('✅ Added "Live" column to Web Development board');
+    } else {
+      console.log('✅ "Live" column already exists on Web Development board');
+    }
+  }
+
   // ─── 4. Create Users ─────────────────────────────
   console.log('\nCreating users...');
 
@@ -88,17 +110,17 @@ async function main() {
 
   // Production (no team — see all boards, only assigned tasks)
   const productionUsers = [
-    { username: 'prod.abubakarsiddiqui', email: 'prod1@company.com', password, role: 'PRODUCTION' as const, name: 'Abubakar Siddiqui' },
-    { username: 'prod.arshanhasan', email: 'prod2@company.com', password, role: 'PRODUCTION' as const, name: 'Arshan Hasan' },
-    { username: 'prod.syedtaha', email: 'prod3@company.com', password, role: 'PRODUCTION' as const, name: 'Syed Taha' },
-    { username: 'prod.syedmuslim', email: 'prod4@company.com', password, role: 'PRODUCTION' as const, name: 'Syed Muslim' },
-    { username: 'prod.syedrayyan', email: 'prod5@company.com', password, role: 'PRODUCTION' as const, name: 'Syed Rayyan' },
-    { username: 'prod.tahiranwar', email: 'prod6@company.com', password, role: 'PRODUCTION' as const, name: 'Tahir Anwar' },
-    { username: 'prod.muhammadbinsaud', email: 'prod7@company.com', password, role: 'PRODUCTION' as const, name: 'Muhammad Bin Saud' },
-    { username: 'prod.qasimrizvi', email: 'prod8@company.com', password, role: 'PRODUCTION' as const, name: 'Qasim Rizvi' },
-    { username: 'prod.syedakbar', email: 'prod9@company.com', password, role: 'PRODUCTION' as const, name: 'Syed Akbar' },
-    { username: 'prod.anaskhan', email: 'prod10@company.com', password, role: 'PRODUCTION' as const, name: 'Anas Khan' },
-    { username: 'prod.shakeebkhan', email: 'prod11@company.com', password, role: 'PRODUCTION' as const, name: 'Shakeeb Khan' },
+    { username: 'prod.abubakarsiddiqui', email: 'prod1@company.com', password, role: 'PRODUCTION' as const, name: 'Abubakar Siddiqui', specialization: 'DEVELOPER' as const },
+    { username: 'prod.arshanhasan', email: 'prod2@company.com', password, role: 'PRODUCTION' as const, name: 'Arshan Hasan', specialization: 'FIGMA_DESIGNER' as const },
+    { username: 'prod.syedtaha', email: 'prod3@company.com', password, role: 'PRODUCTION' as const, name: 'Syed Taha', specialization: 'DEVELOPER' as const },
+    { username: 'prod.syedmuslim', email: 'prod4@company.com', password, role: 'PRODUCTION' as const, name: 'Syed Muslim', specialization: 'LOGO_DESIGNER' as const },
+    { username: 'prod.syedrayyan', email: 'prod5@company.com', password, role: 'PRODUCTION' as const, name: 'Syed Rayyan', specialization: 'DEVELOPER' as const },
+    { username: 'prod.tahiranwar', email: 'prod6@company.com', password, role: 'PRODUCTION' as const, name: 'Tahir Anwar', specialization: 'CONTENT_WRITER' as const },
+    { username: 'prod.muhammadbinsaud', email: 'prod7@company.com', password, role: 'PRODUCTION' as const, name: 'Muhammad Bin Saud', specialization: 'FIGMA_DESIGNER' as const },
+    { username: 'prod.qasimrizvi', email: 'prod8@company.com', password, role: 'PRODUCTION' as const, name: 'Qasim Rizvi', specialization: 'LOGO_DESIGNER' as const },
+    { username: 'prod.syedakbar', email: 'prod9@company.com', password, role: 'PRODUCTION' as const, name: 'Syed Akbar', specialization: 'QA' as const },
+    { username: 'prod.anaskhan', email: 'prod10@company.com', password, role: 'PRODUCTION' as const, name: 'Anas Khan', specialization: 'CONTENT_WRITER' as const },
+    { username: 'prod.shakeebkhan', email: 'prod11@company.com', password, role: 'PRODUCTION' as const, name: 'Shakeeb Khan', specialization: 'QA' as const },
   ];
 
   // Create team users + membership
@@ -132,10 +154,10 @@ async function main() {
   for (const u of productionUsers) {
     await prisma.user.upsert({
       where: { email: u.email },
-      update: {},
-      create: { username: u.username, email: u.email, password: u.password, role: u.role, name: u.name },
+      update: { specialization: u.specialization },
+      create: { username: u.username, email: u.email, password: u.password, role: u.role, name: u.name, specialization: u.specialization },
     });
-    console.log(`✅ PROD: ${u.name}`);
+    console.log(`✅ PROD: ${u.name} (${u.specialization})`);
   }
 
   console.log('\n✅ Database seeded successfully!');
