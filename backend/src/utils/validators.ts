@@ -17,7 +17,6 @@ export const createProjectSchema = z.object({
   status: z.string().max(50).optional(),
   priority: z.enum(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']).optional(),
   dueDate: z.string().optional().nullable(),
-  developerId: z.string().optional().nullable(),
   image: z.string().url().optional().nullable(),
   clientId: z.string().uuid().optional().nullable(),
 });
@@ -28,7 +27,6 @@ export const updateProjectSchema = z.object({
   status: z.string().max(50).optional(),
   priority: z.enum(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']).optional(),
   dueDate: z.string().optional().nullable(),
-  developerId: z.string().uuid().optional().nullable(),
   image: z.string().url().optional().nullable(),
   changeType: z.enum(['NONE', 'MINOR', 'MAJOR']).optional(),
   clientId: z.string().uuid().optional().nullable(),
@@ -109,6 +107,18 @@ export const createEmployeeSchema = z.object({
 export const createClientSchema = z.object({
   name: z.string().min(1, 'Client name is required').max(200),
   contactEmail: z.string().email('Invalid email').max(254).optional().nullable(),
+});
+
+// ─── Assignments ────────────────────────────────────
+
+export const createAssignmentSchema = z.object({
+  userId: z.string().uuid('Invalid user ID'),
+  role: z.enum(['PRIMARY', 'COLLABORATOR']).optional().default('PRIMARY'),
+});
+
+export const updateAssignmentSchema = z.object({
+  role: z.enum(['PRIMARY', 'COLLABORATOR']).optional(),
+  status: z.enum(['ACTIVE', 'DONE']).optional(),
 });
 
 // ─── Middleware factory ────────────────────────────
