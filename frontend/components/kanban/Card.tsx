@@ -540,13 +540,6 @@ export function ProjectCard({ project, onCardClick }: ProjectCardProps) {
                     <div className="flex-1 text-left">
                       <div className="flex items-center gap-2">
                         <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">{user.name}</p>
-                        <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold text-white ${
-                          user.role === 'PM' ? 'bg-blue-500' :
-                          user.role === 'TL' ? 'bg-green-500' :
-                          user.role === 'EXECUTIVE' ? 'bg-purple-500' : 'bg-gray-500'
-                        }`}>
-                          {user.role}
-                        </span>
                         {isAlreadyMember && (
                           <span className="text-[10px] px-1.5 py-0.5 rounded bg-green-500/20 text-green-400 font-medium">Added</span>
                         )}

@@ -27,7 +27,8 @@
       "Bash(DATABASE_URL=\"postgresql://postgres:sudani123456!@localhost:5432/promanage_db?schema=public\" cd \"/f/downloads-new/MANAGEMENT-main/MANAGEMENT-main/.worktrees/feature/admin-dashboard/backend\")",
       "Bash(DATABASE_URL=\"postgresql://postgres:sudani123456!@localhost:5432/promanage_db?schema=public\" ./node_modules/.bin/prisma migrate dev --name add_specialization_client_model)",
       "Bash(./node_modules/.bin/prisma generate:*)",
-      "Bash(cp:*)"
+      "Bash(cp:*)",
+      "Bash(xargs cat:*)"
     ]
   }
 }
