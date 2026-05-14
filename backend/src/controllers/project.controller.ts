@@ -14,8 +14,12 @@ import {
 
 // Shared include for loading project relations
 const projectIncludes = {
-  pm: { select: { id: true, name: true, email: true, avatar: true, role: true } },
-  developer: { select: { id: true, name: true, email: true, avatar: true, role: true } },
+  assignments: {
+    include: {
+      user: { select: { id: true, name: true, email: true, avatar: true, role: true, specialization: true } },
+    },
+    orderBy: { assignedAt: 'asc' as const },
+  },
   comments: {
     include: { user: { select: { id: true, name: true, avatar: true } } },
     orderBy: { createdAt: 'asc' as const },
@@ -107,51 +111,37 @@ export const getAllProjects = async (req: Request, res: Response): Promise<void>
 
 export const createProject = async (req: Request, res: Response): Promise<void> => {
   try {
-    let { name, boardId, description, priority, dueDate, pmId, developerId, image, status, clientId } = req.body;
+    let { name, boardId, description, priority, dueDate, image, status, clientId } = req.body;
 
-    const projectPmId = pmId || req.user?.id;
-
-    if (!name || !boardId || !projectPmId) {
-      res.status(400).json({ success: false, message: 'Name, boardId, and PM ID are required' });
+    const creatorId = req.user?.id;
+    if (!name || !boardId || !creatorId) {
+      res.status(400).json({ success: false, message: 'Name and boardId are required' });
       return;
     }
 
     // Resolve board: accept either UUID or slug
     let board = await prisma.board.findUnique({ where: { id: boardId } });
     if (!board) {
-      // Try looking up by slug
       board = await prisma.board.findUnique({ where: { slug: boardId } });
     }
     if (!board) {
       res.status(404).json({ success: false, message: 'Board not found' });
       return;
     }
-    // Use the resolved UUID from here on
     boardId = board.id;
 
-    // Determine teamId from the PM's team membership
-    const pmMemberships = await prisma.teamMember.findMany({
-      where: { userId: projectPmId },
+    // Determine teamId from the creator's team membership
+    const creatorMemberships = await prisma.teamMember.findMany({
+      where: { userId: creatorId },
       select: { teamId: true },
     });
-    if (pmMemberships.length === 0) {
-      res.status(400).json({ success: false, message: 'PM must belong to a team to create projects' });
+    if (creatorMemberships.length === 0) {
+      res.status(400).json({ success: false, message: 'You must belong to a team to create projects' });
       return;
     }
-    const teamId = pmMemberships[0].teamId;
+    const teamId = creatorMemberships[0].teamId;
 
-    // Verify PM
-    const pm = await prisma.user.findUnique({ where: { id: projectPmId } });
-    if (!pm) { res.status(404).json({ success: false, message: 'PM not found' }); return; }
-    if (pm.role !== 'PM') { res.status(403).json({ success: false, message: 'Only PM role users can be assigned as PM' }); return; }
-
-    // Verify developer if provided
-    if (developerId) {
-      const dev = await prisma.user.findUnique({ where: { id: developerId } });
-      if (!dev) { res.status(404).json({ success: false, message: 'Developer not found' }); return; }
-    }
-
-    // If status is provided, validate it matches a board column key
+    // Validate status against board columns if provided
     if (status) {
       const column = await prisma.boardColumn.findUnique({
         where: { boardId_key: { boardId, key: status } },
@@ -162,6 +152,7 @@ export const createProject = async (req: Request, res: Response): Promise<void> 
       }
     }
 
+    // Create project (no pmId/developerId)
     const project = await prisma.project.create({
       data: {
         name,
@@ -171,61 +162,58 @@ export const createProject = async (req: Request, res: Response): Promise<void> 
         status: status || 'todo',
         priority: priority || 'MEDIUM',
         dueDate: dueDate ? new Date(dueDate) : null,
-        pmId: projectPmId,
-        developerId: developerId || null,
         image: image || null,
         clientId: clientId || null,
       },
       include: projectIncludes,
     });
 
-    // Log activity
-    await prisma.activityLog.create({
-      data: { action: `Created project: ${name}`, projectId: project.id, userId: projectPmId },
+    // Auto-assign creator as first member (PRIMARY)
+    await prisma.projectAssignment.create({
+      data: { projectId: project.id, userId: creatorId, role: 'PRIMARY' },
     });
 
-    // Notify assigned developer
-    const pmUser = await prisma.user.findUnique({ where: { id: projectPmId }, select: { name: true } });
+    // Re-fetch to include the new assignment
+    const fullProject = await prisma.project.findUnique({
+      where: { id: project.id },
+      include: projectIncludes,
+    });
 
-    if (developerId && developerId !== projectPmId) {
-      await createNotification({
-        type: 'assigned',
-        message: `${pmUser?.name || 'A PM'} assigned you to project: ${name}`,
-        userId: developerId,
-        projectId: project.id,
-        actorId: projectPmId,
-      });
-    }
+    // Log activity
+    await prisma.activityLog.create({
+      data: { action: `Created project: ${name}`, projectId: project.id, userId: creatorId },
+    });
 
     // Notify all PRODUCTION users about the new project
+    const creatorUser = await prisma.user.findUnique({ where: { id: creatorId }, select: { name: true } });
     const productionUsers = await prisma.user.findMany({
       where: { role: 'PRODUCTION' },
       select: { id: true },
     });
     const prodNotifItems = productionUsers
-      .filter(u => u.id !== projectPmId && u.id !== developerId)
+      .filter(u => u.id !== creatorId)
       .map(u => ({
         type: 'project_created',
-        message: `${pmUser?.name || 'A PM'} created a new project: ${name}`,
+        message: `${creatorUser?.name || 'Someone'} created a new project: ${name}`,
         userId: u.id,
         projectId: project.id,
-        actorId: projectPmId,
+        actorId: creatorId,
       }));
     await createManyNotifications(prodNotifItems);
 
-    // ── Google Sheets sync (fire-and-forget) ─────────
+    // Google Sheets sync (fire-and-forget)
     (async () => {
       try {
         const initialColumn = await prisma.boardColumn.findFirst({
-          where: { boardId, key: project.status },
+          where: { boardId, key: fullProject?.status || 'todo' },
           select: { name: true },
         });
         await appendProjectRow({
-          projectName: project.name,
-          pmName: pm.name,
-          assignedTo: (project as any).developer?.name || '',
-          role: getBoardRole(board.name),
-          taskType: board.name,
+          projectName: name,
+          pmName: creatorUser?.name || '',
+          assignedTo: '',
+          role: getBoardRole(board!.name),
+          taskType: board!.name,
           dateAssigned: format(project.createdAt, 'MM/dd/yyyy'),
           eta: project.dueDate ? format(new Date(project.dueDate), 'MM/dd/yyyy') : '',
           status: initialColumn?.name || 'To Do',
@@ -238,8 +226,8 @@ export const createProject = async (req: Request, res: Response): Promise<void> 
 
     res.status(201).json({
       success: true,
-      message: `Project created on board`,
-      data: { project },
+      message: 'Project created',
+      data: { project: fullProject },
     });
   } catch (error) {
     console.error('Create project error:', error);
@@ -308,18 +296,9 @@ export const updateProject = async (req: Request, res: Response): Promise<void> 
       }
     }
 
-    // Verify PM if changing
-    if (updateData.pmId) {
-      const pm = await prisma.user.findUnique({ where: { id: updateData.pmId } });
-      if (!pm) { res.status(404).json({ success: false, message: 'PM not found' }); return; }
-      if (pm.role !== 'PM') { res.status(403).json({ success: false, message: 'User is not a PM' }); return; }
-    }
-
-    // Verify developer if changing
-    if (updateData.developerId) {
-      const dev = await prisma.user.findUnique({ where: { id: updateData.developerId } });
-      if (!dev) { res.status(404).json({ success: false, message: 'Developer not found' }); return; }
-    }
+    // Strip legacy pmId/developerId if they come through
+    delete updateData.pmId;
+    delete updateData.developerId;
 
     // Extract changeType before Prisma update — it's a transient trigger, not a DB field
     const changeType: string | undefined = updateData.changeType;
@@ -344,25 +323,18 @@ export const updateProject = async (req: Request, res: Response): Promise<void> 
 
       const actorName = (await prisma.user.findUnique({ where: { id: req.user.id }, select: { name: true } }))?.name || 'Someone';
 
-      // Notify new developer if assignment changed
-      if (updateData.developerId && updateData.developerId !== existing.developerId && updateData.developerId !== req.user.id) {
-        await createNotification({
-          type: 'assigned',
-          message: `${actorName} assigned you to project: ${existing.name}`,
-          userId: updateData.developerId,
-          projectId: id,
-          actorId: req.user.id,
-        });
-      }
-
-      // Notify on status change
+      // Notify assigned members on status change
       if (updateData.status && updateData.status !== existing.status) {
-        const recipients = new Set<string>();
-        if (existing.pmId && existing.pmId !== req.user.id) recipients.add(existing.pmId);
-        if (existing.developerId && existing.developerId !== req.user.id) recipients.add(existing.developerId);
+        const assignedUserIds = await prisma.projectAssignment.findMany({
+          where: { projectId: id },
+          select: { userId: true },
+        });
+        const recipients = assignedUserIds
+          .map(a => a.userId)
+          .filter(uid => uid !== req.user!.id);
 
         const isCompleted = updateData.status === 'completed';
-        const statusItems = [...recipients].map((uid) => ({
+        const statusItems = recipients.map((uid) => ({
           type: isCompleted ? 'completed' : 'status',
           message: isCompleted
             ? `${actorName} marked ${existing.name} as completed! 🎉`
@@ -374,17 +346,23 @@ export const updateProject = async (req: Request, res: Response): Promise<void> 
         await createManyNotifications(statusItems);
       }
 
-      // Notify developer when priority escalated to CRITICAL
+      // Notify assigned members when priority escalated to CRITICAL
       if (updateData.priority && updateData.priority !== existing.priority && updateData.priority === 'CRITICAL') {
-        if (existing.developerId && existing.developerId !== req.user.id) {
-          await createNotification({
+        const assignedUserIds = await prisma.projectAssignment.findMany({
+          where: { projectId: id },
+          select: { userId: true },
+        });
+        const criticalItems = assignedUserIds
+          .map(a => a.userId)
+          .filter(uid => uid !== req.user!.id)
+          .map(uid => ({
             type: 'priority',
             message: `⚠️ ${actorName} escalated ${existing.name} to CRITICAL priority`,
-            userId: existing.developerId,
+            userId: uid,
             projectId: id,
-            actorId: req.user.id,
-          });
-        }
+            actorId: req.user!.id,
+          }));
+        await createManyNotifications(criticalItems);
       }
     }
 
@@ -494,10 +472,12 @@ export const deleteProject = async (req: Request, res: Response): Promise<void> 
       });
 
       const actorName = (await prisma.user.findUnique({ where: { id: req.user.id }, select: { name: true } }))?.name || 'Someone';
-      const recipients = new Set<string>();
-      if (existing.pmId && existing.pmId !== req.user.id) recipients.add(existing.pmId);
-      if (existing.developerId && existing.developerId !== req.user.id) recipients.add(existing.developerId);
-      const deleteItems = [...recipients].map((uid) => ({
+      const assignedUserIds = await prisma.projectAssignment.findMany({
+        where: { projectId: id },
+        select: { userId: true },
+      });
+      const recipients = assignedUserIds.map(a => a.userId).filter(uid => uid !== req.user!.id);
+      const deleteItems = recipients.map((uid) => ({
         type: 'deleted',
         message: `${actorName} deleted project: ${existing.name}`,
         userId: uid,
@@ -542,9 +522,14 @@ export const addComment = async (req: Request, res: Response): Promise<void> => 
     const snippet = content.length > 50 ? content.substring(0, 50) + '...' : content;
     const recipientIds = new Set<string>();
 
-    // Add PM and developer (except commenter)
-    if (project.pmId && project.pmId !== req.user!.id) recipientIds.add(project.pmId);
-    if (project.developerId && project.developerId !== req.user!.id) recipientIds.add(project.developerId);
+    // Add all assigned users (except commenter)
+    const assignedForComment = await prisma.projectAssignment.findMany({
+      where: { projectId: id },
+      select: { userId: true },
+    });
+    assignedForComment.forEach(a => {
+      if (a.userId !== req.user!.id) recipientIds.add(a.userId);
+    });
 
     // Parse @mentions
     const mentionRegex = /@([a-zA-Z0-9_]+)/g;
@@ -632,18 +617,24 @@ export const updateChecklist = async (req: Request, res: Response): Promise<void
       orderBy: { position: 'asc' },
     });
 
-    // Notify PM when all checklist items are completed
+    // Notify assigned users when all checklist items are completed
     if (items && items.length > 0 && items.every((item: any) => item.completed)) {
-      const proj = await prisma.project.findUnique({ where: { id }, select: { pmId: true, developerId: true, name: true } });
-      if (proj && req.user && proj.pmId && proj.pmId !== req.user.id) {
+      const proj = await prisma.project.findUnique({ where: { id }, select: { name: true } });
+      if (proj && req.user) {
         const devName = (await prisma.user.findUnique({ where: { id: req.user.id }, select: { name: true } }))?.name || 'Someone';
-        await createNotification({
+        const assignedForChecklist = await prisma.projectAssignment.findMany({
+          where: { projectId: id },
+          select: { userId: true },
+        });
+        const checklistRecipients = assignedForChecklist.map(a => a.userId).filter(uid => uid !== req.user!.id);
+        const checklistItems = checklistRecipients.map(uid => ({
           type: 'checklist',
           message: `✅ ${devName} completed all checklist items on ${proj.name}`,
-          userId: proj.pmId,
+          userId: uid,
           projectId: id,
-          actorId: req.user.id,
-        });
+          actorId: req.user!.id,
+        }));
+        await createManyNotifications(checklistItems);
       }
     }
 
@@ -719,14 +710,16 @@ export const addAttachment = async (req: Request, res: Response): Promise<void> 
       data: { action: `Added attachment: ${filename}`, projectId: id, userId: req.user!.id },
     });
 
-    // Notify PM + developer about new file
+    // Notify assigned users about new file
     const uploaderName = (await prisma.user.findUnique({ where: { id: req.user!.id }, select: { name: true } }))?.name || 'Someone';
-    const project = await prisma.project.findUnique({ where: { id }, select: { pmId: true, developerId: true, name: true } });
+    const project = await prisma.project.findUnique({ where: { id }, select: { name: true } });
     if (project) {
-      const attRecipients = new Set<string>();
-      if (project.pmId && project.pmId !== req.user!.id) attRecipients.add(project.pmId);
-      if (project.developerId && project.developerId !== req.user!.id) attRecipients.add(project.developerId);
-      const attItems = [...attRecipients].map((uid) => ({
+      const assignedForAttachment = await prisma.projectAssignment.findMany({
+        where: { projectId: id },
+        select: { userId: true },
+      });
+      const attRecipients = assignedForAttachment.map(a => a.userId).filter(uid => uid !== req.user!.id);
+      const attItems = attRecipients.map((uid) => ({
         type: 'attachment',
         message: `${uploaderName} uploaded a file to ${project.name}: ${filename}`,
         userId: uid,
