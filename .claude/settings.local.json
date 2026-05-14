@@ -18,7 +18,16 @@
       "Bash(curl:*)",
       "Bash(grep -r \"google\\\\|sheets\\\\|gsheet\\\\|stripe\\\\|paypal\" /f/downloads-new/MANAGEMENT-main/MANAGEMENT-main --include=*.ts --include=*.tsx --include=*.json)",
       "Bash(npm install:*)",
-      "Bash(node -e \":*)"
+      "Bash(node -e \":*)",
+      "Bash(grep -E \"\\\\.\\(ts|js\\)$\")",
+      "Bash(xargs grep:*)",
+      "Bash(grep -E \"\\\\.\\(ts|tsx|js|jsx\\)$\")",
+      "Bash(find /f/downloads-new/MANAGEMENT-main/MANAGEMENT-main/frontend/src -type f -name *invoice*)",
+      "Bash(./node_modules/.bin/prisma migrate:*)",
+      "Bash(DATABASE_URL=\"postgresql://postgres:sudani123456!@localhost:5432/promanage_db?schema=public\" cd \"/f/downloads-new/MANAGEMENT-main/MANAGEMENT-main/.worktrees/feature/admin-dashboard/backend\")",
+      "Bash(DATABASE_URL=\"postgresql://postgres:sudani123456!@localhost:5432/promanage_db?schema=public\" ./node_modules/.bin/prisma migrate dev --name add_specialization_client_model)",
+      "Bash(./node_modules/.bin/prisma generate:*)",
+      "Bash(cp:*)"
     ]
   }
 }

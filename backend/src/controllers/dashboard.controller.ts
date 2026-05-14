@@ -2,17 +2,12 @@ import { Request, Response } from 'express';
 import prisma from '../lib/prisma';
 
 /**
- * Build WHERE clause scoped to user's team for project visibility.
+ * Build WHERE clause for project visibility.
+ * All authenticated users can see all projects across all teams.
  */
 function buildWhereClause(user: Request['user']): Record<string, unknown> {
   if (!user) return { id: 'none' };
-  if (user.role === 'EXECUTIVE') return {};
-  if (user.role === 'PRODUCTION') return {};
-
-  if (user.teamIds && user.teamIds.length > 0) {
-    return { teamId: { in: user.teamIds } };
-  }
-  return { id: 'none' };
+  return {};
 }
 
 /**

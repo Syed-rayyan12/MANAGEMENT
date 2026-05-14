@@ -33,26 +33,12 @@ const projectIncludes = {
 };
 
 /**
- * Build WHERE clause scoped to user's team for project visibility.
- * - EXECUTIVE: sees all projects
- * - PRODUCTION: sees only tasks assigned to them
- * - TL/PM: sees only projects owned by their team(s)
+ * Build WHERE clause for project visibility.
+ * All authenticated users can see all projects across all teams.
  */
 function buildWhereClause(user: Request['user']): Record<string, unknown> {
   if (!user) return { id: 'none' };
-
-  // EXECUTIVE sees all
-  if (user.role === 'EXECUTIVE') return {};
-
-  // PRODUCTION sees all projects (cross-team execution layer)
-  if (user.role === 'PRODUCTION') return {};
-
-  // TL/PM: see projects belonging to their team(s)
-  if (user.teamIds && user.teamIds.length > 0) {
-    return { teamId: { in: user.teamIds } };
-  }
-
-  return { id: 'none' }; // no teams = no access
+  return {};
 }
 
 // ─── Get projects by board ──────────────────────────
