@@ -522,104 +522,131 @@ function PerformanceModal({ employee, open, onClose }: { employee: Employee | nu
   );
 }
 
+function SectionHeader({ title }: { title: string }) {
+  return (
+    <h4 className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wide pt-2">{title}</h4>
+  );
+}
+
 function PerformanceContent({ employee, performance }: { employee: Employee; performance: EmployeePerformance }) {
-  if (performance.role === 'PM') {
-    return (
-      <div className="space-y-4">
-        <div className="grid grid-cols-2 gap-3">
-          <PerfStat label="Active Projects" value={String(performance.activeProjects)} />
-          <PerfStat label="Completed" value={String(performance.completedProjects)} />
-          <PerfStat label="Total Revenue" value={`£${performance.totalRevenue.toLocaleString('en-GB', { minimumFractionDigits: 2 })}`} />
-          <PerfStat label="Revenue This Month" value={`£${performance.revenueThisMonth.toLocaleString('en-GB', { minimumFractionDigits: 2 })}`} />
-        </div>
-        {performance.projectsByBoard.length > 0 && (
-          <div>
-            <h4 className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wide mb-2">Projects by Board</h4>
-            <div className="space-y-1">
-              {performance.projectsByBoard.map((b) => (
-                <div key={b.boardId} className="flex justify-between text-sm py-1.5 border-b border-zinc-100 dark:border-zinc-800 last:border-0">
-                  <span className="text-zinc-600 dark:text-zinc-400">{b.boardName}</span>
-                  <span className="font-medium text-zinc-900 dark:text-zinc-100">{b.count}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-        {performance.recentProjects.length > 0 && (
-          <div>
-            <h4 className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wide mb-2">Recent Projects</h4>
-            <div className="space-y-1">
-              {performance.recentProjects.map((p) => (
-                <div key={p.id} className="flex justify-between text-sm py-1.5 border-b border-zinc-100 dark:border-zinc-800 last:border-0">
-                  <span className="text-zinc-600 dark:text-zinc-400">{p.name}</span>
-                  <span className="text-xs text-zinc-400">{p.board?.name}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
-    );
-  }
+  const isSales = performance.role === 'PM' || performance.role === 'TL';
+  const isProd = performance.role === 'PRODUCTION';
 
-  if (performance.role === 'TL') {
-    return (
-      <div className="space-y-4">
-        <div className="grid grid-cols-2 gap-3">
-          <PerfStat label="Team Members" value={String(performance.teamMembersCount)} />
-          <PerfStat label="Team Revenue" value={`£${performance.teamRevenue.toLocaleString('en-GB', { minimumFractionDigits: 2 })}`} />
-          <PerfStat label="Active Projects" value={String(performance.teamActiveProjects)} />
-          <PerfStat label="Completed Projects" value={String(performance.teamCompletedProjects)} />
-        </div>
-        {performance.teamMembers.length > 0 && (
-          <div>
-            <h4 className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wide mb-2">Team Members</h4>
-            <div className="space-y-1">
-              {performance.teamMembers.map((m) => (
-                <div key={m.id} className="flex justify-between text-sm py-1.5 border-b border-zinc-100 dark:border-zinc-800 last:border-0">
-                  <span className="text-zinc-600 dark:text-zinc-400">{m.name} <span className="text-xs text-zinc-400">({m.role})</span></span>
-                  <span className="text-zinc-500 dark:text-zinc-400">{m.activeProjects} active</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+  return (
+    <div className="space-y-5">
+      {/* Common: Assignment Stats */}
+      <div className="grid grid-cols-2 gap-3">
+        <PerfStat label="Active Projects" value={String(performance.activeProjects)} />
+        <PerfStat label="Completed" value={String(performance.completedProjects)} />
+        <PerfStat label="As Primary" value={String(performance.asPrimary)} />
+        <PerfStat label="As Collaborator" value={String(performance.asCollaborator)} />
       </div>
-    );
-  }
 
-  if (performance.role === 'PRODUCTION') {
-    return (
-      <div className="space-y-4">
-        {employee.specialization && (
-          <div className="inline-flex items-center rounded-md px-2.5 py-1 text-xs font-medium bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
-            {specLabel(employee.specialization)}
+      {/* Sales: Revenue & Invoices */}
+      {isSales && (
+        <>
+          <SectionHeader title="Revenue" />
+          <div className="grid grid-cols-2 gap-3">
+            <PerfStat label="Total Revenue" value={`£${(performance.totalRevenue || 0).toLocaleString('en-GB', { minimumFractionDigits: 2 })}`} />
+            <PerfStat label="This Month" value={`£${(performance.revenueThisMonth || 0).toLocaleString('en-GB', { minimumFractionDigits: 2 })}`} />
+            <PerfStat label="Avg Invoice" value={`£${(performance.averageInvoiceValue || 0).toLocaleString('en-GB', { minimumFractionDigits: 2 })}`} />
+            <PerfStat label="Total Invoices" value={String(performance.totalInvoicesSent || 0)} />
           </div>
-        )}
-        <div className="grid grid-cols-2 gap-3">
-          <PerfStat label="Active Projects" value={String(performance.activeProjects)} />
-          <PerfStat label="Completed" value={String(performance.completedProjects)} />
-          <PerfStat label="Live Projects" value={String(performance.liveProjects)} />
-          <PerfStat label="Total Changes" value={`${performance.totalMinorChanges} minor / ${performance.totalMajorChanges} major`} />
-        </div>
-        {performance.projectsByBoard.length > 0 && (
-          <div>
-            <h4 className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wide mb-2">Projects by Board</h4>
-            <div className="space-y-1">
-              {performance.projectsByBoard.map((b) => (
-                <div key={b.boardId} className="flex justify-between text-sm py-1.5 border-b border-zinc-100 dark:border-zinc-800 last:border-0">
-                  <span className="text-zinc-600 dark:text-zinc-400">{b.boardName}</span>
-                  <span className="font-medium text-zinc-900 dark:text-zinc-100">{b.count}</span>
-                </div>
-              ))}
+
+          {performance.invoiceBreakdown && Object.keys(performance.invoiceBreakdown).length > 0 && (
+            <>
+              <SectionHeader title="Invoice Breakdown" />
+              <div className="space-y-1">
+                {Object.entries(performance.invoiceBreakdown).map(([status, data]) => (
+                  <div key={status} className="flex justify-between text-sm py-1.5 border-b border-zinc-100 dark:border-zinc-800 last:border-0">
+                    <span className="text-zinc-600 dark:text-zinc-400 capitalize">{status.toLowerCase()}</span>
+                    <span className="font-medium text-zinc-900 dark:text-zinc-100">
+                      {data.count} (£{data.amount.toLocaleString('en-GB', { minimumFractionDigits: 2 })})
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+
+          <SectionHeader title="Clients" />
+          <div className="grid grid-cols-2 gap-3">
+            <PerfStat label="Total Clients" value={String(performance.totalClients || 0)} />
+            <PerfStat label="New This Month" value={String(performance.newClientsThisMonth || 0)} />
+          </div>
+        </>
+      )}
+
+      {/* TL: Team Section */}
+      {performance.role === 'TL' && performance.team && (
+        <>
+          <SectionHeader title="Team Aggregate" />
+          <div className="grid grid-cols-2 gap-3">
+            <PerfStat label="Team Revenue" value={`£${performance.team.totalRevenue.toLocaleString('en-GB', { minimumFractionDigits: 2 })}`} />
+            <PerfStat label="Team This Month" value={`£${performance.team.revenueThisMonth.toLocaleString('en-GB', { minimumFractionDigits: 2 })}`} />
+            <PerfStat label="Team Active" value={String(performance.team.activeProjects)} />
+            <PerfStat label="Team Completed" value={String(performance.team.completedProjects)} />
+          </div>
+
+          {performance.team.members.length > 0 && (
+            <>
+              <SectionHeader title="Team Members" />
+              <div className="space-y-1">
+                {performance.team.members.map((m) => (
+                  <div key={m.id} className="flex justify-between items-center text-sm py-1.5 border-b border-zinc-100 dark:border-zinc-800 last:border-0">
+                    <div>
+                      <span className="text-zinc-600 dark:text-zinc-400">{m.name}</span>
+                      <span className="text-xs text-zinc-400 ml-1.5">({m.role})</span>
+                    </div>
+                    <div className="text-right text-xs">
+                      <span className="font-medium text-zinc-900 dark:text-zinc-100">£{m.revenue.toLocaleString('en-GB', { minimumFractionDigits: 2 })}</span>
+                      <span className="text-zinc-400 ml-2">{m.activeProjects} active</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </>
+      )}
+
+      {/* Production: Specialization-specific */}
+      {isProd && (
+        <>
+          {employee.specialization && (
+            <div className="inline-flex items-center rounded-md px-2.5 py-1 text-xs font-medium bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
+              {specLabel(employee.specialization)}
             </div>
-          </div>
-        )}
-      </div>
-    );
-  }
+          )}
 
-  return <p className="text-sm text-zinc-500 py-4">Performance data not available for this role.</p>;
+          <div className="grid grid-cols-2 gap-3">
+            {(employee.specialization === 'DEVELOPER' || employee.specialization === 'QA') && (
+              <PerfStat label="Live Projects" value={String(performance.liveProjects || 0)} />
+            )}
+            <PerfStat label="Minor Changes" value={String(performance.totalMinorChanges || 0)} />
+            <PerfStat label="Major Changes" value={String(performance.totalMajorChanges || 0)} />
+            <PerfStat label="Avg Changes/Project" value={String(performance.averageChangesPerProject || 0)} />
+            <PerfStat label="Completion Rate" value={`${performance.completionRatio || 0}%`} />
+          </div>
+        </>
+      )}
+
+      {/* Common: Projects by Board */}
+      {performance.projectsByBoard.length > 0 && (
+        <>
+          <SectionHeader title="Projects by Board" />
+          <div className="space-y-1">
+            {performance.projectsByBoard.map((b) => (
+              <div key={b.boardId} className="flex justify-between text-sm py-1.5 border-b border-zinc-100 dark:border-zinc-800 last:border-0">
+                <span className="text-zinc-600 dark:text-zinc-400">{b.boardName}</span>
+                <span className="font-medium text-zinc-900 dark:text-zinc-100">{b.count}</span>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
 }
 
 function PerfStat({ label, value }: { label: string; value: string }) {
