@@ -553,16 +553,12 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
                     value={project.dueDate ? format(new Date(project.dueDate), 'yyyy-MM-dd') : ''}
                     onChange={(e) => handleUpdateDueDate(e.target.value)}
                     min={format(new Date(), 'yyyy-MM-dd')}
-                    disabled={isCompleted}
                     className="flex-1"
                   />
                   {isOverdue && (
                     <AlertCircle className="w-4 h-4 text-red-600" />
                   )}
                 </div>
-                {isCompleted && (
-                  <p className="text-xs text-zinc-400 mt-1">Due date is locked for completed projects</p>
-                )}
               </div>
 
               {/* Primary Member */}
