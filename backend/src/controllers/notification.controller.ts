@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import prisma from '../lib/prisma';
+import { emitToUser } from '../socket/emitHelper';
 
 // ─── Helper: Create notification(s) ────────────────
 
@@ -10,7 +11,20 @@ export async function createNotification(data: {
   projectId?: string;
   actorId?: string;  // who triggered it
 }) {
-  return prisma.notification.create({ data });
+  const notification = await prisma.notification.create({ data });
+
+  // Push to recipient via WebSocket
+  emitToUser(data.userId, 'notification:new', {
+    id: notification.id,
+    userId: data.userId,
+    type: data.type,
+    message: data.message,
+    projectId: data.projectId || '',
+    read: false,
+    timestamp: notification.createdAt.toISOString(),
+  });
+
+  return notification;
 }
 
 export async function createManyNotifications(items: {
@@ -21,7 +35,20 @@ export async function createManyNotifications(items: {
   actorId?: string;
 }[]) {
   if (items.length === 0) return;
-  return prisma.notification.createMany({ data: items });
+  await prisma.notification.createMany({ data: items });
+
+  // Push each notification to the recipient via WebSocket
+  for (const item of items) {
+    emitToUser(item.userId, 'notification:new', {
+      id: `temp-${Date.now()}-${Math.random()}`,
+      userId: item.userId,
+      type: item.type,
+      message: item.message,
+      projectId: item.projectId || '',
+      read: false,
+      timestamp: new Date().toISOString(),
+    });
+  }
 }
 
 // ─── Get notifications for current user ─────────────
