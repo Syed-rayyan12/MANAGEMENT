@@ -30,7 +30,10 @@
       "Bash(cp:*)",
       "Bash(xargs cat:*)",
       "Bash(git add:*)",
-      "Bash(git commit -m \"feat: add assignment validators, remove developerId from project schemas:*)"
+      "Bash(git commit -m \"feat: add assignment validators, remove developerId from project schemas:*)",
+      "Bash(npm run:*)",
+      "Bash(DATABASE_URL=\"postgresql://postgres:PJEGMQUYGIBPANktROhvDhjrGrzmosnP@metro.proxy.rlwy.net:26362/railway\" npx ts-node -e \":*)",
+      "Bash(DATABASE_URL=\"postgresql://postgres:PJEGMQUYGIBPANktROhvDhjrGrzmosnP@metro.proxy.rlwy.net:26362/railway\" node -e \":*)"
     ]
   }
 }
