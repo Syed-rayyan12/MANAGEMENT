@@ -3,7 +3,7 @@
 import { API_BASE_URL, projectAPI, uploadAPI, assignmentAPI } from '@/lib/api-service';
 import { toast } from 'sonner';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Project, ProjectAssignment } from '@/lib/types';
 import { useApp } from '@/contexts/useApp';
 import { usePermissions } from '@/hooks/usePermissions';
@@ -59,6 +59,49 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
   const [coverPhotoFile, setCoverPhotoFile] = useState<File | null>(null);
   const coverPhotoInputRef = React.useRef<HTMLInputElement>(null);
   const [submittingChange, setSubmittingChange] = useState(false);
+
+  // Fetch full project details (comments, attachments, activities) on modal open
+  useEffect(() => {
+    let cancelled = false;
+    const fetchDetails = async () => {
+      try {
+        const result = await projectAPI.getById(project.id);
+        if (!cancelled && result.success) {
+          const p = result.data.project;
+          dispatch({
+            type: 'MERGE_PROJECT_DETAILS',
+            payload: {
+              ...project,
+              comments: (p.comments || []).map((c: any) => ({
+                id: c.id,
+                userId: c.userId,
+                content: c.content,
+                timestamp: new Date(c.createdAt || c.timestamp),
+              })),
+              attachments: (p.attachments || []).map((a: any) => ({
+                id: a.id,
+                filename: a.filename,
+                type: a.type,
+                url: a.url,
+                uploadedAt: new Date(a.uploadedAt),
+              })),
+              activityLog: (p.activities || p.activityLog || []).map((al: any) => ({
+                id: al.id,
+                userId: al.userId,
+                action: al.action,
+                timestamp: new Date(al.createdAt || al.timestamp),
+                details: al.details,
+              })),
+            },
+          });
+        }
+      } catch (error) {
+        console.error('Error fetching project details:', error);
+      }
+    };
+    fetchDetails();
+    return () => { cancelled = true; };
+  }, [project.id]);
 
   const allUsers = getAllUsers();
 

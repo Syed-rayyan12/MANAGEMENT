@@ -11,6 +11,7 @@ export type AppAction =
   | { type: 'CREATE_PROJECT'; payload: { project: Project; userId: string } }
   | { type: 'DELETE_PROJECT'; payload: { projectId: string; userId: string } }
   | { type: 'UPDATE_PROJECT'; payload: Project }
+  | { type: 'MERGE_PROJECT_DETAILS'; payload: Project }
   | { type: 'UPDATE_PROJECT_STATUS'; payload: { projectId: string; newStatus: Project['status']; userId: string } }
   | { type: 'ADD_COMMENT'; payload: { projectId: string; comment: Comment; userId: string } }
   | { type: 'UPDATE_COMMENT'; payload: { projectId: string; commentId: string; content: string; userId: string } }
@@ -123,6 +124,16 @@ function appReducer(state: AppState, action: AppAction): AppState {
       return {
         ...state,
         projects: state.projects.map((p) => (p.id === action.payload.id ? action.payload : p)),
+      };
+    }
+
+    case 'MERGE_PROJECT_DETAILS': {
+      const detailed = action.payload;
+      return {
+        ...state,
+        projects: state.projects.map(p =>
+          p.id === detailed.id ? { ...p, ...detailed } : p
+        ),
       };
     }
 
