@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import prisma from '../lib/prisma';
+import { emitBoardEvent } from '../socket/emitHelper';
 
 export const softDeleteBoard = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -271,6 +272,34 @@ export const restoreItem = async (req: Request, res: Response): Promise<void> =>
         where: { id },
         data: { deletedAt: null, deletedById: null },
       });
+
+      // Broadcast project reappearance
+      const restoredProject = await prisma.project.findUnique({
+        where: { id },
+        include: {
+          assignments: {
+            include: {
+              user: { select: { id: true, name: true, email: true, avatar: true, role: true, specialization: true } },
+            },
+            orderBy: { assignedAt: 'asc' as const },
+          },
+          comments: { select: { id: true } },
+          checklist: { orderBy: { position: 'asc' as const } },
+          labels: { include: { label: true } },
+          attachments: { select: { id: true } },
+          board: { select: { id: true, name: true, slug: true } },
+          team: { select: { id: true, name: true, slug: true } },
+          client: { select: { id: true, name: true, contactEmail: true } },
+        },
+      });
+      if (restoredProject?.board?.slug) {
+        emitBoardEvent(
+          restoredProject.board.slug,
+          'project:created',
+          restoredProject,
+          req.headers['x-socket-id'] as string | undefined,
+        );
+      }
 
       res.status(200).json({ success: true, message: 'Project restored' });
     } else {
