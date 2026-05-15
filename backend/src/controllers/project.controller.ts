@@ -37,6 +37,25 @@ const projectIncludes = {
   client: { select: { id: true, name: true, contactEmail: true } },
 };
 
+// Lightweight include for list endpoints (Kanban cards, board views).
+// Drops comment content, attachment data, and activity logs entirely.
+// Comments/attachments return only { id } so frontend can use .length for counts.
+const projectCardIncludes = {
+  assignments: {
+    include: {
+      user: { select: { id: true, name: true, email: true, avatar: true, role: true, specialization: true } },
+    },
+    orderBy: { assignedAt: 'asc' as const },
+  },
+  comments: { select: { id: true } },
+  checklist: { orderBy: { position: 'asc' as const } },
+  labels: { include: { label: true } },
+  attachments: { select: { id: true } },
+  board: { select: { id: true, name: true, slug: true } },
+  team: { select: { id: true, name: true, slug: true } },
+  client: { select: { id: true, name: true, contactEmail: true } },
+};
+
 /**
  * Build WHERE clause for project visibility.
  * All authenticated users can see all projects across all teams.
@@ -70,7 +89,7 @@ export const getBoardProjects = async (req: Request, res: Response): Promise<voi
 
     const projects = await prisma.project.findMany({
       where,
-      include: projectIncludes,
+      include: projectCardIncludes,
       orderBy: [{ position: 'asc' }, { createdAt: 'desc' }],
     });
 
@@ -92,7 +111,7 @@ export const getAllProjects = async (req: Request, res: Response): Promise<void>
     const where = buildWhereClause(req.user);
     const projects = await prisma.project.findMany({
       where,
-      include: projectIncludes,
+      include: projectCardIncludes,
       orderBy: [{ position: 'asc' }, { createdAt: 'desc' }],
     });
 
