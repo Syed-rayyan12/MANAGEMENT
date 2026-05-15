@@ -10,6 +10,7 @@ import { usePermissions } from '@/hooks/usePermissions';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
@@ -415,6 +416,7 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
     <>
     <Dialog open={true} onOpenChange={onClose}>
       <DialogContent className="max-w-7xl h-[90vh] overflow-hidden p-0 gap-0 flex flex-col rounded-2xl backdrop-blur-md bg-white/80 dark:bg-zinc-900/80 border border-zinc-200/50 dark:border-white/10 ring-1 ring-[#e05c29]/10 shadow-2xl">
+        <DialogDescription className="sr-only">Project details and management</DialogDescription>
 
         {/* Left-Right Layout */}
         <div className="flex flex-1 min-h-0">
@@ -601,7 +603,7 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
                           <div className="flex items-center gap-1.5">
                             {assignment.user?.specialization && (
                               <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
-                                {assignment.user.specialization.replace(/_/g, ' ')}
+                                {assignment.user?.specialization?.replace(/_/g, ' ')}
                               </span>
                             )}
                             <span className="text-[10px] px-1.5 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-500">

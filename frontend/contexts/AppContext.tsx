@@ -521,7 +521,7 @@ function mapApiProject(p: any): Project {
         email: a.user.email,
         avatar: a.user.avatar || null,
         role: a.user.role,
-        specialization: a.user.specialization || undefined,
+        specialization: a.user?.specialization || undefined,
       } : null,
       role: a.role || 'PRIMARY',
       status: a.status || 'ACTIVE',
