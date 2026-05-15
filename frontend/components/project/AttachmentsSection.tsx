@@ -49,7 +49,7 @@ function formatSize(bytes: number): string {
 }
 
 export function AttachmentsSection({ project }: AttachmentsSectionProps) {
-  const { dispatch } = useApp();
+  const { state, dispatch } = useApp();
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0 });
@@ -107,7 +107,7 @@ export function AttachmentsSection({ project }: AttachmentsSectionProps) {
                 url: savedAttachment.url,
                 uploadedAt: new Date(savedAttachment.createdAt),
               },
-              userId: project.pm,
+              userId: state.currentUser?.id || '',
             },
           });
           successCount++;
@@ -143,7 +143,7 @@ export function AttachmentsSection({ project }: AttachmentsSectionProps) {
       payload: {
         projectId: project.id,
         attachmentId,
-        userId: project.pm,
+        userId: state.currentUser?.id || '',
       },
     });
   };

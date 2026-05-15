@@ -38,12 +38,19 @@ export const getMyNotifications = async (req: Request, res: Response): Promise<v
     const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
     const threeDaysFromNow = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
 
-    // Find overdue or due-soon projects where user is PM or developer
+    // Find projects the user is assigned to
+    const userAssignments = await prisma.projectAssignment.findMany({
+      where: { userId: req.user.id },
+      select: { projectId: true },
+    });
+    const assignedProjectIds = userAssignments.map(a => a.projectId);
+
+    // Find overdue or due-soon projects where user is assigned
     const dueSoonProjects = await prisma.project.findMany({
       where: {
         status: { notIn: ['completed', 'revisions'] },
         dueDate: { lte: threeDaysFromNow },
-        OR: [{ pmId: req.user.id }, { developerId: req.user.id }],
+        id: { in: assignedProjectIds },
       },
       select: { id: true, name: true, dueDate: true },
     });

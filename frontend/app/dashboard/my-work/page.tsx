@@ -56,7 +56,7 @@ export default function MyWorkPage() {
   const myProjects = useMemo(() => {
     if (!currentUserId) return [];
     return state.projects.filter(
-      (p) => p.developer === currentUserId || p.pm === currentUserId || p.labels.some(l => l.name === currentUserName)
+      (p) => p.assignments.some(a => a.userId === currentUserId)
     );
   }, [state.projects, currentUserId, currentUserName]);
 

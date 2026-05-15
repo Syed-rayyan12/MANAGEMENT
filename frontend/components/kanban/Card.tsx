@@ -8,7 +8,7 @@ import { Card } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useApp } from '@/contexts/useApp';
 import { PRIORITY_STYLES, DEFAULT_KANBAN_COLUMNS } from '@/lib/constants';
-import { API_BASE_URL, projectAPI } from '@/lib/api-service';
+import { API_BASE_URL, projectAPI, assignmentAPI } from '@/lib/api-service';
 import { toast } from 'sonner';
 import { Calendar, MessageSquare, Paperclip, Clock, Plus, X, AlertTriangle, CheckCircle2, Pencil } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -24,7 +24,7 @@ export function ProjectCard({ project, onCardClick }: ProjectCardProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: project.id,
   });
-  const { getUserName, getUserAvatar, getAllUsers, dispatch } = useApp();
+  const { state, getUserName, getUserAvatar, getAllUsers, dispatch } = useApp();
   const { isReadOnly, canChangePriority } = usePermissions();
   const [showTagModal, setShowTagModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -48,8 +48,9 @@ export function ProjectCard({ project, onCardClick }: ProjectCardProps) {
     opacity: isDragging ? 0.5 : 1,
   };
 
-  const pmName = getUserName(project.pm);
-  const pmAvatar = getUserAvatar(project.pm);
+  const primaryAssignment = project.assignments[0];
+  const pmName = primaryAssignment?.user?.name || 'Unassigned';
+  const pmAvatar = primaryAssignment?.user?.avatar || undefined;
   const isOverdue = project.dueDate && new Date(project.dueDate) < new Date() && project.status !== 'completed';
   const isDueSoon = project.dueDate && !isOverdue && project.status !== 'completed' &&
     (new Date(project.dueDate).getTime() - new Date().getTime()) < 3 * 24 * 60 * 60 * 1000;
@@ -58,7 +59,7 @@ export function ProjectCard({ project, onCardClick }: ProjectCardProps) {
 
   const priorityStyle = PRIORITY_STYLES[project.priority];
 
-  // Get initials from label name
+  // Get initials from a name string
   const getInitials = (name: string) => {
     const words = name.trim().split(' ');
     if (words.length === 1) return words[0].substring(0, 2).toUpperCase();
@@ -76,39 +77,28 @@ export function ProjectCard({ project, onCardClick }: ProjectCardProps) {
     setShowTagModal(true);
   };
 
-  const handleAddMember = async (userId: string) => {
+  const handleAddMember = async (userId: string, role: string = 'PRIMARY') => {
     const user = allUsers.find(u => u.id === userId);
     if (!user) return;
 
-    // Check if already a member
-    if (project.labels.some(l => l.name === user.name)) {
-      toast.info(`${user.name} is already a member`);
+    if (project.assignments.some(a => a.userId === userId)) {
+      toast.info(`${user.name} is already assigned`);
       setShowTagModal(false);
       setSearchQuery('');
       return;
     }
 
     try {
-      const result = await projectAPI.addLabel(project.id, user.name, '#ff6600');
+      const result = await assignmentAPI.add(project.id, userId, role);
       if (result.success) {
-        const savedLabel = result.data.label || result.data;
-        const newLabel = {
-          id: savedLabel.id || `label_${Date.now()}`,
-          name: user.name,
-          color: '#ff6600'
-        };
-
+        const newAssignment = result.data.assignment;
         const updatedProject = {
           ...project,
-          labels: [...project.labels, newLabel],
-          updatedAt: new Date()
+          assignments: [...project.assignments, newAssignment],
+          updatedAt: new Date(),
         };
-
-        dispatch({
-          type: 'UPDATE_PROJECT',
-          payload: updatedProject
-        });
-        toast.success(`${user.name} added as member`);
+        dispatch({ type: 'UPDATE_PROJECT', payload: updatedProject });
+        toast.success(`${user.name} added as ${role.toLowerCase()}`);
       }
     } catch (error) {
       console.error('Error adding member:', error);
@@ -119,25 +109,19 @@ export function ProjectCard({ project, onCardClick }: ProjectCardProps) {
     setSearchQuery('');
   };
 
-  const handleRemoveMember = async (e: React.MouseEvent, labelId: string) => {
+  const handleRemoveMember = async (e: React.MouseEvent, assignmentId: string) => {
     e.stopPropagation();
-    
     try {
-      await projectAPI.removeLabel(project.id, labelId);
+      await assignmentAPI.remove(project.id, assignmentId);
     } catch (error) {
       console.error('Error removing member:', error);
     }
-
     const updatedProject = {
       ...project,
-      labels: project.labels.filter(l => l.id !== labelId),
-      updatedAt: new Date()
+      assignments: project.assignments.filter(a => a.id !== assignmentId),
+      updatedAt: new Date(),
     };
-
-    dispatch({
-      type: 'UPDATE_PROJECT',
-      payload: updatedProject
-    });
+    dispatch({ type: 'UPDATE_PROJECT', payload: updatedProject });
   };
 
   // ── Quick-Edit handlers ──
@@ -154,7 +138,7 @@ export function ProjectCard({ project, onCardClick }: ProjectCardProps) {
     }
     dispatch({
       type: 'UPDATE_NAME',
-      payload: { projectId: project.id, name: quickEditName.trim(), userId: project.pm },
+      payload: { projectId: project.id, name: quickEditName.trim(), userId: state.currentUser?.id || '' },
     });
     try {
       const token = localStorage.getItem('token');
@@ -173,7 +157,7 @@ export function ProjectCard({ project, onCardClick }: ProjectCardProps) {
   const handleQuickPriority = async (newPri: string) => {
     dispatch({
       type: 'UPDATE_PRIORITY',
-      payload: { projectId: project.id, priority: newPri as Project['priority'], userId: project.pm },
+      payload: { projectId: project.id, priority: newPri as Project['priority'], userId: state.currentUser?.id || '' },
     });
     const priorityMap: Record<string, string> = { low: 'LOW', medium: 'MEDIUM', high: 'HIGH', critical: 'CRITICAL' };
     try {
@@ -192,7 +176,7 @@ export function ProjectCard({ project, onCardClick }: ProjectCardProps) {
   const handleQuickStatus = async (newStatus: string) => {
     dispatch({
       type: 'UPDATE_PROJECT_STATUS',
-      payload: { projectId: project.id, newStatus: newStatus as Project['status'], userId: project.pm },
+      payload: { projectId: project.id, newStatus: newStatus as Project['status'], userId: state.currentUser?.id || '' },
     });
     try {
       const token = localStorage.getItem('token');
@@ -356,28 +340,33 @@ export function ProjectCard({ project, onCardClick }: ProjectCardProps) {
 
         {/* Members */}
         <div className="flex flex-wrap gap-1.5 items-center">
-          {/* Stacked member avatars */}
-          {project.labels.length > 0 && (
+          {project.assignments.length > 0 && (
             <div className="flex -space-x-1.5">
-              {project.labels.slice(0, 5).map((label) => {
-                const memberUser = allUsers.find(u => u.name === label.name);
-                const memberAvatar = memberUser ? getUserAvatar(memberUser.id) : undefined;
+              {project.assignments.slice(0, 5).map((assignment) => {
+                const memberAvatar = assignment.user?.avatar ? getUserAvatar(assignment.userId) : undefined;
                 return (
-                  <div key={label.id} className="relative group/member">
-                    <Avatar className="w-6 h-6 border-2 border-white dark:border-[#1a1f2e] cursor-pointer">
-                      <AvatarImage src={memberAvatar} alt={label.name} />
-                      <AvatarFallback className="text-[8px] bg-orange-500 text-white font-bold">
-                        {getInitials(label.name)}
-                      </AvatarFallback>
-                    </Avatar>
+                  <div key={assignment.id} className="relative group/member">
+                    <div className="relative">
+                      <Avatar className="w-6 h-6 border-2 border-white dark:border-[#1a1f2e] cursor-pointer">
+                        <AvatarImage src={memberAvatar} alt={assignment.user?.name} />
+                        <AvatarFallback className="text-[8px] bg-orange-500 text-white font-bold">
+                          {getInitials(assignment.user?.name || '')}
+                        </AvatarFallback>
+                      </Avatar>
+                      {assignment.status === 'DONE' && (
+                        <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-green-500 border border-white dark:border-[#1a1f2e] flex items-center justify-center">
+                          <CheckCircle2 className="w-2 h-2 text-white" />
+                        </div>
+                      )}
+                    </div>
                     {/* Tooltip + remove on hover */}
                     <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 hidden group-hover/member:flex flex-col items-center z-40">
                       <span className="bg-gray-900 text-white text-[10px] px-2 py-1 rounded whitespace-nowrap shadow-lg">
-                        {label.name}
+                        {assignment.user?.name} ({assignment.role === 'PRIMARY' ? 'Primary' : 'Collab'})
                       </span>
                       {!isReadOnly && (
                         <button
-                          onClick={(e) => handleRemoveMember(e, label.id)}
+                          onClick={(e) => handleRemoveMember(e, assignment.id)}
                           className="mt-0.5 bg-red-500 text-white text-[9px] px-1.5 py-0.5 rounded hover:bg-red-600 transition-colors"
                         >
                           Remove
@@ -387,9 +376,9 @@ export function ProjectCard({ project, onCardClick }: ProjectCardProps) {
                   </div>
                 );
               })}
-              {project.labels.length > 5 && (
+              {project.assignments.length > 5 && (
                 <div className="w-6 h-6 rounded-full bg-gray-200 dark:bg-[#2d3548] border-2 border-white dark:border-[#1a1f2e] flex items-center justify-center">
-                  <span className="text-[9px] font-bold text-gray-600 dark:text-gray-300">+{project.labels.length - 5}</span>
+                  <span className="text-[9px] font-bold text-gray-600 dark:text-gray-300">+{project.assignments.length - 5}</span>
                 </div>
               )}
             </div>
@@ -495,21 +484,21 @@ export function ProjectCard({ project, onCardClick }: ProjectCardProps) {
             />
 
             {/* Current members */}
-            {project.labels.length > 0 && (
+            {project.assignments.length > 0 && (
               <div>
-                <p className="text-xs text-gray-400 mb-2">Current Members ({project.labels.length})</p>
+                <p className="text-xs text-gray-400 mb-2">Current Members ({project.assignments.length})</p>
                 <div className="flex flex-wrap gap-2">
-                  {project.labels.map((label) => {
-                    const memberUser = allUsers.find(u => u.name === label.name);
-                    const mAvatar = memberUser ? getUserAvatar(memberUser.id) : undefined;
+                  {project.assignments.map((assignment) => {
+                    const mAvatar = assignment.user?.avatar ? getUserAvatar(assignment.userId) : undefined;
                     return (
-                      <div key={label.id} className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-orange-500/15 border border-orange-500/30">
+                      <div key={assignment.id} className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-orange-500/15 border border-orange-500/30">
                         <Avatar className="w-5 h-5">
-                          <AvatarImage src={mAvatar} alt={label.name} />
-                          <AvatarFallback className="text-[8px] bg-orange-500 text-white">{getInitials(label.name)}</AvatarFallback>
+                          <AvatarImage src={mAvatar} alt={assignment.user?.name} />
+                          <AvatarFallback className="text-[8px] bg-orange-500 text-white">{getInitials(assignment.user?.name || '')}</AvatarFallback>
                         </Avatar>
-                        <span className="text-xs text-orange-400 font-medium">{label.name}</span>
-                        <button onClick={(e) => handleRemoveMember(e, label.id)} className="text-gray-400 hover:text-red-400">
+                        <span className="text-xs text-orange-400 font-medium">{assignment.user?.name}</span>
+                        <span className="text-[10px] text-gray-400">({assignment.role === 'PRIMARY' ? 'Primary' : 'Collab'})</span>
+                        <button onClick={(e) => handleRemoveMember(e, assignment.id)} className="text-gray-400 hover:text-red-400">
                           <X className="w-3 h-3" />
                         </button>
                       </div>
@@ -521,12 +510,10 @@ export function ProjectCard({ project, onCardClick }: ProjectCardProps) {
 
             <div className="max-h-64 overflow-y-auto space-y-2">
               {filteredUsers.map((user) => {
-                const isAlreadyMember = project.labels.some(l => l.name === user.name);
+                const isAlreadyMember = project.assignments.some(a => a.userId === user.id);
                 return (
-                  <button
+                  <div
                     key={user.id}
-                    onClick={() => !isAlreadyMember && handleAddMember(user.id)}
-                    disabled={isAlreadyMember}
                     className={`w-full flex items-center gap-3 p-3 rounded-lg border transition-colors ${
                       isAlreadyMember
                         ? 'border-green-500/30 bg-green-500/5 opacity-60 cursor-default'
@@ -546,7 +533,19 @@ export function ProjectCard({ project, onCardClick }: ProjectCardProps) {
                       </div>
                       <p className="text-xs text-gray-500 dark:text-gray-400">{user.email}</p>
                     </div>
-                  </button>
+                    {!isAlreadyMember && (
+                      <div className="flex gap-1">
+                        <button onClick={() => handleAddMember(user.id, 'PRIMARY')}
+                          className="text-[10px] px-2 py-0.5 rounded bg-orange-500/20 text-orange-600 hover:bg-orange-500/30">
+                          Primary
+                        </button>
+                        <button onClick={() => handleAddMember(user.id, 'COLLABORATOR')}
+                          className="text-[10px] px-2 py-0.5 rounded bg-blue-500/20 text-blue-600 hover:bg-blue-500/30">
+                          Collab
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 );
               })}
               {filteredUsers.length === 0 && (

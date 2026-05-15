@@ -55,7 +55,7 @@ export function ChecklistSection({ project }: ChecklistSectionProps) {
       payload: {
         projectId: project.id,
         checklist: updatedChecklist,
-        userId: state.currentUser?.id || project.pm,
+        userId: state.currentUser?.id || '',
       },
     });
 
@@ -74,7 +74,7 @@ export function ChecklistSection({ project }: ChecklistSectionProps) {
       payload: {
         projectId: project.id,
         checklist: updatedChecklist,
-        userId: state.currentUser?.id || project.pm,
+        userId: state.currentUser?.id || '',
       },
     });
 
@@ -89,7 +89,7 @@ export function ChecklistSection({ project }: ChecklistSectionProps) {
       payload: {
         projectId: project.id,
         checklist: updatedChecklist,
-        userId: state.currentUser?.id || project.pm,
+        userId: state.currentUser?.id || '',
       },
     });
 

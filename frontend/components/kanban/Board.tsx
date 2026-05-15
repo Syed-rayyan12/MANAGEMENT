@@ -101,7 +101,7 @@ export function Board({ searchQuery = '', filterPriority = 'all', filterAssignee
       const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                            p.description.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesPriority = filterPriority === 'all' || p.priority === filterPriority;
-      const matchesAssignee = filterAssignee === 'all' || p.developer === filterAssignee || p.pm === filterAssignee || p.labels.some(l => l.name === getUserName(filterAssignee));
+      const matchesAssignee = filterAssignee === 'all' || p.assignments.some(a => a.userId === filterAssignee);
       const matchesBoard = !boardId || p.boardId === boardId;
       return matchesSearch && matchesPriority && matchesAssignee && matchesBoard;
     });
@@ -315,8 +315,7 @@ export function Board({ searchQuery = '', filterPriority = 'all', filterAssignee
               dueDate: null,
               image: null,
               position: 0,
-              pm: state.currentUser.id,
-              developer: null,
+              assignments: [],
               labels: [],
               checklist: [],
               comments: [],

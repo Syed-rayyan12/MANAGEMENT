@@ -77,7 +77,7 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
         payload: {
           projectId: project.id,
           name: editingTitle,
-          userId: project.pm,
+          userId: state.currentUser?.id || '',
         },
       });
 
@@ -107,7 +107,7 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
       payload: {
         projectId: project.id,
         description: editingDesc,
-        userId: project.pm,
+        userId: state.currentUser?.id || '',
       },
     });
 
@@ -138,7 +138,7 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
       payload: {
         projectId: project.id,
         dueDate: date,
-        userId: project.pm,
+        userId: state.currentUser?.id || '',
       },
     });
 
@@ -229,7 +229,7 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
       payload: {
         projectId: project.id,
         newStatus: newStatus as Project['status'],
-        userId: project.pm,
+        userId: state.currentUser?.id || '',
       },
     });
 
@@ -261,7 +261,7 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
       payload: {
         projectId: project.id,
         priority: newPriority as Project['priority'],
-        userId: project.pm,
+        userId: state.currentUser?.id || '',
       },
     });
 
@@ -330,7 +330,7 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
         type: 'DELETE_PROJECT',
         payload: {
           projectId: project.id,
-          userId: project.pm,
+          userId: state.currentUser?.id || '',
         },
       });
       onClose();
@@ -377,7 +377,7 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
           payload: {
             projectId: project.id,
             image: imageUrl,
-            userId: project.pm,
+            userId: state.currentUser?.id || '',
           },
         });
         toast.dismiss(loadingToast);
@@ -402,7 +402,7 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
       payload: {
         projectId: project.id,
         image: null,
-        userId: project.pm,
+        userId: state.currentUser?.id || '',
       },
     });
     setShowCoverPhotoModal(false);
@@ -567,16 +567,21 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
                 )}
               </div>
 
-              {/* Project Manager */}
+              {/* Primary Member */}
               <div>
-                <Label className="text-xs font-medium uppercase tracking-wide text-zinc-400 mb-2 block">Project Manager</Label>
-                <div className="flex items-center gap-2 p-3 bg-zinc-50 dark:bg-zinc-800 rounded-xl border border-zinc-200 dark:border-zinc-700">
-                  <Avatar className="w-8 h-8">
-                    <AvatarImage src={getUserAvatar(project.pm)} alt={getUserName(project.pm)} />
-                    <AvatarFallback>{getUserName(project.pm)[0]}</AvatarFallback>
-                  </Avatar>
-                  <span className="text-sm font-medium text-zinc-900 dark:text-zinc-100">{getUserName(project.pm)}</span>
-                </div>
+                <Label className="text-xs font-medium uppercase tracking-wide text-zinc-400 mb-2 block">Primary Member</Label>
+                {(() => {
+                  const primaryAssignment = project.assignments[0];
+                  return (
+                    <div className="flex items-center gap-2 p-3 bg-zinc-50 dark:bg-zinc-800 rounded-xl border border-zinc-200 dark:border-zinc-700">
+                      <Avatar className="w-8 h-8">
+                        <AvatarImage src={primaryAssignment?.user?.avatar || undefined} alt={primaryAssignment?.user?.name} />
+                        <AvatarFallback>{primaryAssignment?.user?.name?.[0]}</AvatarFallback>
+                      </Avatar>
+                      <span className="text-sm font-medium text-zinc-900 dark:text-zinc-100">{primaryAssignment?.user?.name || 'Unassigned'}</span>
+                    </div>
+                  );
+                })()}
               </div>
 
               {/* Members */}
