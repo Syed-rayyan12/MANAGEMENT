@@ -70,6 +70,7 @@ export default function WorkspacePage() {
                 label: c.name,
                 color: c.color,
                 isCustom: false,
+                phase: c.phase || 'NOT_STARTED',
               }));
             setCustomColumns(cols);
           }
@@ -83,22 +84,22 @@ export default function WorkspacePage() {
     fetchBoard();
   }, [boardSlug]);
 
-  const handleAddColumn = async (columnName: string, columnColor: string) => {
+  const handleAddColumn = async (columnName: string, columnColor: string, columnPhase: string) => {
     const newColumn = {
       status: columnName.toLowerCase().replace(/\s+/g, '-'),
       label: columnName,
       color: columnColor,
-      isCustom: true
+      isCustom: true,
+      phase: columnPhase,
     };
 
     const updatedColumns = [...customColumns, newColumn];
     setCustomColumns(updatedColumns);
     setRefreshKey(prev => prev + 1);
 
-    // Persist to backend
     if (boardId) {
       try {
-        await boardAPI.addColumn(boardId, columnName, columnColor);
+        await boardAPI.addColumn(boardId, columnName, columnColor, columnPhase);
       } catch (error) {
         console.error('Error saving column:', error);
       }
@@ -284,19 +285,26 @@ export default function WorkspacePage() {
   );
 }
 
-function AddColumnModal({ onClose, onAdd }: { onClose: () => void; onAdd: (name: string, color: string) => void }) {
+function AddColumnModal({ onClose, onAdd }: { onClose: () => void; onAdd: (name: string, color: string, phase: string) => void }) {
   const [columnName, setColumnName] = useState('');
   const [columnColor, setColumnColor] = useState('#3B82F6');
+  const [columnPhase, setColumnPhase] = useState('IN_PROGRESS');
 
   const handleAddColumn = () => {
     if (!columnName.trim()) {
       alert('Column name is required');
       return;
     }
-    
-    onAdd(columnName.trim(), columnColor);
+    onAdd(columnName.trim(), columnColor, columnPhase);
     onClose();
   };
+
+  const phases = [
+    { value: 'NOT_STARTED', label: 'Not Started', description: 'Work hasn\'t begun yet', color: 'text-zinc-500' },
+    { value: 'IN_PROGRESS', label: 'In Progress', description: 'Actively being worked on', color: 'text-blue-500' },
+    { value: 'DONE', label: 'Done', description: 'Work is complete', color: 'text-emerald-500' },
+    { value: 'ON_HOLD', label: 'On Hold', description: 'Paused or blocked', color: 'text-amber-500' },
+  ];
 
   return (
     <Dialog open={true} onOpenChange={onClose}>
@@ -315,6 +323,27 @@ function AddColumnModal({ onClose, onAdd }: { onClose: () => void; onAdd: (name:
               onChange={(e) => setColumnName(e.target.value)}
               className="mt-1 placeholder:text-gray-400"
             />
+          </div>
+
+          <div>
+            <Label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Phase *</Label>
+            <p className="text-xs text-zinc-400 mt-0.5 mb-2">How this column appears in the cross-board &quot;My Work&quot; view</p>
+            <div className="grid grid-cols-2 gap-2">
+              {phases.map((p) => (
+                <button
+                  key={p.value}
+                  onClick={() => setColumnPhase(p.value)}
+                  className={`text-left px-3 py-2 rounded-lg border transition-colors ${
+                    columnPhase === p.value
+                      ? 'border-orange-500 bg-orange-500/10'
+                      : 'border-zinc-200 dark:border-zinc-700 hover:border-zinc-300 dark:hover:border-zinc-600'
+                  }`}
+                >
+                  <span className={`text-sm font-medium ${p.color}`}>{p.label}</span>
+                  <p className="text-[11px] text-zinc-400 mt-0.5">{p.description}</p>
+                </button>
+              ))}
+            </div>
           </div>
 
           <div>
