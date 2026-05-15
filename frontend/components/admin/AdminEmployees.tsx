@@ -492,11 +492,13 @@ function PerformanceModal({ employee, open, onClose }: { employee: Employee | nu
 
   useEffect(() => {
     if (!employee || !open) { setPerformance(null); return; }
+    let cancelled = false;
     setLoading(true);
     adminAPI.getEmployeePerformance(employee.id)
-      .then(r => { if (r.success) setPerformance(r.data.performance); else toast.error(r.message || 'Failed to load performance'); })
-      .catch((err: any) => toast.error(err.message))
-      .finally(() => setLoading(false));
+      .then(r => { if (cancelled) return; if (r.success) setPerformance(r.data.performance); else toast.error(r.message || 'Failed to load performance'); })
+      .catch((err: any) => { if (!cancelled) toast.error(err.message); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
   }, [employee, open]);
 
   return (
