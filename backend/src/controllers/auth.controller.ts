@@ -147,3 +147,40 @@ export const getMe = async (req: Request, res: Response): Promise<void> => {
     });
   }
 };
+
+/**
+ * Verify the current user's password
+ * POST /api/auth/verify-password
+ */
+export const verifyPassword = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { password } = req.body;
+
+    if (!password) {
+      res.status(400).json({ success: false, message: 'Password is required' });
+      return;
+    }
+
+    if (!req.user) {
+      res.status(401).json({ success: false, message: 'Not authenticated' });
+      return;
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: req.user.id } });
+    if (!user) {
+      res.status(404).json({ success: false, message: 'User not found' });
+      return;
+    }
+
+    const isValid = await bcrypt.compare(password, user.password);
+    if (!isValid) {
+      res.status(401).json({ success: false, message: 'Invalid password' });
+      return;
+    }
+
+    res.status(200).json({ success: true, message: 'Password verified' });
+  } catch (error) {
+    console.error('Verify password error:', error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+};

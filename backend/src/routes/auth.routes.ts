@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { login, getMe } from '../controllers/auth.controller';
+import { login, getMe, verifyPassword } from '../controllers/auth.controller';
 import { authenticate } from '../middlewares/auth.middleware';
 import { validate, loginSchema } from '../utils/validators';
 
@@ -19,6 +19,12 @@ router.post('/login', validate(loginSchema), login);
  */
 router.get('/me', authenticate, getMe);
 
+/**
+ * @route   POST /api/auth/verify-password
+ * @desc    Verify the current user's password
+ * @access  Private (requires authentication)
+ */
+router.post('/verify-password', authenticate, verifyPassword);
 
 /**
  * @route   POST /api/auth/logout

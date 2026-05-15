@@ -87,6 +87,15 @@ export const authAPI = {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
   },
+
+  verifyPassword: async (password: string) => {
+    const response = await apiFetch(`${API_BASE_URL}/auth/verify-password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password }),
+    });
+    return await response.json();
+  },
 };
 
 // Project APIs
