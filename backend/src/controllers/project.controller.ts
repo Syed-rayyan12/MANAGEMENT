@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { createNotification, createManyNotifications } from './notification.controller';
+import { createManyNotifications } from './notification.controller';
 import prisma from '../lib/prisma';
 import { format } from 'date-fns';
 import {
