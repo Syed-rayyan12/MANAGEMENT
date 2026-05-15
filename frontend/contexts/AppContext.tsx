@@ -514,7 +514,7 @@ export const AppContext = createContext<{
 
 // ─── Map backend project to frontend Project shape ────────
 
-function mapApiProject(p: any): Project {
+export function mapApiProject(p: any): Project {
   return {
     id: p.id,
     name: p.name,
@@ -673,8 +673,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     };
 
     fetchNotifications();
-    const interval = setInterval(fetchNotifications, 30000);
-    return () => clearInterval(interval);
+    // Polling removed — notifications now arrive via WebSocket in SocketContext
   }, [state.currentUser]);
 
   return (

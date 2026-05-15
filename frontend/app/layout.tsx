@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from 'next/font/google'
 
 import './globals.css'
 import { AppProvider } from '@/contexts/AppContext'
+import { SocketProvider } from '@/contexts/SocketContext'
 import { ThemeProvider } from '@/components/theme-provider'
 import { Toaster } from '@/components/ui/sonner'
 
@@ -30,8 +31,10 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <AppProvider>
-            {children}
-            <Toaster position="bottom-right" richColors closeButton />
+            <SocketProvider>
+              {children}
+              <Toaster position="bottom-right" richColors closeButton />
+            </SocketProvider>
           </AppProvider>
         </ThemeProvider>
       </body>
