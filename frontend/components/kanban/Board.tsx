@@ -278,8 +278,9 @@ export function Board({ searchQuery = '', filterPriority = 'all', filterAssignee
   };
 
   const handleCloseProject = () => {
+    setSelectedProjectId(null);
     const currentPath = window.location.pathname;
-    router.push(currentPath);
+    router.push(currentPath, { scroll: false });
   };
 
   // Inline quick-add card handler
