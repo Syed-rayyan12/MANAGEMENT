@@ -4,10 +4,10 @@ import type { LucideIcon } from 'lucide-react';
 
 // Fallback columns if workspace columns fail to load
 export const DEFAULT_KANBAN_COLUMNS: KanbanColumn[] = [
-  { status: 'todo', label: 'To Do', color: '#6B7280', isCustom: false },
-  { status: 'in-progress', label: 'In Progress', color: '#3B82F6', isCustom: false },
-  { status: 'completed', label: 'Completed', color: '#10B981', isCustom: false },
-  { status: 'revisions', label: 'Revisions', color: '#F59E0B', isCustom: false },
+  { status: 'todo', label: 'To Do', color: '#6B7280', isCustom: false, phase: 'NOT_STARTED' },
+  { status: 'in-progress', label: 'In Progress', color: '#3B82F6', isCustom: false, phase: 'IN_PROGRESS' },
+  { status: 'completed', label: 'Completed', color: '#10B981', isCustom: false, phase: 'DONE' },
+  { status: 'revisions', label: 'Revisions', color: '#F59E0B', isCustom: false, phase: 'IN_PROGRESS' },
 ];
 
 // Alias for backward compatibility

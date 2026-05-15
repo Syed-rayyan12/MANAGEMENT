@@ -26,12 +26,15 @@ export interface BoardInfo {
   columns?: BoardColumn[];
 }
 
+export type ColumnPhase = 'NOT_STARTED' | 'IN_PROGRESS' | 'DONE' | 'ON_HOLD';
+
 export interface BoardColumn {
   id: string;
   name: string;
   key: string;
   color: string;
   position: number;
+  phase: ColumnPhase;
 }
 
 export interface KanbanColumn {
@@ -39,6 +42,7 @@ export interface KanbanColumn {
   label: string;
   color: string;
   isCustom?: boolean;
+  phase?: ColumnPhase;
 }
 
 export interface ProjectManager {

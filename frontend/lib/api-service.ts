@@ -380,11 +380,11 @@ export const boardAPI = {
     return await response.json();
   },
 
-  addColumn: async (boardId: string, name: string, color?: string) => {
+  addColumn: async (boardId: string, name: string, color?: string, phase?: string) => {
     const response = await apiFetch(`${API_BASE_URL}/boards/${boardId}/columns`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, color }),
+      body: JSON.stringify({ name, color, phase }),
     });
     return await response.json();
   },
