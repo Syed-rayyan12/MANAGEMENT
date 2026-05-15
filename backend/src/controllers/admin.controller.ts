@@ -102,75 +102,43 @@ export const getEmployees = async (_req: Request, res: Response): Promise<void> 
       orderBy: { name: 'asc' },
     });
 
-    // Batched aggregations to avoid N+1 queries
-    const [
-      pmActiveProjects,
-      pmCompletedProjects,
-      pmRevenue,
-      prodActiveProjects,
-      prodCompletedProjects,
-    ] = await Promise.all([
-      prisma.project.groupBy({
-        by: ['pmId'],
+    // Batched assignment stats
+    const [activeAssignments, doneAssignments, revenueByUser] = await Promise.all([
+      prisma.projectAssignment.groupBy({
+        by: ['userId'],
         _count: { id: true },
-        where: { status: { notIn: ['completed', 'live'] } },
+        where: { status: 'ACTIVE' },
       }),
-      prisma.project.groupBy({
-        by: ['pmId'],
+      prisma.projectAssignment.groupBy({
+        by: ['userId'],
         _count: { id: true },
-        where: { status: 'completed' },
+        where: { status: 'DONE' },
       }),
       prisma.invoice.groupBy({
         by: ['createdById'],
         _sum: { amount: true },
         where: { status: 'PAID' },
       }),
-      prisma.project.groupBy({
-        by: ['developerId'],
-        _count: { id: true },
-        where: { developerId: { not: null }, status: { notIn: ['completed', 'live'] } },
-      }),
-      prisma.project.groupBy({
-        by: ['developerId'],
-        _count: { id: true },
-        where: { developerId: { not: null }, status: 'completed' },
-      }),
     ]);
 
-    const pmActiveMap = new Map(pmActiveProjects.map((r) => [r.pmId, r._count.id]));
-    const pmCompletedMap = new Map(pmCompletedProjects.map((r) => [r.pmId, r._count.id]));
-    const pmRevenueMap = new Map(pmRevenue.map((r) => [r.createdById, Number(r._sum.amount) || 0]));
-    const prodActiveMap = new Map(prodActiveProjects.map((r) => [r.developerId!, r._count.id]));
-    const prodCompletedMap = new Map(prodCompletedProjects.map((r) => [r.developerId!, r._count.id]));
+    const activeMap = new Map(activeAssignments.map(r => [r.userId, r._count.id]));
+    const doneMap = new Map(doneAssignments.map(r => [r.userId, r._count.id]));
+    const revenueMap = new Map(revenueByUser.map(r => [r.createdById, Number(r._sum.amount) || 0]));
 
-    const employees = await Promise.all(
-      users.map(async (user) => {
-        const teams = user.teamMembers.map((m) => m.team);
-        let stats: Record<string, unknown> = {};
+    const employees = users.map(user => {
+      const teams = user.teamMembers.map(m => m.team);
+      const stats: Record<string, unknown> = {
+        activeProjects: activeMap.get(user.id) || 0,
+        completedProjects: doneMap.get(user.id) || 0,
+      };
 
-        if (user.role === 'PM') {
-          stats = {
-            activeProjects: pmActiveMap.get(user.id) || 0,
-            completedProjects: pmCompletedMap.get(user.id) || 0,
-            totalRevenue: pmRevenueMap.get(user.id) || 0,
-          };
-        } else if (user.role === 'TL') {
-          const teamIds = teams.map((t) => t.id);
-          const teamMembersCount = teamIds.length > 0
-            ? await prisma.teamMember.count({ where: { teamId: { in: teamIds } } })
-            : 0;
-          stats = { teamMembersCount };
-        } else if (user.role === 'PRODUCTION') {
-          stats = {
-            activeProjects: prodActiveMap.get(user.id) || 0,
-            completedProjects: prodCompletedMap.get(user.id) || 0,
-          };
-        }
+      if (user.role === 'PM' || user.role === 'TL' || user.role === 'EXECUTIVE') {
+        stats.totalRevenue = revenueMap.get(user.id) || 0;
+      }
 
-        const { teamMembers: _tm, ...userWithoutTeamMembers } = user;
-        return { ...userWithoutTeamMembers, teams, stats };
-      })
-    );
+      const { teamMembers: _tm, ...userWithoutTeamMembers } = user;
+      return { ...userWithoutTeamMembers, teams, stats };
+    });
 
     res.status(200).json({ success: true, message: 'Data retrieved successfully', data: { employees } });
   } catch (error) {
@@ -184,214 +152,142 @@ export const getEmployees = async (_req: Request, res: Response): Promise<void> 
 export const getEmployeePerformance = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
-
     const user = await prisma.user.findUnique({
       where: { id },
       select: {
-        id: true,
-        name: true,
-        username: true,
-        email: true,
-        role: true,
-        specialization: true,
-        avatar: true,
-        createdAt: true,
-        teamMembers: {
-          include: {
-            team: { select: { id: true, name: true, slug: true } },
-          },
-        },
+        id: true, name: true, username: true, email: true, role: true, specialization: true, avatar: true, createdAt: true,
+        teamMembers: { include: { team: { select: { id: true, name: true, slug: true } } } },
       },
     });
+    if (!user) { res.status(404).json({ success: false, message: 'Employee not found' }); return; }
 
-    if (!user) {
-      res.status(404).json({ success: false, message: 'Employee not found' });
-      return;
-    }
+    const teams = user.teamMembers.map(m => m.team);
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
-    const teams = user.teamMembers.map((m) => m.team);
-    let performance: Record<string, unknown> = {};
+    // Common assignment stats
+    const [activeAssignments, doneAssignments, primaryCount, collaboratorCount, assignmentsByBoard] = await Promise.all([
+      prisma.projectAssignment.count({ where: { userId: id, status: 'ACTIVE' } }),
+      prisma.projectAssignment.count({ where: { userId: id, status: 'DONE' } }),
+      prisma.projectAssignment.count({ where: { userId: id, role: 'PRIMARY' } }),
+      prisma.projectAssignment.count({ where: { userId: id, role: 'COLLABORATOR' } }),
+      prisma.projectAssignment.findMany({ where: { userId: id }, select: { project: { select: { boardId: true } } } }),
+    ]);
 
-    if (user.role === 'PM') {
-      const now = new Date();
-      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    // Group by board
+    const boardCounts: Record<string, number> = {};
+    for (const a of assignmentsByBoard) { boardCounts[a.project.boardId] = (boardCounts[a.project.boardId] || 0) + 1; }
+    const boardIds = Object.keys(boardCounts);
+    const boardsInfo = await prisma.board.findMany({ where: { id: { in: boardIds } }, select: { id: true, name: true, slug: true } });
+    const projectsByBoard = boardIds.map(bid => {
+      const info = boardsInfo.find(b => b.id === bid);
+      return { boardId: bid, boardName: info?.name || 'Unknown', boardSlug: info?.slug || '', count: boardCounts[bid] };
+    });
 
-      const [
-        activeProjects,
-        completedProjects,
-        totalRevenueResult,
-        revenueThisMonthResult,
-        recentProjects,
-        projectsByBoardRaw,
-      ] = await Promise.all([
-        prisma.project.count({
-          where: { pmId: user.id, status: { notIn: ['completed', 'live'] } },
-        }),
-        prisma.project.count({
-          where: { pmId: user.id, status: 'completed' },
-        }),
-        prisma.invoice.aggregate({
-          _sum: { amount: true },
-          where: { createdById: user.id, status: 'PAID' },
-        }),
-        prisma.invoice.aggregate({
-          _sum: { amount: true },
-          where: { createdById: user.id, status: 'PAID', paidAt: { gte: startOfMonth } },
-        }),
-        prisma.project.findMany({
-          where: { pmId: user.id },
-          orderBy: { createdAt: 'desc' },
-          take: 5,
-          include: { board: { select: { name: true, slug: true } } },
-        }),
-        prisma.project.groupBy({
-          by: ['boardId'],
-          where: { pmId: user.id },
-          _count: { id: true },
-        }),
+    let performance: Record<string, unknown> = {
+      activeProjects: activeAssignments, completedProjects: doneAssignments,
+      asPrimary: primaryCount, asCollaborator: collaboratorCount, projectsByBoard,
+    };
+
+    if (user.role === 'PM' || user.role === 'TL') {
+      const [totalRevenueResult, revenueThisMonthResult, invoiceCounts, avgInvoiceResult, distinctClients, newClientsThisMonth] = await Promise.all([
+        prisma.invoice.aggregate({ _sum: { amount: true }, where: { createdById: id, status: 'PAID' } }),
+        prisma.invoice.aggregate({ _sum: { amount: true }, where: { createdById: id, status: 'PAID', paidAt: { gte: startOfMonth } } }),
+        prisma.invoice.groupBy({ by: ['status'], _count: { id: true }, _sum: { amount: true }, where: { createdById: id } }),
+        prisma.invoice.aggregate({ _avg: { amount: true }, where: { createdById: id, status: 'PAID' } }),
+        prisma.invoice.findMany({ where: { createdById: id }, select: { clientName: true }, distinct: ['clientName'] }),
+        prisma.invoice.findMany({ where: { createdById: id, createdAt: { gte: startOfMonth } }, select: { clientName: true }, distinct: ['clientName'] }),
       ]);
 
-      const boardIds = projectsByBoardRaw.map((g) => g.boardId);
-      const boards = await prisma.board.findMany({
-        where: { id: { in: boardIds } },
-        select: { id: true, name: true, slug: true },
-      });
+      const invoiceBreakdown: Record<string, { count: number; amount: number }> = {};
+      let totalInvoicesSent = 0;
+      for (const row of invoiceCounts) {
+        invoiceBreakdown[row.status] = { count: row._count.id, amount: Number(row._sum.amount) || 0 };
+        totalInvoicesSent += row._count.id;
+      }
 
-      const projectsByBoard = projectsByBoardRaw.map((g) => {
-        const board = boards.find((b) => b.id === g.boardId);
-        return {
-          boardId: g.boardId,
-          boardName: board?.name || 'Unknown',
-          boardSlug: board?.slug || '',
-          count: g._count.id,
-        };
-      });
-
-      performance = {
-        activeProjects,
-        completedProjects,
+      performance = { ...performance,
         totalRevenue: Number(totalRevenueResult._sum.amount) || 0,
         revenueThisMonth: Number(revenueThisMonthResult._sum.amount) || 0,
-        projectsByBoard,
-        recentProjects,
+        averageInvoiceValue: Number(avgInvoiceResult._avg.amount) || 0,
+        totalInvoicesSent, invoiceBreakdown,
+        totalClients: distinctClients.length,
+        newClientsThisMonth: newClientsThisMonth.length,
       };
-    } else if (user.role === 'TL') {
-      const teamIds = teams.map((t) => t.id);
 
-      const [teamMembersCount, teamActiveProjects, teamCompletedProjects, teamRevenueResult] =
-        await Promise.all([
-          teamIds.length > 0
-            ? prisma.teamMember.count({ where: { teamId: { in: teamIds } } })
-            : Promise.resolve(0),
-          teamIds.length > 0
-            ? prisma.project.count({
-                where: { teamId: { in: teamIds }, status: { notIn: ['completed', 'live'] } },
-              })
-            : Promise.resolve(0),
-          teamIds.length > 0
-            ? prisma.project.count({
-                where: { teamId: { in: teamIds }, status: 'completed' },
-              })
-            : Promise.resolve(0),
-          teamIds.length > 0
-            ? prisma.invoice.aggregate({
-                _sum: { amount: true },
-                where: { teamId: { in: teamIds }, status: 'PAID' },
-              })
-            : Promise.resolve({ _sum: { amount: null } }),
-        ]);
-
-      // Get team members with basic stats
-      const teamMemberUsers = teamIds.length > 0
-        ? await prisma.teamMember.findMany({
+      // TL team aggregate
+      if (user.role === 'TL') {
+        const teamIds = teams.map(t => t.id);
+        if (teamIds.length > 0) {
+          const teamMemberRecords = await prisma.teamMember.findMany({
             where: { teamId: { in: teamIds } },
-            include: {
-              user: { select: { id: true, name: true, role: true, username: true, avatar: true } },
-            },
-          })
-        : [];
+            include: { user: { select: { id: true, name: true, role: true, username: true, avatar: true, specialization: true } } },
+          });
+          const teamUserIds = teamMemberRecords.map(tm => tm.user.id);
 
-      performance = {
-        teamMembersCount,
-        teamActiveProjects,
-        teamCompletedProjects,
-        teamRevenue: Number(teamRevenueResult._sum.amount) || 0,
-        teamMembers: teamMemberUsers.map((tm) => ({
-          ...tm.user,
-          teamId: tm.teamId,
-        })),
-      };
+          const [teamRevenueResult, teamRevenueThisMonth, teamInvoiceCounts, teamActiveAssignments, teamDoneAssignments] = await Promise.all([
+            prisma.invoice.aggregate({ _sum: { amount: true }, where: { createdById: { in: teamUserIds }, status: 'PAID' } }),
+            prisma.invoice.aggregate({ _sum: { amount: true }, where: { createdById: { in: teamUserIds }, status: 'PAID', paidAt: { gte: startOfMonth } } }),
+            prisma.invoice.groupBy({ by: ['status'], _count: { id: true }, _sum: { amount: true }, where: { createdById: { in: teamUserIds } } }),
+            prisma.projectAssignment.groupBy({ by: ['userId'], _count: { id: true }, where: { userId: { in: teamUserIds }, status: 'ACTIVE' } }),
+            prisma.projectAssignment.groupBy({ by: ['userId'], _count: { id: true }, where: { userId: { in: teamUserIds }, status: 'DONE' } }),
+          ]);
+
+          const perUserRevenue = await prisma.invoice.groupBy({
+            by: ['createdById'], _sum: { amount: true },
+            where: { createdById: { in: teamUserIds }, status: 'PAID' },
+          });
+          const userRevenueMap = new Map(perUserRevenue.map(r => [r.createdById, Number(r._sum.amount) || 0]));
+          const userActiveMap = new Map(teamActiveAssignments.map(r => [r.userId, r._count.id]));
+          const userDoneMap = new Map(teamDoneAssignments.map(r => [r.userId, r._count.id]));
+
+          const teamInvoiceBreakdown: Record<string, { count: number; amount: number }> = {};
+          for (const row of teamInvoiceCounts) {
+            teamInvoiceBreakdown[row.status] = { count: row._count.id, amount: Number(row._sum.amount) || 0 };
+          }
+
+          const teamMembers = teamMemberRecords.map(tm => ({
+            ...tm.user, teamId: tm.teamId,
+            revenue: userRevenueMap.get(tm.user.id) || 0,
+            activeProjects: userActiveMap.get(tm.user.id) || 0,
+            completedProjects: userDoneMap.get(tm.user.id) || 0,
+          }));
+
+          performance.team = {
+            totalRevenue: Number(teamRevenueResult._sum.amount) || 0,
+            revenueThisMonth: Number(teamRevenueThisMonth._sum.amount) || 0,
+            invoiceBreakdown: teamInvoiceBreakdown,
+            activeProjects: teamActiveAssignments.reduce((sum, r) => sum + r._count.id, 0),
+            completedProjects: teamDoneAssignments.reduce((sum, r) => sum + r._count.id, 0),
+            members: teamMembers,
+          };
+        }
+      }
     } else if (user.role === 'PRODUCTION') {
-      const [
-        activeProjects,
-        completedProjects,
-        liveProjects,
-        projectsByBoardRaw,
-        changesResult,
-      ] = await Promise.all([
-        prisma.project.count({
-          where: { developerId: user.id, status: { notIn: ['completed', 'live'] } },
-        }),
-        prisma.project.count({
-          where: { developerId: user.id, status: 'completed' },
-        }),
-        prisma.project.count({
-          where: { developerId: user.id, status: 'live' },
-        }),
-        prisma.project.groupBy({
-          by: ['boardId'],
-          where: { developerId: user.id },
-          _count: { id: true },
-        }),
-        prisma.project.aggregate({
-          _sum: { minorChanges: true, majorChanges: true },
-          where: { developerId: user.id },
-        }),
+      const assignedProjectIds = await prisma.projectAssignment.findMany({ where: { userId: id }, select: { projectId: true } });
+      const projectIds = assignedProjectIds.map(a => a.projectId);
+
+      const [liveProjects, changesResult] = await Promise.all([
+        prisma.project.count({ where: { id: { in: projectIds }, status: 'live' } }),
+        prisma.project.aggregate({ _sum: { minorChanges: true, majorChanges: true }, where: { id: { in: projectIds } } }),
       ]);
 
-      const boardIds = projectsByBoardRaw.map((g) => g.boardId);
-      const boards = await prisma.board.findMany({
-        where: { id: { in: boardIds } },
-        select: { id: true, name: true, slug: true },
-      });
+      const totalMinorChanges = changesResult._sum.minorChanges || 0;
+      const totalMajorChanges = changesResult._sum.majorChanges || 0;
+      const totalAssigned = projectIds.length;
 
-      const projectsByBoard = projectsByBoardRaw.map((g) => {
-        const board = boards.find((b) => b.id === g.boardId);
-        return {
-          boardId: g.boardId,
-          boardName: board?.name || 'Unknown',
-          boardSlug: board?.slug || '',
-          count: g._count.id,
-        };
-      });
-
-      performance = {
-        specialization: user.specialization,
-        activeProjects,
-        completedProjects,
-        liveProjects,
-        projectsByBoard,
-        totalMinorChanges: changesResult._sum.minorChanges || 0,
-        totalMajorChanges: changesResult._sum.majorChanges || 0,
-      };
-    } else {
-      // EXECUTIVE — basic info only
-      performance = {
-        role: user.role,
-        teams,
+      performance = { ...performance,
+        specialization: user.specialization, liveProjects,
+        totalMinorChanges, totalMajorChanges,
+        averageChangesPerProject: totalAssigned > 0 ? Math.round((totalMinorChanges + totalMajorChanges) / totalAssigned * 10) / 10 : 0,
+        completionRatio: totalAssigned > 0 ? Math.round((doneAssignments / totalAssigned) * 100) : 0,
       };
     }
 
     const { teamMembers: _tm, ...userInfo } = user;
     res.status(200).json({
-      success: true,
-      message: 'Data retrieved successfully',
-      data: {
-        performance: {
-          user: { ...userInfo, teams },
-          ...performance,
-        },
-      },
+      success: true, message: 'Data retrieved successfully',
+      data: { performance: { user: { ...userInfo, teams }, role: user.role, ...performance } },
     });
   } catch (error) {
     console.error('Get employee performance error:', error);
@@ -504,23 +400,22 @@ export const deleteEmployee = async (req: Request, res: Response): Promise<void>
       }
     }
 
+    // Check if PM has active assignments
     if (user.role === 'PM') {
-      const projectCount = await prisma.project.count({ where: { pmId: id } });
-      if (projectCount > 0) {
+      const activeAssignments = await prisma.projectAssignment.count({
+        where: { userId: id, status: 'ACTIVE' },
+      });
+      if (activeAssignments > 0) {
         res.status(400).json({
           success: false,
-          message: 'Cannot delete PM with active projects. Reassign projects first.',
+          message: `Cannot delete ${user.name} — they have ${activeAssignments} active project assignments. Remove them from projects first.`,
         });
         return;
       }
     }
 
-    if (user.role === 'PRODUCTION') {
-      await prisma.project.updateMany({
-        where: { developerId: id },
-        data: { developerId: null },
-      });
-    }
+    // Delete all assignments for this user
+    await prisma.projectAssignment.deleteMany({ where: { userId: id } });
 
     await prisma.user.delete({ where: { id } });
 
