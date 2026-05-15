@@ -20,8 +20,9 @@ export const getDashboardOverview = async (req: Request, res: Response): Promise
 
     // Get all org-level boards
     const boards = await prisma.board.findMany({
+      where: { deletedAt: null },
       include: {
-        columns: { orderBy: { position: 'asc' } },
+        columns: { where: { deletedAt: null }, orderBy: { position: 'asc' } },
       },
     });
 
@@ -57,6 +58,7 @@ export const getDashboardOverview = async (req: Request, res: Response): Promise
 
     // Recent projects
     const recentProjects = await prisma.project.findMany({
+      where: { deletedAt: null },
       orderBy: { createdAt: 'desc' },
       take: 5,
       include: {
@@ -119,7 +121,7 @@ export const getMyDashboardStats = async (req: Request, res: Response): Promise<
 
     const boardIds = boardBreakdown.map(b => b.boardId);
     const boardsInfo = await prisma.board.findMany({
-      where: { id: { in: boardIds } },
+      where: { id: { in: boardIds }, deletedAt: null },
       select: { id: true, name: true, slug: true },
     });
 
@@ -133,7 +135,7 @@ export const getMyDashboardStats = async (req: Request, res: Response): Promise<
 
     // Recent projects for this user
     const myRecentProjects = await prisma.project.findMany({
-      where: { id: { in: myProjectIds } },
+      where: { id: { in: myProjectIds }, deletedAt: null },
       orderBy: { createdAt: 'desc' },
       take: 5,
       include: {

@@ -43,7 +43,7 @@ const projectIncludes = {
  */
 function buildWhereClause(user: Request['user']): Record<string, unknown> {
   if (!user) return { id: 'none' };
-  return {};
+  return { deletedAt: null };
 }
 
 // ─── Get projects by board ──────────────────────────
@@ -58,7 +58,7 @@ export const getBoardProjects = async (req: Request, res: Response): Promise<voi
     }
 
     // Verify board exists
-    const board = await prisma.board.findUnique({ where: { id: boardId } });
+    const board = await prisma.board.findFirst({ where: { id: boardId, deletedAt: null } });
     if (!board) {
       res.status(404).json({ success: false, message: 'Board not found' });
       return;
@@ -239,8 +239,8 @@ export const createProject = async (req: Request, res: Response): Promise<void> 
 
 export const getProjectById = async (req: Request, res: Response): Promise<void> => {
   try {
-    const project = await prisma.project.findUnique({
-      where: { id: req.params.id },
+    const project = await prisma.project.findFirst({
+      where: { id: req.params.id, deletedAt: null },
       include: projectIncludes,
     });
 
@@ -263,7 +263,7 @@ export const updateProject = async (req: Request, res: Response): Promise<void> 
     const { id } = req.params;
     const updateData = req.body;
 
-    const existing = await prisma.project.findUnique({ where: { id } });
+    const existing = await prisma.project.findFirst({ where: { id, deletedAt: null } });
     if (!existing) {
       res.status(404).json({ success: false, message: 'Project not found' });
       return;

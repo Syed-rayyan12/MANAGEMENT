@@ -8,9 +8,10 @@ import prisma from '../lib/prisma';
 export const getAllBoards = async (_req: Request, res: Response): Promise<void> => {
   try {
     const boards = await prisma.board.findMany({
+      where: { deletedAt: null },
       include: {
-        columns: { orderBy: { position: 'asc' } },
-        _count: { select: { projects: true } },
+        columns: { where: { deletedAt: null }, orderBy: { position: 'asc' } },
+        _count: { select: { projects: { where: { deletedAt: null } } } },
       },
       orderBy: { name: 'asc' },
     });
@@ -30,10 +31,10 @@ export const getBoardBySlug = async (req: Request, res: Response): Promise<void>
   try {
     const { slug } = req.params;
 
-    const board = await prisma.board.findUnique({
-      where: { slug },
+    const board = await prisma.board.findFirst({
+      where: { slug, deletedAt: null },
       include: {
-        columns: { orderBy: { position: 'asc' } },
+        columns: { where: { deletedAt: null }, orderBy: { position: 'asc' } },
       },
     });
 
@@ -58,7 +59,7 @@ export const getBoardColumns = async (req: Request, res: Response): Promise<void
     const { boardId } = req.params;
 
     const columns = await prisma.boardColumn.findMany({
-      where: { boardId },
+      where: { boardId, deletedAt: null },
       orderBy: { position: 'asc' },
     });
 
@@ -85,7 +86,7 @@ export const createBoard = async (req: Request, res: Response): Promise<void> =>
     const slug = name.trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
 
     // Check for duplicate slug
-    const existing = await prisma.board.findUnique({ where: { slug } });
+    const existing = await prisma.board.findFirst({ where: { slug, deletedAt: null } });
     if (existing) {
       res.status(409).json({ success: false, message: 'A workspace with that name already exists' });
       return;
@@ -131,6 +132,7 @@ export const createBoard = async (req: Request, res: Response): Promise<void> =>
 export const getAllBoardColumns = async (_req: Request, res: Response): Promise<void> => {
   try {
     const columns = await prisma.boardColumn.findMany({
+      where: { deletedAt: null },
       orderBy: { position: 'asc' },
       select: { key: true, phase: true, boardId: true },
     });
@@ -162,7 +164,7 @@ export const addBoardColumn = async (req: Request, res: Response): Promise<void>
       return;
     }
 
-    const board = await prisma.board.findUnique({ where: { id: boardId } });
+    const board = await prisma.board.findFirst({ where: { id: boardId, deletedAt: null } });
     if (!board) {
       res.status(404).json({ success: false, message: 'Board not found' });
       return;
@@ -171,8 +173,8 @@ export const addBoardColumn = async (req: Request, res: Response): Promise<void>
     const key = name.trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
 
     // Check for duplicate key on this board
-    const existing = await prisma.boardColumn.findUnique({
-      where: { boardId_key: { boardId, key } },
+    const existing = await prisma.boardColumn.findFirst({
+      where: { boardId, key, deletedAt: null },
     });
     if (existing) {
       res.status(409).json({ success: false, message: 'A column with that name already exists on this board' });
@@ -182,7 +184,7 @@ export const addBoardColumn = async (req: Request, res: Response): Promise<void>
     // Get next position
     const maxPos = await prisma.boardColumn.aggregate({
       _max: { position: true },
-      where: { boardId },
+      where: { boardId, deletedAt: null },
     });
 
     const column = await prisma.boardColumn.create({
