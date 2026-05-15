@@ -44,6 +44,9 @@ interface ProjectModalProps {
 export function ProjectModal({ project, onClose }: ProjectModalProps) {
   const { state, dispatch, getUserName, getAllUsers, getUserAvatar } = useApp();
   const { canDeleteProject, canChangePriority, isReadOnly } = usePermissions();
+
+  // Guard: if project is somehow null/undefined during unmount, bail out
+  if (!project) return null;
   const [editingName, setEditingName] = useState(false);
   const [editingDescription, setEditingDescription] = useState(false);
   const [editingTitle, setEditingTitle] = useState(project.name);

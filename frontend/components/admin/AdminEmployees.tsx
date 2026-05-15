@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
@@ -508,6 +509,7 @@ function PerformanceModal({ employee, open, onClose }: { employee: Employee | nu
           <DialogTitle>
             {employee?.name} — Performance
           </DialogTitle>
+          <DialogDescription className="sr-only">Performance details for {employee?.name}</DialogDescription>
         </DialogHeader>
 
         {loading && (
@@ -516,8 +518,8 @@ function PerformanceModal({ employee, open, onClose }: { employee: Employee | nu
           </div>
         )}
 
-        {!loading && performance && (
-          <PerformanceContent employee={employee!} performance={performance} />
+        {!loading && performance && employee && (
+          <PerformanceContent employee={employee} performance={performance} />
         )}
       </DialogContent>
     </Dialog>
