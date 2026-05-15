@@ -18,6 +18,7 @@ import {
   getActivityLogs,
 } from '../controllers/project.controller';
 import { authenticate, authorizeRoles } from '../middlewares/auth.middleware';
+import { softDeleteProject } from '../controllers/trash.controller';
 import assignmentRoutes from './assignment.routes';
 import {
   validate,
@@ -49,6 +50,9 @@ router.put('/reorder/batch', reorderProjects);
 
 // ─── Activity Log (must be before /:id) ────────────
 router.get('/activity/logs', getActivityLogs);
+
+// ─── Soft-delete a project ────────────────────────
+router.post('/:id/soft-delete', authorizeRoles('PM', 'PRODUCTION'), softDeleteProject);
 
 // ─── Get project by ID ────────────────────────────
 router.get('/:id', getProjectById);

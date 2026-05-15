@@ -16,6 +16,8 @@ import invoiceRoutes from './routes/invoice.routes';
 import webhookRoutes from './routes/webhook.routes';
 import adminRoutes from './routes/admin.routes';
 import clientRoutes from './routes/client.routes';
+import trashRoutes from './routes/trash.routes';
+import { purgeExpiredTrash } from './controllers/trash.controller';
 
 // Load environment variables
 dotenv.config();
@@ -93,6 +95,10 @@ app.use('/api/invoices', apiLimiter, invoiceRoutes);
 app.use('/api/webhooks', webhookRoutes); // No rate limit — Square needs reliable delivery
 app.use('/api/admin', apiLimiter, adminRoutes);
 app.use('/api/clients', apiLimiter, clientRoutes);
+app.use('/api/trash', apiLimiter, trashRoutes);
+
+// ─── Auto-purge expired trash on startup ───────────
+purgeExpiredTrash();
 
 // ─── 404 handler ───────────────────────────────────
 app.use((_req: Request, res: Response) => {

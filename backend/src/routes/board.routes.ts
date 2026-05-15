@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { getAllBoards, getBoardBySlug, getBoardColumns, createBoard, addBoardColumn, getAllBoardColumns } from '../controllers/board.controller';
-import { authenticate } from '../middlewares/auth.middleware';
+import { authenticate, authorizeRoles } from '../middlewares/auth.middleware';
+import { softDeleteBoard, softDeleteColumn } from '../controllers/trash.controller';
 
 const router = Router();
 
@@ -20,6 +21,12 @@ router.get('/:boardId/columns', getBoardColumns);
 
 // Add a column to a board
 router.post('/:boardId/columns', addBoardColumn);
+
+// Soft-delete a board
+router.post('/:boardId/soft-delete', authorizeRoles('PM', 'PRODUCTION'), softDeleteBoard);
+
+// Soft-delete a column
+router.post('/:boardId/columns/:columnId/soft-delete', authorizeRoles('PM', 'PRODUCTION'), softDeleteColumn);
 
 // Get board by slug
 router.get('/:slug', getBoardBySlug);
