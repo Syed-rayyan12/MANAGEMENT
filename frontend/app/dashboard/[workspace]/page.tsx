@@ -9,14 +9,15 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { BoardSkeleton } from '@/components/ui/skeletons';
 import { useApp } from '@/contexts/useApp';
-import { boardAPI } from '@/lib/api-service';
+import { boardAPI, trashAPI } from '@/lib/api-service';
+import { DeleteConfirmation } from '@/components/shared/DeleteConfirmation';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Plus, Filter, SortAsc, ArrowLeft, Users, X } from 'lucide-react';
+import { Plus, Filter, SortAsc, ArrowLeft, Users, X, Trash2 } from 'lucide-react';
 import { usePermissions } from '@/hooks/usePermissions';
 import {
   DropdownMenu,
@@ -35,7 +36,7 @@ export default function WorkspacePage() {
   const searchParams = useSearchParams();
   const { searchQuery } = useSearch();
   const { isLoading, getAllUsers, getUserName } = useApp();
-  const { canCreateProject, canAddColumn } = usePermissions();
+  const { canCreateProject, canAddColumn, canSoftDelete } = usePermissions();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showAddColumnModal, setShowAddColumnModal] = useState(false);
   const [filterPriority, setFilterPriority] = useState<string>('all');
@@ -45,6 +46,8 @@ export default function WorkspacePage() {
   const [customColumns, setCustomColumns] = useState<any[]>([]);
   const [boardName, setBoardName] = useState<string>('');
   const [boardId, setBoardId] = useState<string | null>(null);
+  const [boardData, setBoardData] = useState<any>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{ type: 'board' | 'column'; id: string; name: string; projectCount: number; columnCount?: number } | null>(null);
 
   const boardSlug = params.workspace as string;
   const projectId = searchParams.get('project');
@@ -61,6 +64,7 @@ export default function WorkspacePage() {
           const board = result.data.board;
           setBoardName(board.name);
           setBoardId(board.id);
+          setBoardData(board);
           // Use board columns from API if available
           if (board.columns && board.columns.length > 0) {
             const cols = board.columns
@@ -103,6 +107,45 @@ export default function WorkspacePage() {
       } catch (error) {
         console.error('Error saving column:', error);
       }
+    }
+  };
+
+  const handleSoftDelete = async () => {
+    if (!deleteTarget || !boardId) return;
+    try {
+      if (deleteTarget.type === 'board') {
+        await trashAPI.softDeleteBoard(boardId);
+        router.push('/dashboard');
+      } else {
+        await trashAPI.softDeleteColumn(boardId, deleteTarget.id);
+        const result = await boardAPI.getBySlug(boardSlug);
+        if (result.success) {
+          const board = result.data.board;
+          setBoardData(board);
+          const cols = board.columns
+            .sort((a: any, b: any) => a.position - b.position)
+            .map((c: any) => ({
+              status: c.key,
+              label: c.name,
+              color: c.color,
+              isCustom: false,
+              phase: c.phase || 'NOT_STARTED',
+            }));
+          setCustomColumns(cols);
+          setRefreshKey(prev => prev + 1);
+        }
+      }
+    } catch (error) {
+      console.error('Delete error:', error);
+    } finally {
+      setDeleteTarget(null);
+    }
+  };
+
+  const handleDeleteColumn = (status: string, label: string, projectCount: number) => {
+    const col = boardData?.columns?.find((c: any) => c.key === status);
+    if (col) {
+      setDeleteTarget({ type: 'column', id: col.id, name: label, projectCount });
     }
   };
 
@@ -182,6 +225,22 @@ export default function WorkspacePage() {
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
+          {canSoftDelete && (
+            <Button
+              onClick={() => setDeleteTarget({
+                type: 'board',
+                id: boardId || '',
+                name: displayName,
+                projectCount: 0,
+                columnCount: customColumns.length,
+              })}
+              variant="outline"
+              className="border-red-500/30 hover:bg-red-500/10 text-red-500 hover:text-red-600"
+            >
+              <Trash2 className="w-4 h-4 mr-2" />
+              Delete Workspace
+            </Button>
+          )}
           {canAddColumn && (
             <Button
               onClick={() => setShowAddColumnModal(true)}
@@ -258,6 +317,7 @@ export default function WorkspacePage() {
               sortBy={sortBy}
               boardId={boardId}
               customColumns={customColumns}
+              onDeleteColumn={canSoftDelete ? handleDeleteColumn : undefined}
             />
           </ErrorBoundary>
         )}
@@ -276,9 +336,25 @@ export default function WorkspacePage() {
 
       {/* Add Column Modal */}
       {showAddColumnModal && (
-        <AddColumnModal 
+        <AddColumnModal
           onClose={() => setShowAddColumnModal(false)}
           onAdd={handleAddColumn}
+        />
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteTarget && (
+        <DeleteConfirmation
+          open={!!deleteTarget}
+          onClose={() => setDeleteTarget(null)}
+          onConfirm={handleSoftDelete}
+          title={`Delete ${deleteTarget.type === 'board' ? 'Workspace' : 'Column'}?`}
+          description={`This will delete "${deleteTarget.name}" and move it to trash.`}
+          impactSummary={
+            deleteTarget.type === 'board'
+              ? `This will delete <strong>${deleteTarget.name}</strong> along with <strong>${deleteTarget.columnCount || 0} columns</strong> and <strong>${deleteTarget.projectCount} projects</strong>.`
+              : `This will delete column <strong>${deleteTarget.name}</strong> and <strong>${deleteTarget.projectCount} projects</strong> in it.`
+          }
         />
       )}
     </div>

@@ -8,8 +8,14 @@ import {
 } from '@dnd-kit/sortable';
 import { Project, ProjectStatus } from '@/lib/types';
 import { ProjectCard } from './Card';
-import { Plus, X } from 'lucide-react';
+import { Plus, X, MoreVertical, Trash2 } from 'lucide-react';
 import { usePermissions } from '@/hooks/usePermissions';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 interface ColumnProps {
   status: ProjectStatus | string;
@@ -18,11 +24,12 @@ interface ColumnProps {
   projects: Project[];
   onCardClick: (projectId: string) => void;
   onAddCard?: (name: string, status: string) => Promise<void>;
+  onDeleteColumn?: (status: string, label: string, projectCount: number) => void;
 }
 
-export function Column({ status, label, color, projects, onCardClick, onAddCard }: ColumnProps) {
+export function Column({ status, label, color, projects, onCardClick, onAddCard, onDeleteColumn }: ColumnProps) {
   const { setNodeRef, isOver } = useDroppable({ id: status });
-  const { canCreateProject } = usePermissions();
+  const { canCreateProject, canSoftDelete } = usePermissions();
   const [showForm, setShowForm] = useState(false);
   const [cardName, setCardName] = useState('');
   const [saving, setSaving] = useState(false);
@@ -70,15 +77,35 @@ export function Column({ status, label, color, projects, onCardClick, onAddCard 
             {projects.length}
           </span>
         </div>
-        {canCreateProject && !showForm && (
-          <button
-            onClick={() => setShowForm(true)}
-            className="w-6 h-6 rounded-md flex items-center justify-center text-gray-400 dark:text-gray-500 hover:text-orange-500 dark:hover:text-orange-400 hover:bg-orange-500/10 transition-colors"
-            title="Add a card"
-          >
-            <Plus className="w-4 h-4" />
-          </button>
-        )}
+        <div className="flex items-center gap-1">
+          {canSoftDelete && onDeleteColumn && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="w-6 h-6 rounded-md flex items-center justify-center text-gray-400 dark:text-gray-500 hover:text-zinc-600 dark:hover:text-zinc-300 hover:bg-zinc-200/50 dark:hover:bg-zinc-700/50 transition-colors">
+                  <MoreVertical className="w-4 h-4" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem
+                  onClick={() => onDeleteColumn(status as string, label, projects.length)}
+                  className="text-red-600 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-900/20"
+                >
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Delete Column
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+          {canCreateProject && !showForm && (
+            <button
+              onClick={() => setShowForm(true)}
+              className="w-6 h-6 rounded-md flex items-center justify-center text-gray-400 dark:text-gray-500 hover:text-orange-500 dark:hover:text-orange-400 hover:bg-orange-500/10 transition-colors"
+              title="Add a card"
+            >
+              <Plus className="w-4 h-4" />
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Scrollable Cards Container */}
