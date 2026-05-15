@@ -26,13 +26,17 @@ export const getDashboardOverview = async (req: Request, res: Response): Promise
       },
     });
 
-    // Board counts (projects per board, scoped to user's visibility)
+    // Single groupBy instead of N+1 count loop
+    const projectCountsByBoard = await prisma.project.groupBy({
+      by: ['boardId'],
+      where,
+      _count: { id: true },
+    });
+    const countMap = new Map(projectCountsByBoard.map(g => [g.boardId, g._count.id]));
+
     const boardStats: Record<string, { name: string; slug: string; count: number }> = {};
     for (const board of boards) {
-      const count = await prisma.project.count({
-        where: { ...where, boardId: board.id },
-      });
-      boardStats[board.slug] = { name: board.name, slug: board.slug, count };
+      boardStats[board.slug] = { name: board.name, slug: board.slug, count: countMap.get(board.id) || 0 };
     }
 
     const totalProjects = await prisma.project.count({ where });
