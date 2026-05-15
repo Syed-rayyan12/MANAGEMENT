@@ -34,7 +34,7 @@ export function usePermissions() {
     canAddColumn: true,
 
     // Project fields
-    canChangePriority: isPM || isTL,
+    canChangePriority: isPM || isTL || isExec || isProd,
     canChangeStatus: isPM || isTL || isProd,
     canEditProjectFields: isPM || isTL,
 

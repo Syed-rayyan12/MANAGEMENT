@@ -36,7 +36,9 @@
       "Bash(DATABASE_URL=\"postgresql://postgres:PJEGMQUYGIBPANktROhvDhjrGrzmosnP@metro.proxy.rlwy.net:26362/railway\" node -e \":*)",
       "Bash(mkdir:*)",
       "Bash(find /f/downloads-new/MANAGEMENT-main/MANAGEMENT-main/frontend/src -type f \\\\\\(-name *.tsx -o -name *.ts -o -name *.jsx -o -name *.js \\\\\\))",
-      "Bash(wc:*)"
+      "Bash(wc:*)",
+      "Bash(grep -n updateProject /f/downloads-new/MANAGEMENT-main/MANAGEMENT-main/backend/src/routes/*.ts)",
+      "Bash(find F:downloads-newMANAGEMENT-mainMANAGEMENT-main -name *.tsx -o -name *.ts)"
     ]
   }
 }

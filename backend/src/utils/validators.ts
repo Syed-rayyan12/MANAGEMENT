@@ -10,6 +10,13 @@ export const loginSchema = z.object({
 
 // ─── Projects ──────────────────────────────────────
 
+// Accepts a valid URL, empty string (→ null), null, or undefined
+const optionalUrl = z.string()
+  .transform(v => v.trim() === '' ? null : v)
+  .pipe(z.string().url().nullable())
+  .optional()
+  .nullable();
+
 export const createProjectSchema = z.object({
   name: z.string().min(1, 'Project name is required').max(200),
   description: z.string().max(5000).optional().default(''),
@@ -17,7 +24,7 @@ export const createProjectSchema = z.object({
   status: z.string().max(50).optional(),
   priority: z.enum(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']).optional(),
   dueDate: z.string().optional().nullable(),
-  image: z.string().url().optional().nullable(),
+  image: optionalUrl,
   clientId: z.string().uuid().optional().nullable(),
 });
 
@@ -27,7 +34,7 @@ export const updateProjectSchema = z.object({
   status: z.string().max(50).optional(),
   priority: z.enum(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']).optional(),
   dueDate: z.string().optional().nullable(),
-  image: z.string().url().optional().nullable(),
+  image: optionalUrl,
   changeType: z.enum(['NONE', 'MINOR', 'MAJOR']).optional(),
   clientId: z.string().uuid().optional().nullable(),
 });

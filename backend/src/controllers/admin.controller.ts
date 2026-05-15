@@ -420,8 +420,15 @@ export const deleteEmployee = async (req: Request, res: Response): Promise<void>
       }
     }
 
-    // Delete all assignments for this user
+    // Delete all related records for this user
+    await prisma.notification.deleteMany({ where: { userId: id } });
+    await prisma.activityLog.deleteMany({ where: { userId: id } });
+    await prisma.comment.deleteMany({ where: { userId: id } });
     await prisma.projectAssignment.deleteMany({ where: { userId: id } });
+    await prisma.teamMember.deleteMany({ where: { userId: id } });
+
+    // Nullify invoice creator references (preserve financial records)
+    await prisma.invoice.updateMany({ where: { createdById: id }, data: { createdById: null } });
 
     await prisma.user.delete({ where: { id } });
 

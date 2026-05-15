@@ -240,7 +240,7 @@ model Comment {
   projectId String
   project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
   userId    String
-  user      User     @relation(fields: [userId], references: [id])
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -306,7 +306,7 @@ model ActivityLog {
   projectId String?
   project   Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
   userId    String
-  user      User     @relation(fields: [userId], references: [id])
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
 
   @@map("activity_logs")
@@ -321,7 +321,7 @@ model Notification {
   read      Boolean  @default(false)
   projectId String?
   userId    String   // recipient
-  user      User     @relation(fields: [userId], references: [id])
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   actorId   String?  // who triggered it
   createdAt DateTime @default(now())
 
@@ -345,8 +345,8 @@ model Invoice {
   paidAt              DateTime?
 
   // Who created this invoice
-  createdById     String
-  createdBy       User          @relation(fields: [createdById], references: [id])
+  createdById     String?
+  createdBy       User?         @relation(fields: [createdById], references: [id], onDelete: SetNull)
 
   // Team association (for visibility scoping)
   teamId          String
