@@ -1,6 +1,6 @@
 
 'use client';
-import { API_BASE_URL, projectAPI, clientAPI } from '@/lib/api-service';
+import { API_BASE_URL, projectAPI, clientAPI, assignmentAPI } from '@/lib/api-service';
 import { toast } from 'sonner';
 
 import React, { useState, useEffect } from 'react';
@@ -101,19 +101,16 @@ export function CreateProjectModal({ onClose, initialStatus, initialBoard }: Cre
       if (result.success) {
         const p = result.data.project;
 
-        // Add selected members as labels
-        const addedLabels: { id: string; name: string; color: string }[] = [];
+        // Add selected members as assignments
+        const addedAssignments: any[] = [];
         for (const memberId of selectedMembers) {
-          const memberUser = allUsers.find(u => u.id === memberId);
-          if (memberUser) {
-            try {
-              const labelResult = await projectAPI.addLabel(p.id, memberUser.name, '#ff6600');
-              if (labelResult.success) {
-                const saved = labelResult.data.label || labelResult.data;
-                addedLabels.push({ id: saved.id || `label_${Date.now()}`, name: memberUser.name, color: '#ff6600' });
-              }
-            } catch { /* continue */ }
-          }
+          if (memberId === state.currentUser?.id) continue; // Creator already assigned by backend
+          try {
+            const assignResult = await assignmentAPI.add(p.id, memberId, 'PRIMARY');
+            if (assignResult.success) {
+              addedAssignments.push(assignResult.data.assignment);
+            }
+          } catch { /* continue */ }
         }
 
         // Create local project object for immediate UI update
@@ -130,10 +127,14 @@ export function CreateProjectModal({ onClose, initialStatus, initialBoard }: Cre
           dueDate: dueDate || null,
           image: imageUrl.trim() || null,
           position: 0,
-          pm: state.currentUser.id,
-          developer: null,
           clientId: (selectedClientId && selectedClientId !== 'none') ? selectedClientId : null,
-          labels: addedLabels,
+          assignments: [
+            // Creator's assignment (from backend response)
+            ...(p.assignments || []),
+            // Additional assignments we just created
+            ...addedAssignments,
+          ],
+          labels: [],
           checklist: [],
           comments: [],
           attachments: [],
@@ -353,7 +354,7 @@ export function CreateProjectModal({ onClose, initialStatus, initialBoard }: Cre
                   .filter(u => !selectedMembers.includes(u.id))
                   .map((user) => (
                     <SelectItem key={user.id} value={user.id}>
-                      {user.name} ({user.role})
+                      {user.name}
                     </SelectItem>
                   ))}
               </SelectContent>
