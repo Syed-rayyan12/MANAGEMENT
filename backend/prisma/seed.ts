@@ -41,10 +41,10 @@ async function main() {
   ];
 
   const defaultColumns = [
-    { name: 'To Do', key: 'todo', color: '#6B7280', position: 0 },
-    { name: 'In Progress', key: 'in-progress', color: '#3B82F6', position: 1 },
-    { name: 'Completed', key: 'completed', color: '#10B981', position: 2 },
-    { name: 'Revisions', key: 'revisions', color: '#F59E0B', position: 3 },
+    { name: 'To Do', key: 'todo', color: '#6B7280', position: 0, phase: 'NOT_STARTED' as const },
+    { name: 'In Progress', key: 'in-progress', color: '#3B82F6', position: 1, phase: 'IN_PROGRESS' as const },
+    { name: 'Completed', key: 'completed', color: '#10B981', position: 2, phase: 'DONE' as const },
+    { name: 'Revisions', key: 'revisions', color: '#F59E0B', position: 3, phase: 'IN_PROGRESS' as const },
   ];
 
   for (const b of boardDefs) {
@@ -74,9 +74,10 @@ async function main() {
         data: {
           name: 'Live',
           key: 'live',
-          color: '#8B5CF6',
+          color: '#10B981',
           position: 4,
           boardId: webDevBoard.id,
+          phase: 'DONE',
         },
       });
       console.log('✅ Added "Live" column to Web Development board');
@@ -281,6 +282,28 @@ async function main() {
       console.log(`✅ Project: ${proj.name} (${proj.assignments.length} members)`);
     }
   }
+
+  // Backfill phase for existing columns that still have the default NOT_STARTED
+  const phaseMap: Record<string, string> = {
+    'todo': 'NOT_STARTED',
+    'to-do': 'NOT_STARTED',
+    'backlog': 'NOT_STARTED',
+    'in-progress': 'IN_PROGRESS',
+    'revisions': 'IN_PROGRESS',
+    'review': 'IN_PROGRESS',
+    'completed': 'DONE',
+    'done': 'DONE',
+    'live': 'DONE',
+    'on-hold': 'ON_HOLD',
+  };
+
+  for (const [key, phase] of Object.entries(phaseMap)) {
+    await prisma.boardColumn.updateMany({
+      where: { key },
+      data: { phase: phase as any },
+    });
+  }
+  console.log('✅ Backfilled column phases');
 
   console.log('\n✅ Database seeded successfully!');
   console.log('\n📋 Login Credentials (all passwords: password123):');
