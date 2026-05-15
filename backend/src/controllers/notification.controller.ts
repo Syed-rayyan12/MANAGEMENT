@@ -55,30 +55,37 @@ export const getMyNotifications = async (req: Request, res: Response): Promise<v
       select: { id: true, name: true, dueDate: true },
     });
 
-    for (const p of dueSoonProjects) {
-      if (!p.dueDate) continue;
-      const isOverdue = p.dueDate < now;
-      const type = 'due_date';
-      // Check if we already sent a due_date notification for this project today
-      const existing = await prisma.notification.findFirst({
+    if (dueSoonProjects.length > 0) {
+      // Batch check: which projects already have a due_date notification today?
+      const dueSoonIds = dueSoonProjects.map(p => p.id);
+      const existingNotifs = await prisma.notification.findMany({
         where: {
           userId: req.user.id,
-          projectId: p.id,
-          type,
+          projectId: { in: dueSoonIds },
+          type: 'due_date',
           createdAt: { gte: oneDayAgo },
         },
+        select: { projectId: true },
       });
-      if (!existing) {
-        await prisma.notification.create({
-          data: {
-            type,
+      const alreadyNotified = new Set(existingNotifs.map(n => n.projectId));
+
+      // Build notifications for projects that don't have one yet
+      const newNotifs = dueSoonProjects
+        .filter(p => p.dueDate && !alreadyNotified.has(p.id))
+        .map(p => {
+          const isOverdue = p.dueDate! < now;
+          return {
+            type: 'due_date',
             message: isOverdue
-              ? `⏰ ${p.name} is overdue (was due ${p.dueDate.toLocaleDateString()})`
-              : `⏳ ${p.name} is due soon — ${p.dueDate.toLocaleDateString()}`,
-            userId: req.user.id,
+              ? `⏰ ${p.name} is overdue (was due ${p.dueDate!.toLocaleDateString()})`
+              : `⏳ ${p.name} is due soon — ${p.dueDate!.toLocaleDateString()}`,
+            userId: req.user!.id,
             projectId: p.id,
-          },
+          };
         });
+
+      if (newNotifs.length > 0) {
+        await prisma.notification.createMany({ data: newNotifs });
       }
     }
 
