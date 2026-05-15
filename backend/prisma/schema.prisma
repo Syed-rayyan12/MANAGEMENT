@@ -52,6 +52,13 @@ enum AssignmentStatus {
   DONE
 }
 
+enum ColumnPhase {
+  NOT_STARTED
+  IN_PROGRESS
+  DONE
+  ON_HOLD
+}
+
 // ─── ORGANIZATION ───────────────────────────────────
 
 model Organization {
@@ -131,13 +138,14 @@ model Board {
 // ─── BOARD COLUMNS (workflow stages per board) ──────
 
 model BoardColumn {
-  id       String @id @default(uuid())
+  id       String      @id @default(uuid())
   name     String
   key      String
-  color    String @default("#6B7280")
-  position Int    @default(0)
+  color    String      @default("#6B7280")
+  position Int         @default(0)
+  phase    ColumnPhase @default(NOT_STARTED)
   boardId  String
-  board    Board  @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  board    Board       @relation(fields: [boardId], references: [id], onDelete: Cascade)
 
   @@unique([boardId, key])
   @@map("board_columns")
