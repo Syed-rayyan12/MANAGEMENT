@@ -11,7 +11,6 @@ import { useApp } from '@/contexts/useApp';
  *   - canDeleteProject: PM only
  *   - canAddColumn: PM, TL
  *   - canChangePriority: PM, TL
- *   - canAssignDeveloper: PM, TL
  *   - canEditProject: PM, TL, PRODUCTION (the assigned developer)
  *   - canComment: everyone
  *   - isReadOnly: EXECUTIVE (view-only)
@@ -36,7 +35,6 @@ export function usePermissions() {
 
     // Project fields
     canChangePriority: isPM || isTL,
-    canAssignDeveloper: isPM || isTL,
     canChangeStatus: isPM || isTL || isProd,
     canEditProjectFields: isPM || isTL,
 

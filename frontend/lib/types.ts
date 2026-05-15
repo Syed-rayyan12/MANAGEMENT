@@ -232,6 +232,8 @@ export interface KPIData {
   projectsByBoard: { id: string; name: string; slug: string; _count: { projects: number } }[];
   revenueByTeam: { id: string; name: string; slug: string; totalRevenue: number }[];
   newClientsThisMonth: number;
+  activeAssignments: number;
+  completedAssignmentsThisMonth: number;
 }
 
 export interface InvoiceBreakdown {

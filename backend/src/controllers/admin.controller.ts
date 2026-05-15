@@ -19,6 +19,8 @@ export const getKPIs = async (_req: Request, res: Response): Promise<void> => {
       projectsByBoard,
       revenueByTeam,
       newClientsThisMonth,
+      activeAssignments,
+      completedAssignmentsThisMonth,
     ] = await Promise.all([
       prisma.invoice.aggregate({
         _sum: { amount: true },
@@ -44,6 +46,8 @@ export const getKPIs = async (_req: Request, res: Response): Promise<void> => {
         },
       }),
       prisma.client.count({ where: { createdAt: { gte: startOfMonth } } }),
+      prisma.projectAssignment.count({ where: { status: 'ACTIVE' } }),
+      prisma.projectAssignment.count({ where: { status: 'DONE', completedAt: { gte: startOfMonth } } }),
     ]);
 
     const totalRevenueAllTime = Number(totalRevenueAllTimeResult._sum.amount) || 0;
@@ -70,6 +74,8 @@ export const getKPIs = async (_req: Request, res: Response): Promise<void> => {
           projectsByBoard,
           revenueByTeam: revenueByTeamMapped,
           newClientsThisMonth,
+          activeAssignments,
+          completedAssignmentsThisMonth,
         },
       },
     });

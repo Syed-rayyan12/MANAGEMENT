@@ -46,7 +46,7 @@ export function AdminOverview() {
   return (
     <div className="space-y-6">
       {/* KPI stat cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           label="Total Revenue"
           value={`£${kpis.totalRevenueAllTime.toLocaleString('en-GB', { minimumFractionDigits: 2 })}`}
@@ -82,6 +82,18 @@ export function AdminOverview() {
           value={String(kpis.newClientsThisMonth)}
           gradient="from-amber-400 to-amber-300"
           icon={Users}
+        />
+        <StatCard
+          label="Active Assignments"
+          value={String(kpis.activeAssignments)}
+          gradient="from-indigo-400 to-indigo-300"
+          icon={Users}
+        />
+        <StatCard
+          label="Completed This Month"
+          value={String(kpis.completedAssignmentsThisMonth)}
+          gradient="from-teal-400 to-teal-300"
+          icon={CheckCircle}
         />
       </div>
 
