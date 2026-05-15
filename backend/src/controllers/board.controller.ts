@@ -131,7 +131,7 @@ export const createBoard = async (req: Request, res: Response): Promise<void> =>
 export const addBoardColumn = async (req: Request, res: Response): Promise<void> => {
   try {
     const { boardId } = req.params;
-    const { name, color } = req.body;
+    const { name, color, phase } = req.body;
 
     if (!name || !name.trim()) {
       res.status(400).json({ success: false, message: 'Column name is required' });
@@ -168,6 +168,7 @@ export const addBoardColumn = async (req: Request, res: Response): Promise<void>
         key,
         color: color || '#6B7280',
         position: (maxPos._max.position ?? -1) + 1,
+        phase: phase || 'NOT_STARTED',
       },
     });
 
