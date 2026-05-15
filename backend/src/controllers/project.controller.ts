@@ -342,8 +342,12 @@ export const updateProject = async (req: Request, res: Response): Promise<void> 
 
       const actorName = (await prisma.user.findUnique({ where: { id: req.user.id }, select: { name: true } }))?.name || 'Someone';
 
-      // Notify assigned members on status change
-      if (updateData.status && updateData.status !== existing.status) {
+      // Fetch assigned users once, reuse for both status and priority notifications
+      const needsNotification =
+        (updateData.status && updateData.status !== existing.status) ||
+        (updateData.priority && updateData.priority !== existing.priority && updateData.priority === 'CRITICAL');
+
+      if (needsNotification) {
         const assignedUserIds = await prisma.projectAssignment.findMany({
           where: { projectId: id },
           select: { userId: true },
@@ -352,36 +356,32 @@ export const updateProject = async (req: Request, res: Response): Promise<void> 
           .map(a => a.userId)
           .filter(uid => uid !== req.user!.id);
 
-        const isCompleted = updateData.status === 'completed';
-        const statusItems = recipients.map((uid) => ({
-          type: isCompleted ? 'completed' : 'status',
-          message: isCompleted
-            ? `${actorName} marked ${existing.name} as completed! 🎉`
-            : `${actorName} moved ${existing.name} to ${updateData.status}`,
-          userId: uid,
-          projectId: id,
-          actorId: req.user!.id,
-        }));
-        await createManyNotifications(statusItems);
-      }
+        // Status change notification
+        if (updateData.status && updateData.status !== existing.status) {
+          const isCompleted = updateData.status === 'completed';
+          const statusItems = recipients.map((uid) => ({
+            type: isCompleted ? 'completed' : 'status',
+            message: isCompleted
+              ? `${actorName} marked ${existing.name} as completed! 🎉`
+              : `${actorName} moved ${existing.name} to ${updateData.status}`,
+            userId: uid,
+            projectId: id,
+            actorId: req.user!.id,
+          }));
+          await createManyNotifications(statusItems);
+        }
 
-      // Notify assigned members when priority escalated to CRITICAL
-      if (updateData.priority && updateData.priority !== existing.priority && updateData.priority === 'CRITICAL') {
-        const assignedUserIds = await prisma.projectAssignment.findMany({
-          where: { projectId: id },
-          select: { userId: true },
-        });
-        const criticalItems = assignedUserIds
-          .map(a => a.userId)
-          .filter(uid => uid !== req.user!.id)
-          .map(uid => ({
+        // Priority escalation notification
+        if (updateData.priority && updateData.priority !== existing.priority && updateData.priority === 'CRITICAL') {
+          const criticalItems = recipients.map(uid => ({
             type: 'priority',
             message: `⚠️ ${actorName} escalated ${existing.name} to CRITICAL priority`,
             userId: uid,
             projectId: id,
             actorId: req.user!.id,
           }));
-        await createManyNotifications(criticalItems);
+          await createManyNotifications(criticalItems);
+        }
       }
     }
 
