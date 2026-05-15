@@ -1,10 +1,10 @@
 
 'use client';
-import { API_BASE_URL, projectAPI, uploadAPI } from '@/lib/api-service';
+import { API_BASE_URL, projectAPI, uploadAPI, assignmentAPI } from '@/lib/api-service';
 import { toast } from 'sonner';
 
 import React, { useState } from 'react';
-import { Project } from '@/lib/types';
+import { Project, ProjectAssignment } from '@/lib/types';
 import { useApp } from '@/contexts/useApp';
 import { usePermissions } from '@/hooks/usePermissions';
 import {
@@ -49,8 +49,8 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
   const [editingDesc, setEditingDesc] = useState(project.description);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [addingMember, setAddingMember] = useState(false);
-  const [removingMemberId, setRemovingMemberId] = useState<string | null>(null);
+  const [showMemberModal, setShowMemberModal] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const [showCoverPhotoModal, setShowCoverPhotoModal] = useState(false);
   const [coverPhotoFile, setCoverPhotoFile] = useState<File | null>(null);
   const coverPhotoInputRef = React.useRef<HTMLInputElement>(null);
@@ -64,6 +64,11 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
     const scoped = allUsers.filter((u: any) => u.teams?.some((t: any) => t.id === project.teamId));
     return scoped.length > 0 ? scoped : allUsers;
   }, [allUsers, project.teamId]);
+
+  const filteredUsers = teamUsers.filter((user: any) =>
+    user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    user.email?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   const handleSaveName = async () => {
     if (editingTitle.trim()) {
@@ -153,39 +158,69 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
     }
   };
 
-  const handleAddMember = async (userId: string) => {
-    const user = allUsers.find(u => u.id === userId);
+  const handleAddMember = async (userId: string, role: string = 'PRIMARY') => {
+    const user = allUsers.find((u: any) => u.id === userId);
     if (!user) return;
-    if (project.labels.some(l => l.name === user.name)) {
-      toast.info(`${user.name} is already a member`);
+
+    if (project.assignments.some((a: ProjectAssignment) => a.userId === userId)) {
+      toast.info(`${user.name} is already assigned`);
+      setShowMemberModal(false);
+      setSearchQuery('');
       return;
     }
-    setAddingMember(true);
+
     try {
-      const result = await projectAPI.addLabel(project.id, user.name, '#ff6600');
+      const result = await assignmentAPI.add(project.id, userId, role);
       if (result.success) {
-        const savedLabel = result.data.label || result.data;
-        const newLabel = { id: savedLabel.id || `label_${Date.now()}`, name: user.name, color: '#ff6600' };
-        dispatch({ type: 'UPDATE_PROJECT', payload: { ...project, labels: [...project.labels, newLabel], updatedAt: new Date() } });
-        toast.success(`${user.name} added as member`);
+        const newAssignment = result.data.assignment;
+        const updatedProject = {
+          ...project,
+          assignments: [...project.assignments, newAssignment],
+          updatedAt: new Date(),
+        };
+        dispatch({ type: 'UPDATE_PROJECT', payload: updatedProject });
+        toast.success(`${user.name} added as ${role.toLowerCase()}`);
       }
     } catch (error) {
       console.error('Error adding member:', error);
       toast.error('Failed to add member');
-    } finally {
-      setAddingMember(false);
+    }
+
+    setShowMemberModal(false);
+    setSearchQuery('');
+  };
+
+  const handleRemoveAssignment = async (assignmentId: string) => {
+    try {
+      await assignmentAPI.remove(project.id, assignmentId);
+      const updatedProject = {
+        ...project,
+        assignments: project.assignments.filter((a: ProjectAssignment) => a.id !== assignmentId),
+        updatedAt: new Date(),
+      };
+      dispatch({ type: 'UPDATE_PROJECT', payload: updatedProject });
+    } catch (error) {
+      console.error('Error removing member:', error);
+      toast.error('Failed to remove member');
     }
   };
 
-  const handleRemoveMember = async (labelId: string) => {
-    setRemovingMemberId(labelId);
+  const handleToggleStatus = async (assignment: ProjectAssignment) => {
+    const newStatus = assignment.status === 'ACTIVE' ? 'DONE' : 'ACTIVE';
     try {
-      await projectAPI.removeLabel(project.id, labelId);
+      const result = await assignmentAPI.update(project.id, assignment.id, { status: newStatus });
+      if (result.success) {
+        const updatedAssignments = project.assignments.map((a: ProjectAssignment) =>
+          a.id === assignment.id
+            ? { ...a, status: newStatus as any, completedAt: newStatus === 'DONE' ? new Date().toISOString() : null }
+            : a
+        );
+        dispatch({ type: 'UPDATE_PROJECT', payload: { ...project, assignments: updatedAssignments, updatedAt: new Date() } });
+        toast.success(newStatus === 'DONE' ? 'Marked as done' : 'Marked as active');
+      }
     } catch (error) {
-      console.error('Error removing member:', error);
+      toast.error('Failed to update status');
     }
-    dispatch({ type: 'UPDATE_PROJECT', payload: { ...project, labels: project.labels.filter(l => l.id !== labelId), updatedAt: new Date() } });
-    setRemovingMemberId(null);
   };
 
   const handleUpdateStatus = async (newStatus: string) => {
@@ -547,66 +582,62 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
               {/* Members */}
               <div>
                 <Label className="text-xs font-medium uppercase tracking-wide text-zinc-400 mb-2 block">Members</Label>
-                {/* Current members list */}
-                <div className="space-y-1.5 mb-2 max-h-48 overflow-y-auto">
-                  {project.labels.map((label) => {
-                    const memberUser = allUsers.find(u => u.name === label.name);
-                    const mAvatar = memberUser ? getUserAvatar(memberUser.id) : undefined;
-                    return (
-                      <div key={label.id} className="flex items-center justify-between p-2 bg-zinc-50 dark:bg-zinc-800 rounded-xl border border-zinc-200 dark:border-zinc-700">
-                        <div className="flex items-center gap-2">
-                          <Avatar className="w-6 h-6">
-                            <AvatarImage src={mAvatar} alt={label.name} />
-                            <AvatarFallback className="text-[9px] bg-orange-500 text-white">{label.name.split(' ').map(w=>w[0]).join('').slice(0,2)}</AvatarFallback>
-                          </Avatar>
-                          <span className="text-xs font-medium text-zinc-900 dark:text-zinc-100">{label.name}</span>
-                          {memberUser?.role && (
-                            <span className={`text-[9px] px-1 py-0.5 rounded font-bold text-white ${
-                              memberUser.role === 'PM' ? 'bg-blue-500' :
-                              memberUser.role === 'TL' ? 'bg-green-500' :
-                              memberUser.role === 'EXECUTIVE' ? 'bg-purple-500' : 'bg-gray-500'
-                            }`}>{memberUser.role}</span>
-                          )}
-                        </div>
-                        {!isReadOnly && (
-                          <button
-                            onClick={() => handleRemoveMember(label.id)}
-                            disabled={removingMemberId === label.id}
-                            className="text-gray-400 hover:text-red-400 transition-colors disabled:opacity-50"
-                          >
-                            {removingMemberId === label.id ? (
-                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                            ) : (
-                              <X className="w-3.5 h-3.5" />
+                {/* Current assignments list */}
+                <div className="space-y-0 mb-2 max-h-64 overflow-y-auto border border-zinc-200 dark:border-zinc-700 rounded-xl divide-y divide-zinc-100 dark:divide-zinc-800">
+                  {project.assignments.map((assignment: ProjectAssignment) => (
+                    <div key={assignment.id} className="flex items-center justify-between py-2 px-3 last:border-0">
+                      <div className="flex items-center gap-2">
+                        <Avatar className="w-8 h-8">
+                          <AvatarImage src={assignment.user?.avatar || undefined} />
+                          <AvatarFallback className="text-xs bg-orange-500 text-white">{assignment.user?.name?.[0]}</AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">{assignment.user?.name}</p>
+                          <div className="flex items-center gap-1.5">
+                            {assignment.user?.specialization && (
+                              <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
+                                {assignment.user.specialization.replace(/_/g, ' ')}
+                              </span>
                             )}
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-500">
+                              {assignment.role === 'PRIMARY' ? 'Primary' : 'Collaborator'}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => handleToggleStatus(assignment)}
+                          className={`px-2 py-1 rounded text-xs font-medium transition-all ${
+                            assignment.status === 'DONE'
+                              ? 'bg-green-500/15 text-green-600 dark:text-green-400'
+                              : 'bg-orange-500/15 text-orange-600 dark:text-orange-400'
+                          }`}
+                        >
+                          {assignment.status === 'DONE' ? '✓ Done' : '● Active'}
+                        </button>
+                        {!isReadOnly && (
+                          <button onClick={() => handleRemoveAssignment(assignment.id)} className="p-1 text-zinc-400 hover:text-red-500">
+                            <X className="w-3.5 h-3.5" />
                           </button>
                         )}
                       </div>
-                    );
-                  })}
-                  {project.labels.length === 0 && (
-                    <p className="text-xs text-gray-500 dark:text-gray-400 py-1">No members assigned</p>
+                    </div>
+                  ))}
+                  {project.assignments.length === 0 && (
+                    <p className="text-xs text-gray-500 dark:text-gray-400 py-3 px-3">No members assigned</p>
                   )}
                 </div>
-                {/* Add member dropdown */}
+                {/* Add member button */}
                 {!isReadOnly && (
-                  <Select onValueChange={(val) => handleAddMember(val)} disabled={addingMember}>
-                    <SelectTrigger className="mt-1">
-                      <SelectValue placeholder={addingMember ? 'Adding...' : 'Add member...'} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {teamUsers
-                        .filter(u => !project.labels.some(l => l.name === u.name))
-                        .map((user) => (
-                          <SelectItem key={user.id} value={user.id}>
-                            <div className="flex items-center gap-2">
-                              <span>{user.name}</span>
-                              <span className="text-[10px] text-gray-400">({user.role})</span>
-                            </div>
-                          </SelectItem>
-                        ))}
-                    </SelectContent>
-                  </Select>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full mt-1 text-xs"
+                    onClick={() => setShowMemberModal(true)}
+                  >
+                    + Add Member
+                  </Button>
                 )}
               </div>
 
@@ -778,6 +809,97 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
                     </Button>
                   </div>
                 </div>
+              )}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    )}
+
+    {/* Add Member Modal */}
+    {showMemberModal && (
+      <Dialog open={showMemberModal} onOpenChange={(open) => { setShowMemberModal(open); if (!open) setSearchQuery(''); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Add Member</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-2">
+            <Input
+              placeholder="Search by name or email..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full"
+              autoFocus
+            />
+
+            {/* Current assignments */}
+            {project.assignments.length > 0 && (
+              <div>
+                <p className="text-xs text-gray-400 mb-2">Current Members ({project.assignments.length})</p>
+                <div className="flex flex-wrap gap-2">
+                  {project.assignments.map((assignment: ProjectAssignment) => (
+                    <div key={assignment.id} className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-orange-500/15 border border-orange-500/30">
+                      <Avatar className="w-5 h-5">
+                        <AvatarImage src={assignment.user?.avatar || undefined} alt={assignment.user?.name} />
+                        <AvatarFallback className="text-[8px] bg-orange-500 text-white">{assignment.user?.name?.[0]}</AvatarFallback>
+                      </Avatar>
+                      <span className="text-xs text-orange-400 font-medium">{assignment.user?.name}</span>
+                      <span className="text-[10px] text-gray-400">({assignment.role === 'PRIMARY' ? 'Primary' : 'Collab'})</span>
+                      <button onClick={() => handleRemoveAssignment(assignment.id)} className="text-gray-400 hover:text-red-400">
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="max-h-64 overflow-y-auto space-y-2">
+              {filteredUsers.map((user: any) => {
+                const isAlreadyMember = project.assignments.some((a: ProjectAssignment) => a.userId === user.id);
+                return (
+                  <div
+                    key={user.id}
+                    className={`w-full flex items-center gap-3 p-3 rounded-lg border transition-colors ${
+                      isAlreadyMember
+                        ? 'border-green-500/30 bg-green-500/5 opacity-60 cursor-default'
+                        : 'border-gray-300 dark:border-gray-600 hover:bg-orange-50 dark:hover:bg-orange-900/20 hover:border-orange-500'
+                    }`}
+                  >
+                    <Avatar className="w-8 h-8">
+                      <AvatarImage src={user.avatar} />
+                      <AvatarFallback>{user.name[0]}</AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 text-left">
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">{user.name}</p>
+                        {isAlreadyMember && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-green-500/20 text-green-400 font-medium">Added</span>
+                        )}
+                      </div>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">{user.email}</p>
+                    </div>
+                    {!isAlreadyMember && (
+                      <div className="flex gap-1">
+                        <button
+                          onClick={() => handleAddMember(user.id, 'PRIMARY')}
+                          className="text-[10px] px-2 py-0.5 rounded bg-orange-500/20 text-orange-600 hover:bg-orange-500/30"
+                        >
+                          Primary
+                        </button>
+                        <button
+                          onClick={() => handleAddMember(user.id, 'COLLABORATOR')}
+                          className="text-[10px] px-2 py-0.5 rounded bg-blue-500/20 text-blue-600 hover:bg-blue-500/30"
+                        >
+                          Collab
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+              {filteredUsers.length === 0 && (
+                <p className="text-center text-gray-500 dark:text-gray-400 py-4">No users found</p>
               )}
             </div>
           </div>
