@@ -23,6 +23,8 @@ import { sortableKeyboardCoordinates } from '@dnd-kit/sortable';
 import { Project } from '@/lib/types';
 import { DEFAULT_KANBAN_COLUMNS } from '@/lib/constants';
 import { useApp } from '@/contexts/useApp';
+import { useSocket } from '@/contexts/SocketContext';
+import { mapApiProject } from '@/contexts/AppContext';
 import { Column } from './Column';
 import { ProjectCard } from './Card';
 import { ProjectModal } from '../project/ProjectModal';
@@ -48,6 +50,7 @@ export function Board({ searchQuery = '', filterPriority = 'all', filterAssignee
   const [originalStatus, setOriginalStatus] = useState<string | null>(null);
   const { state, dispatch, getUserName } = useApp();
   const { canDragCards } = usePermissions();
+  const { socket } = useSocket();
 
   // Debounced save: card must settle in a column for 1.5s before hitting backend
   const pendingSaves = useRef<Map<string, {
@@ -76,6 +79,63 @@ export function Board({ searchQuery = '', filterPriority = 'all', filterAssignee
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, []);
+
+  // ─── Real-time event listeners ─────────────────────
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleProjectCreated = (data: any) => {
+      const project = mapApiProject(data);
+      // Only add if it belongs to this board
+      if (boardId && project.boardId === boardId) {
+        // Check if project already exists (avoid duplicates)
+        const exists = state.projects.some(p => p.id === project.id);
+        if (!exists) {
+          dispatch({
+            type: 'CREATE_PROJECT',
+            payload: { project, userId: '' },
+          });
+          toast.info(`New card: "${project.name}"`);
+        }
+      }
+    };
+
+    const handleProjectUpdated = (data: any) => {
+      const project = mapApiProject(data);
+      // Check if we have a pending save for this project
+      const pending = pendingSaves.current.get(project.id);
+      if (pending) {
+        // Another user moved this card while we had a pending save — cancel ours
+        clearTimeout(pending.timerId);
+        pendingSaves.current.delete(project.id);
+        toast.warning(`Card was moved by another user — your change was overridden`);
+      }
+      dispatch({ type: 'UPDATE_PROJECT', payload: project });
+    };
+
+    const handleProjectDeleted = (data: { projectId: string }) => {
+      // Cancel any pending save for this project
+      const pending = pendingSaves.current.get(data.projectId);
+      if (pending) {
+        clearTimeout(pending.timerId);
+        pendingSaves.current.delete(data.projectId);
+      }
+      dispatch({
+        type: 'DELETE_PROJECT',
+        payload: { projectId: data.projectId, userId: '' },
+      });
+    };
+
+    socket.on('project:created', handleProjectCreated);
+    socket.on('project:updated', handleProjectUpdated);
+    socket.on('project:deleted', handleProjectDeleted);
+
+    return () => {
+      socket.off('project:created', handleProjectCreated);
+      socket.off('project:updated', handleProjectUpdated);
+      socket.off('project:deleted', handleProjectDeleted);
+    };
+  }, [socket, boardId, state.projects, dispatch]);
 
   // Update selected project when URL changes
   useEffect(() => {
@@ -242,17 +302,39 @@ export function Board({ searchQuery = '', filterPriority = 'all', filterAssignee
 
       try {
         const token = localStorage.getItem('token');
+        const projectForSave = state.projects.find(p => p.id === projectId);
         const response = await fetch(`${API_BASE_URL}/projects/${projectId}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`,
+            ...(socket?.id ? { 'x-socket-id': socket.id } : {}),
           },
-          body: JSON.stringify({ status: newStatus }),
+          body: JSON.stringify({
+            status: newStatus,
+            lastUpdatedAt: projectForSave?.updatedAt?.toISOString(),
+          }),
         });
 
         if (!response.ok) {
           const errData = await response.json().catch(() => ({ message: 'Unknown error' }));
+          if (response.status === 409 && errData.conflict) {
+            // Another user modified this project — apply their version and revert our drag
+            toast.warning(`Card was already moved by ${errData.updatedBy}`);
+            if (errData.current) {
+              dispatch({ type: 'UPDATE_PROJECT', payload: mapApiProject(errData.current) });
+            } else {
+              dispatch({
+                type: 'UPDATE_PROJECT_STATUS',
+                payload: {
+                  projectId,
+                  newStatus: trueOriginal as Project['status'],
+                  userId: state.currentUser?.id || '',
+                },
+              });
+            }
+            return;
+          }
           throw new Error(errData.message || `HTTP ${response.status}`);
         }
       } catch (error: any) {
@@ -291,7 +373,11 @@ export function Board({ searchQuery = '', filterPriority = 'all', filterAssignee
       const token = localStorage.getItem('token');
       const response = await fetch(`${API_BASE_URL}/projects`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+          ...(socket?.id ? { 'x-socket-id': socket.id } : {}),
+        },
         body: JSON.stringify({
           name,
           boardId: boardId,

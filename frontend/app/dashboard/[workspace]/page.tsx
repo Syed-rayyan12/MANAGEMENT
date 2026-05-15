@@ -19,6 +19,7 @@ import {
 } from '@/components/ui/dialog';
 import { Plus, Filter, SortAsc, ArrowLeft, Users, X, Trash2 } from 'lucide-react';
 import { usePermissions } from '@/hooks/usePermissions';
+import { useSocket } from '@/contexts/SocketContext';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -37,6 +38,7 @@ export default function WorkspacePage() {
   const { searchQuery } = useSearch();
   const { isLoading, getAllUsers, getUserName } = useApp();
   const { canCreateProject, canAddColumn, canSoftDelete } = usePermissions();
+  const { socket } = useSocket();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showAddColumnModal, setShowAddColumnModal] = useState(false);
   const [filterPriority, setFilterPriority] = useState<string>('all');
@@ -52,6 +54,15 @@ export default function WorkspacePage() {
   const boardSlug = params.workspace as string;
   const projectId = searchParams.get('project');
   const [boardLoading, setBoardLoading] = useState(true);
+
+  // Join/leave board room for real-time events
+  useEffect(() => {
+    if (!socket || !boardSlug) return;
+    socket.emit('join:board', boardSlug);
+    return () => {
+      socket.emit('leave:board', boardSlug);
+    };
+  }, [socket, boardSlug]);
 
   // Fetch board by slug to get board info + columns
   useEffect(() => {
