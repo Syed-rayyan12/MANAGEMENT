@@ -432,3 +432,27 @@ export const clientAPI = {
     return await response.json();
   },
 };
+
+// Assignment APIs
+export const assignmentAPI = {
+  add: async (projectId: string, userId: string, role: string = 'PRIMARY') => {
+    const response = await apiFetch(`${API_BASE_URL}/projects/${projectId}/assignments`, {
+      method: 'POST',
+      body: JSON.stringify({ userId, role }),
+    });
+    return await response.json();
+  },
+  update: async (projectId: string, assignmentId: string, data: { role?: string; status?: string }) => {
+    const response = await apiFetch(`${API_BASE_URL}/projects/${projectId}/assignments/${assignmentId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+    return await response.json();
+  },
+  remove: async (projectId: string, assignmentId: string) => {
+    const response = await apiFetch(`${API_BASE_URL}/projects/${projectId}/assignments/${assignmentId}`, {
+      method: 'DELETE',
+    });
+    return await response.json();
+  },
+};
