@@ -83,17 +83,26 @@ export default function WorkspacePage() {
     fetchBoard();
   }, [boardSlug]);
 
-  const handleAddColumn = (columnName: string, columnColor: string) => {
+  const handleAddColumn = async (columnName: string, columnColor: string) => {
     const newColumn = {
       status: columnName.toLowerCase().replace(/\s+/g, '-'),
       label: columnName,
       color: columnColor,
       isCustom: true
     };
-    
+
     const updatedColumns = [...customColumns, newColumn];
     setCustomColumns(updatedColumns);
     setRefreshKey(prev => prev + 1);
+
+    // Persist to backend
+    if (boardId) {
+      try {
+        await boardAPI.addColumn(boardId, columnName, columnColor);
+      } catch (error) {
+        console.error('Error saving column:', error);
+      }
+    }
   };
 
   const displayName = boardName || boardSlug;

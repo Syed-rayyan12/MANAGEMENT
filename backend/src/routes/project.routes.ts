@@ -42,7 +42,7 @@ router.get('/board/:boardId', getBoardProjects);
 router.get('/', getAllProjects);
 
 // ─── Create a new project ──────────────────────────
-router.post('/', authorizeRoles('PM'), validate(createProjectSchema), createProject);
+router.post('/', validate(createProjectSchema), createProject);
 
 // ─── Reorder (must be before /:id) ─────────────────
 router.put('/reorder/batch', reorderProjects);

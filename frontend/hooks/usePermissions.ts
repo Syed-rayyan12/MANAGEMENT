@@ -27,11 +27,11 @@ export function usePermissions() {
 
   return {
     // Project CRUD
-    canCreateProject: isPM,
+    canCreateProject: true,
     canDeleteProject: isPM,
 
     // Board management
-    canAddColumn: isPM || isTL,
+    canAddColumn: true,
 
     // Project fields
     canChangePriority: isPM || isTL,

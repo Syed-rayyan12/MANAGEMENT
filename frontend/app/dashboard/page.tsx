@@ -7,11 +7,15 @@ import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { StatsCards } from '@/components/dashboard/StatsCards';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { DashboardSkeleton } from '@/components/ui/skeletons';
 import { useApp } from '@/contexts/useApp';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Plus } from 'lucide-react';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { BOARD_METADATA, DEFAULT_BOARD_METADATA } from '@/lib/constants';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { toast } from 'sonner';
 
 interface BoardCard {
   slug: string;
@@ -24,6 +28,9 @@ export default function DashboardPage() {
   const { isLoading } = useApp();
   const [boards, setBoards] = useState<BoardCard[]>([]);
   const [statsLoading, setStatsLoading] = useState(true);
+  const [showCreateWorkspace, setShowCreateWorkspace] = useState(false);
+  const [newWorkspaceName, setNewWorkspaceName] = useState('');
+  const [creating, setCreating] = useState(false);
 
   // Fetch boards + dashboard stats
   useEffect(() => {
@@ -69,6 +76,28 @@ export default function DashboardPage() {
     fetchData();
   }, []);
 
+  const handleCreateWorkspace = async () => {
+    if (!newWorkspaceName.trim()) return;
+    setCreating(true);
+    try {
+      const result = await boardAPI.create(newWorkspaceName.trim());
+      if (result.success) {
+        const board = result.data.board;
+        setBoards(prev => [...prev, { slug: board.slug, name: board.name, projectCount: 0 }]);
+        toast.success('Workspace created');
+        setShowCreateWorkspace(false);
+        setNewWorkspaceName('');
+        router.push(`/dashboard/${board.slug}`);
+      } else {
+        toast.error(result.message || 'Failed to create workspace');
+      }
+    } catch (error) {
+      toast.error('Failed to create workspace');
+    } finally {
+      setCreating(false);
+    }
+  };
+
   if (isLoading || statsLoading) {
     return <DashboardSkeleton />;
   }
@@ -83,6 +112,13 @@ export default function DashboardPage() {
           <h1 className="text-3xl font-semibold text-zinc-900 dark:text-zinc-100">Welcome to Your Workspace</h1>
           <p className="text-zinc-500 dark:text-zinc-400 mt-1">Select a workspace to manage your projects</p>
         </div>
+        <Button
+          onClick={() => setShowCreateWorkspace(true)}
+          className="bg-gradient-to-r from-[#e05c29] to-orange-400 hover:to-rose-500 text-white shadow-[0_4px_20px_rgba(224,92,41,0.35)]"
+        >
+          <Plus className="w-4 h-4 mr-2" />
+          New Workspace
+        </Button>
       </div>
 
       {/* Board Cards Grid */}
@@ -145,6 +181,41 @@ export default function DashboardPage() {
             })}
           </div>
       )}
+      {/* Create Workspace Modal */}
+      <Dialog open={showCreateWorkspace} onOpenChange={setShowCreateWorkspace}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Create New Workspace</DialogTitle>
+            <DialogDescription className="sr-only">Create a new workspace board</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 pt-2">
+            <div>
+              <Label htmlFor="workspaceName" className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Workspace Name *</Label>
+              <Input
+                id="workspaceName"
+                placeholder="e.g. Video Editing, SEO, Marketing"
+                value={newWorkspaceName}
+                onChange={(e) => setNewWorkspaceName(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleCreateWorkspace()}
+                autoFocus
+                className="mt-1"
+              />
+            </div>
+            <div className="flex gap-2 justify-end">
+              <Button variant="outline" onClick={() => { setShowCreateWorkspace(false); setNewWorkspaceName(''); }}>
+                Cancel
+              </Button>
+              <Button
+                onClick={handleCreateWorkspace}
+                disabled={creating || !newWorkspaceName.trim()}
+                className="bg-gradient-to-r from-[#e05c29] to-orange-400 hover:to-rose-500 text-white"
+              >
+                {creating ? 'Creating...' : 'Create Workspace'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
     </ErrorBoundary>
   );

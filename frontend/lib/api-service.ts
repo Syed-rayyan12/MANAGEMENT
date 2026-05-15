@@ -370,6 +370,24 @@ export const boardAPI = {
     const response = await apiFetch(`${API_BASE_URL}/boards/${boardId}/columns`);
     return await response.json();
   },
+
+  create: async (name: string) => {
+    const response = await apiFetch(`${API_BASE_URL}/boards`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name }),
+    });
+    return await response.json();
+  },
+
+  addColumn: async (boardId: string, name: string, color?: string) => {
+    const response = await apiFetch(`${API_BASE_URL}/boards/${boardId}/columns`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, color }),
+    });
+    return await response.json();
+  },
 };
 
 // Admin APIs (Executive only)
