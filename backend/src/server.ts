@@ -22,8 +22,22 @@ async function connectDatabase() {
 async function startServer() {
   try {
     await connectDatabase();
-    
-    const server = app.listen(PORT, () => {
+
+    // Create HTTP server explicitly (Socket.io needs the raw server)
+    const { createServer } = await import('http');
+    const httpServer = createServer(app);
+
+    // Initialize Socket.io
+    const allowedOrigins = [
+      process.env.CLIENT_URL || 'http://localhost:3000',
+      'http://localhost:3000',
+      'http://localhost:3001',
+    ].filter(Boolean) as string[];
+
+    const { initSocket } = await import('./socket/index');
+    initSocket(httpServer, allowedOrigins);
+
+    httpServer.listen(PORT, () => {
       console.log(`
 ╔═══════════════════════════════════════════╗
 ║   🚀 ProManage Backend Server Running    ║
@@ -32,6 +46,7 @@ async function startServer() {
 ║   Port: ${PORT}
 ║   API: http://localhost:${PORT}
 ║   Health: http://localhost:${PORT}/health
+║   WebSocket: Enabled ✅
 ╚═══════════════════════════════════════════╝
       `);
     });
@@ -39,7 +54,7 @@ async function startServer() {
     // Graceful shutdown handler
     const shutdown = async (signal: string) => {
       console.log(`\n🔴 ${signal} received. Shutting down gracefully...`);
-      server.close(async () => {
+      httpServer.close(async () => {
         await prisma.$disconnect();
         console.log('Database disconnected. Process exiting.');
         process.exit(0);
