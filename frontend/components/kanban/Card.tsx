@@ -34,13 +34,6 @@ export function ProjectCard({ project, onCardClick }: ProjectCardProps) {
 
   const allUsers = getAllUsers();
 
-  // Team-scoped users: prefer users in the same team, but fall back to all users
-  const teamUsers = React.useMemo(() => {
-    if (!project.teamId) return allUsers;
-    const scoped = allUsers.filter((u: any) => u.teams?.some((t: any) => t.id === project.teamId));
-    // Fall back to all users if team filtering returns empty
-    return scoped.length > 0 ? scoped : allUsers;
-  }, [allUsers, project.teamId]);
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -211,7 +204,7 @@ export function ProjectCard({ project, onCardClick }: ProjectCardProps) {
     };
   }, [showQuickEdit]);
 
-  const filteredUsers = teamUsers.filter(user =>
+  const filteredUsers = allUsers.filter(user =>
     user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     user.email.toLowerCase().includes(searchQuery.toLowerCase())
   );

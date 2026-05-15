@@ -62,14 +62,7 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
 
   const allUsers = getAllUsers();
 
-  // Team-scoped users: prefer same team, fall back to all users
-  const teamUsers = React.useMemo(() => {
-    if (!project.teamId) return allUsers;
-    const scoped = allUsers.filter((u: any) => u.teams?.some((t: any) => t.id === project.teamId));
-    return scoped.length > 0 ? scoped : allUsers;
-  }, [allUsers, project.teamId]);
-
-  const filteredUsers = teamUsers.filter((user: any) =>
+  const filteredUsers = allUsers.filter((user: any) =>
     user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     user.email?.toLowerCase().includes(searchQuery.toLowerCase())
   );

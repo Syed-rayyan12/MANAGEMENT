@@ -27,12 +27,6 @@ export function CommentsSection({ project }: CommentsSectionProps) {
   const allUsers = getAllUsers();
   const mentionDropdownRef = React.useRef<HTMLDivElement>(null);
 
-  // Team-scoped users: only show users belonging to the same team as this project
-  const teamUsers = React.useMemo(() => {
-    if (!project.teamId) return allUsers;
-    const scoped = allUsers.filter((u: any) => u.teams?.some((t: any) => t.id === project.teamId));
-    return scoped.length > 0 ? scoped : allUsers;
-  }, [allUsers, project.teamId]);
 
   // Close mention dropdown on click outside
   useEffect(() => {
@@ -170,7 +164,7 @@ export function CommentsSection({ project }: CommentsSectionProps) {
     <>
       {showMentionDropdown && (
         <div ref={mentionDropdownRef} className="absolute bottom-full left-0 mb-1 w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-lg shadow-black/10 max-h-40 overflow-y-auto z-50">
-          {teamUsers
+          {allUsers
             .filter(u => u.name.toLowerCase().includes(mentionSearchQuery))
             .map(user => (
               <button
