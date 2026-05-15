@@ -6,11 +6,12 @@ import { CSS } from '@dnd-kit/utilities';
 import { Project } from '@/lib/types';
 import { Card } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useApp } from '@/contexts/useApp';
 import { PRIORITY_STYLES, DEFAULT_KANBAN_COLUMNS } from '@/lib/constants';
-import { API_BASE_URL, projectAPI, assignmentAPI } from '@/lib/api-service';
+import { API_BASE_URL, assignmentAPI } from '@/lib/api-service';
 import { toast } from 'sonner';
-import { Calendar, MessageSquare, Paperclip, Clock, Plus, X, AlertTriangle, CheckCircle2, Pencil } from 'lucide-react';
+import { Calendar, MessageSquare, Paperclip, Clock, X, AlertTriangle, CheckCircle2, Pencil } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { usePermissions } from '@/hooks/usePermissions';
@@ -28,31 +29,24 @@ export function ProjectCard({ project, onCardClick }: ProjectCardProps) {
   const { isReadOnly, canChangePriority } = usePermissions();
   const [showTagModal, setShowTagModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [showQuickEdit, setShowQuickEdit] = useState(false);
+  const [quickEditOpen, setQuickEditOpen] = useState(false);
   const [quickEditName, setQuickEditName] = useState(project.name);
-  const quickEditRef = useRef<HTMLDivElement>(null);
 
   const allUsers = getAllUsers();
-
 
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    opacity: isDragging ? 0.5 : 1,
+    opacity: isDragging ? 0.4 : 1,
   };
 
-  const primaryAssignment = project.assignments[0];
-  const pmName = primaryAssignment?.user?.name || 'Unassigned';
-  const pmAvatar = primaryAssignment?.user?.avatar || undefined;
   const isOverdue = project.dueDate && new Date(project.dueDate) < new Date() && project.status !== 'completed';
   const isDueSoon = project.dueDate && !isOverdue && project.status !== 'completed' &&
     (new Date(project.dueDate).getTime() - new Date().getTime()) < 3 * 24 * 60 * 60 * 1000;
   const checklistTotal = project.checklist.length;
   const checklistDone = project.checklist.filter(i => i.completed).length;
-
   const priorityStyle = PRIORITY_STYLES[project.priority];
 
-  // Get initials from a name string
   const getInitials = (name: string) => {
     const words = name.trim().split(' ');
     if (words.length === 1) return words[0].substring(0, 2).toUpperCase();
@@ -63,11 +57,6 @@ export function ProjectCard({ project, onCardClick }: ProjectCardProps) {
     if (!isDragging) {
       onCardClick(project.id);
     }
-  };
-
-  const handleAddTag = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setShowTagModal(true);
   };
 
   const handleAddMember = async (userId: string, role: string = 'PRIMARY') => {
@@ -118,15 +107,9 @@ export function ProjectCard({ project, onCardClick }: ProjectCardProps) {
   };
 
   // ── Quick-Edit handlers ──
-  const handleQuickEditToggle = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setQuickEditName(project.name);
-    setShowQuickEdit(true);
-  };
-
   const handleQuickSaveName = async () => {
     if (!quickEditName.trim() || quickEditName === project.name) {
-      setShowQuickEdit(false);
+      setQuickEditOpen(false);
       return;
     }
     dispatch({
@@ -144,7 +127,7 @@ export function ProjectCard({ project, onCardClick }: ProjectCardProps) {
     } catch {
       toast.error('Failed to save name');
     }
-    setShowQuickEdit(false);
+    setQuickEditOpen(false);
   };
 
   const handleQuickPriority = async (newPri: string) => {
@@ -163,7 +146,7 @@ export function ProjectCard({ project, onCardClick }: ProjectCardProps) {
     } catch {
       toast.error('Failed to update priority');
     }
-    setShowQuickEdit(false);
+    setQuickEditOpen(false);
   };
 
   const handleQuickStatus = async (newStatus: string) => {
@@ -182,287 +165,235 @@ export function ProjectCard({ project, onCardClick }: ProjectCardProps) {
     } catch {
       toast.error('Failed to update status');
     }
-    setShowQuickEdit(false);
+    setQuickEditOpen(false);
   };
-
-  // Close quick-edit on outside click or Escape key
-  useEffect(() => {
-    if (!showQuickEdit) return;
-    const handleClick = (e: MouseEvent) => {
-      if (quickEditRef.current && !quickEditRef.current.contains(e.target as Node)) {
-        setShowQuickEdit(false);
-      }
-    };
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setShowQuickEdit(false);
-    };
-    document.addEventListener('mousedown', handleClick);
-    document.addEventListener('keydown', handleKeyDown);
-    return () => {
-      document.removeEventListener('mousedown', handleClick);
-      document.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [showQuickEdit]);
 
   const filteredUsers = allUsers.filter(user =>
     user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     user.email.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  // Priority dot color (small colored circle instead of full badge)
+  const priorityDotColor: Record<string, string> = {
+    low: 'bg-zinc-400',
+    medium: 'bg-amber-500',
+    high: 'bg-[#e05c29]',
+    critical: 'bg-red-500',
+  };
+
   return (
     <Card
       ref={setNodeRef}
       style={style}
-      className="group/card relative bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 border-l-2 border-l-[#e05c29] cursor-pointer hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 p-4 space-y-3 rounded-xl overflow-hidden w-full"
+      {...attributes}
+      {...listeners}
+      className="group/card relative bg-white dark:bg-zinc-900/90 shadow-sm hover:shadow-md cursor-grab active:cursor-grabbing transition-all duration-200 rounded-lg overflow-hidden w-full"
     >
-      {/* Quick-Edit pencil button (visible on hover) */}
-      {!isReadOnly && !showQuickEdit && (
-        <button
-          onClick={handleQuickEditToggle}
-          className="absolute top-2 right-2 z-20 opacity-0 group-hover/card:opacity-100 transition-opacity w-7 h-7 rounded-md bg-gray-200 dark:bg-[#2d3548] hover:bg-orange-500 dark:hover:bg-orange-500 flex items-center justify-center shadow"
-        >
-          <Pencil className="w-3.5 h-3.5 text-gray-600 dark:text-gray-300 hover:text-white" />
-        </button>
-      )}
-
-      {/* Quick-Edit Overlay */}
-      {showQuickEdit && (
-        <div
-          ref={quickEditRef}
-          className="absolute inset-0 z-30 bg-white dark:bg-zinc-900 rounded-xl border-2 border-[#e05c29] p-3 space-y-3 overflow-y-auto"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <div className="flex items-center justify-between mb-1">
-            <span className="text-xs font-bold text-orange-400 uppercase tracking-wider">Quick Edit</span>
-            <button onClick={() => setShowQuickEdit(false)} className="text-gray-400 hover:text-white">
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-
-          {/* Name */}
-          <div>
-            <label className="text-[10px] text-gray-400 uppercase">Name</label>
-            <input
-              className="w-full mt-0.5 px-2 py-1.5 text-sm rounded border border-gray-300 dark:border-[#2d3548] bg-transparent dark:text-white focus:outline-none focus:border-orange-500"
-              value={quickEditName}
-              onChange={(e) => setQuickEditName(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleQuickSaveName()}
-              autoFocus
-            />
-          </div>
-
-          {/* Priority (only if allowed) */}
-          {canChangePriority && (
-            <div>
-              <label className="text-[10px] text-gray-400 uppercase">Priority</label>
-              <div className="flex gap-1.5 mt-1">
-                {Object.entries(PRIORITY_STYLES).map(([key, style]) => (
-                  <button
-                    key={key}
-                    onClick={() => handleQuickPriority(key)}
-                    className={`flex-1 text-[11px] py-1.5 rounded font-medium transition-colors ${
-                      project.priority === key
-                        ? 'bg-orange-500 text-white'
-                        : 'bg-gray-100 dark:bg-[#2d3548] text-gray-600 dark:text-gray-300 hover:bg-orange-500/20'
-                    }`}
-                  >
-                    {style.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Status */}
-          <div>
-            <label className="text-[10px] text-gray-400 uppercase">Move to</label>
-            <div className="grid grid-cols-2 gap-1.5 mt-1">
-              {DEFAULT_KANBAN_COLUMNS.map((col) => (
-                <button
-                  key={col.status}
-                  onClick={() => handleQuickStatus(col.status)}
-                  className={`text-[11px] py-1.5 rounded font-medium transition-colors ${
-                    project.status === col.status
-                      ? 'bg-orange-500 text-white'
-                      : 'bg-gray-100 dark:bg-[#2d3548] text-gray-600 dark:text-gray-300 hover:bg-orange-500/20'
-                  }`}
-                >
-                  {col.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Save Name Button */}
-          <button
-            onClick={handleQuickSaveName}
-            className="w-full py-1.5 text-sm font-medium rounded bg-orange-500 text-white hover:bg-orange-600 transition-colors"
-          >
-            Save
-          </button>
-          <p className="text-[10px] text-center text-gray-400">Press Esc or click outside to close</p>
-        </div>
-      )}
-
-      {/* Drag Handle - separate from click area */}
-      <div
-        {...attributes}
-        {...listeners}
-        className="cursor-grab active:cursor-grabbing -mx-4 -mt-4 px-4 pt-3 pb-2 border-b border-zinc-100 dark:border-zinc-800"
-      >
-        <div className="flex items-center justify-center">
-          <div className="w-8 h-1 bg-zinc-300 dark:bg-zinc-600 rounded-full"></div>
-        </div>
-      </div>
-
       {/* Clickable Content Area */}
-      <div onClick={handleClick} className="space-y-3">
-        {/* Image */}
+      <div onClick={handleClick} className="p-3 space-y-2.5">
+        {/* Cover Image */}
         {project.image && (
           <img
             src={project.image}
             alt={project.name}
-            className="w-full h-40 object-cover rounded-lg"
+            className="w-full h-36 object-cover rounded-md -mt-0.5"
           />
         )}
 
         {/* Title */}
-        <div>
-          <h4 className="text-sm font-medium text-zinc-900 dark:text-zinc-100 line-clamp-2">{project.name}</h4>
-        </div>
+        <h4 className="text-sm font-medium text-zinc-800 dark:text-zinc-100 line-clamp-2 leading-snug">
+          {project.name}
+        </h4>
 
-        {/* Members */}
-        <div className="flex flex-wrap gap-1.5 items-center">
-          {project.assignments.length > 0 && (
-            <div className="flex -space-x-1.5">
-              {project.assignments.slice(0, 5).map((assignment) => {
-                const memberAvatar = assignment.user?.avatar ? getUserAvatar(assignment.userId) : undefined;
-                return (
-                  <div key={assignment.id} className="relative group/member">
-                    <div className="relative">
-                      <Avatar className="w-6 h-6 border-2 border-white dark:border-[#1a1f2e] cursor-pointer">
-                        <AvatarImage src={memberAvatar} alt={assignment.user?.name} />
-                        <AvatarFallback className="text-[8px] bg-orange-500 text-white font-bold">
-                          {getInitials(assignment.user?.name || '')}
-                        </AvatarFallback>
-                      </Avatar>
-                      {assignment.status === 'DONE' && (
-                        <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-green-500 border border-white dark:border-[#1a1f2e] flex items-center justify-center">
-                          <CheckCircle2 className="w-2 h-2 text-white" />
-                        </div>
-                      )}
+        {/* Member Avatars */}
+        {project.assignments.length > 0 && (
+          <div className="flex -space-x-1.5">
+            {project.assignments.slice(0, 4).map((assignment) => {
+              const memberAvatar = assignment.user?.avatar ? getUserAvatar(assignment.userId) : undefined;
+              return (
+                <div key={assignment.id} className="relative group/member">
+                  <Avatar className="w-6 h-6 border-2 border-white dark:border-zinc-900 ring-0">
+                    <AvatarImage src={memberAvatar} alt={assignment.user?.name} />
+                    <AvatarFallback className="text-[8px] bg-orange-500 text-white font-bold">
+                      {getInitials(assignment.user?.name || '')}
+                    </AvatarFallback>
+                  </Avatar>
+                  {assignment.status === 'DONE' && (
+                    <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-green-500 border border-white dark:border-zinc-900 flex items-center justify-center">
+                      <CheckCircle2 className="w-2 h-2 text-white" />
                     </div>
-                    {/* Tooltip + remove on hover */}
-                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 hidden group-hover/member:flex flex-col items-center z-40">
-                      <span className="bg-gray-900 text-white text-[10px] px-2 py-1 rounded whitespace-nowrap shadow-lg">
-                        {assignment.user?.name} ({assignment.role === 'PRIMARY' ? 'Primary' : 'Collab'})
-                      </span>
-                      {!isReadOnly && (
-                        <button
-                          onClick={(e) => handleRemoveMember(e, assignment.id)}
-                          className="mt-0.5 bg-red-500 text-white text-[9px] px-1.5 py-0.5 rounded hover:bg-red-600 transition-colors"
-                        >
-                          Remove
-                        </button>
-                      )}
-                    </div>
+                  )}
+                  {/* Tooltip on hover */}
+                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 hidden group-hover/member:flex items-center z-40 pointer-events-none">
+                    <span className="bg-zinc-900 dark:bg-zinc-700 text-white text-[10px] px-2 py-1 rounded whitespace-nowrap shadow-lg">
+                      {assignment.user?.name}
+                    </span>
                   </div>
-                );
-              })}
-              {project.assignments.length > 5 && (
-                <div className="w-6 h-6 rounded-full bg-gray-200 dark:bg-[#2d3548] border-2 border-white dark:border-[#1a1f2e] flex items-center justify-center">
-                  <span className="text-[9px] font-bold text-gray-600 dark:text-gray-300">+{project.assignments.length - 5}</span>
                 </div>
-              )}
-            </div>
-          )}
-          {!isReadOnly && (
-            <button
-              onClick={handleAddTag}
-              className="w-6 h-6 rounded-full bg-orange-500/20 hover:bg-orange-500/30 flex items-center justify-center transition-colors border border-dashed border-orange-500/40"
-              title="Add member"
-            >
-              <Plus className="w-3 h-3 text-orange-500" />
-            </button>
-          )}
-        </div>
-
-
-
-        {/* Latest Comment */}
-        {project.comments.length > 0 && (
-          <div className="bg-zinc-50 dark:bg-zinc-800 rounded-xl p-2 border border-zinc-200 dark:border-zinc-700">
-            <div className="flex items-center gap-1 mb-1">
-              <MessageSquare className="w-3 h-3 text-zinc-500 dark:text-zinc-400" />
-              <span className="text-xs font-medium text-zinc-600 dark:text-zinc-400">Latest comment:</span>
-            </div>
-            <p className="text-xs text-zinc-600 dark:text-zinc-300 line-clamp-2">
-              {project.comments[project.comments.length - 1].content}
-            </p>
+              );
+            })}
+            {project.assignments.length > 4 && (
+              <div className="w-6 h-6 rounded-full bg-zinc-100 dark:bg-zinc-800 border-2 border-white dark:border-zinc-900 flex items-center justify-center">
+                <span className="text-[9px] font-medium text-zinc-500 dark:text-zinc-400">+{project.assignments.length - 4}</span>
+              </div>
+            )}
           </div>
         )}
 
-        {/* Priority & Due Date */}
-        <div className="flex items-center justify-between gap-2 text-xs">
-          <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${priorityStyle.color} ${priorityStyle.bgColor}`}>
-            {priorityStyle.label}
+        {/* Compact Footer: priority dot + due date + meta icons */}
+        <div className="flex items-center gap-2 text-[11px] text-zinc-400 dark:text-zinc-500 pt-0.5">
+          {/* Priority dot + label */}
+          <span className="flex items-center gap-1">
+            <span className={`w-2 h-2 rounded-full ${priorityDotColor[project.priority] || 'bg-zinc-400'}`} />
+            <span className={`font-medium ${priorityStyle.color}`}>{priorityStyle.label}</span>
           </span>
+
+          {/* Separator */}
+          {project.dueDate && <span className="text-zinc-300 dark:text-zinc-700">|</span>}
+
+          {/* Due date */}
           {isOverdue && (
-            <span className="flex items-center gap-1 text-red-600 dark:text-red-400 font-medium bg-red-50 dark:bg-red-500/10 px-2 py-1 rounded border border-red-200 dark:border-red-500/30 animate-pulse">
+            <span className="flex items-center gap-0.5 text-red-500 font-medium">
               <Clock className="w-3 h-3" />
               Overdue
             </span>
           )}
           {isDueSoon && (
-            <span className="flex items-center gap-1 text-amber-600 dark:text-amber-400 font-medium bg-amber-50 dark:bg-amber-500/10 px-2 py-1 rounded border border-amber-200 dark:border-amber-500/30">
+            <span className="flex items-center gap-0.5 text-amber-500 font-medium">
               <AlertTriangle className="w-3 h-3" />
               Due Soon
             </span>
           )}
           {project.dueDate && !isOverdue && !isDueSoon && (
-            <span className="flex items-center gap-1 text-gray-600 dark:text-orange-400">
+            <span className="flex items-center gap-0.5">
               <Calendar className="w-3 h-3" />
               {new Date(project.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
             </span>
           )}
+
+          {/* Spacer */}
+          <span className="flex-1" />
+
+          {/* Meta icons */}
+          {project.comments.length > 0 && (
+            <span className="flex items-center gap-0.5">
+              <MessageSquare className="w-3 h-3" />
+              {project.comments.length}
+            </span>
+          )}
+          {project.attachments.length > 0 && (
+            <span className="flex items-center gap-0.5">
+              <Paperclip className="w-3 h-3" />
+              {project.attachments.length}
+            </span>
+          )}
         </div>
 
-        {/* Checklist Progress (if any items) */}
+        {/* Checklist Progress (only if checklist exists) */}
         {checklistTotal > 0 && (
-          <div className="flex items-center gap-2 text-xs">
-            <CheckCircle2 className={`w-3.5 h-3.5 ${checklistDone === checklistTotal ? 'text-green-500' : 'text-gray-400 dark:text-gray-500'}`} />
-            <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
+          <div className="flex items-center gap-2 text-[11px]">
+            <div className="flex-1 bg-zinc-100 dark:bg-zinc-800 rounded-full h-1">
               <div
-                className={`h-1.5 rounded-full transition-all ${checklistDone === checklistTotal ? 'bg-green-500' : 'bg-orange-500'}`}
-                style={{ width: `${checklistTotal > 0 ? (checklistDone / checklistTotal) * 100 : 0}%` }}
+                className={`h-1 rounded-full transition-all ${checklistDone === checklistTotal ? 'bg-green-500' : 'bg-orange-500'}`}
+                style={{ width: `${(checklistDone / checklistTotal) * 100}%` }}
               />
             </div>
-            <span className={`font-medium ${checklistDone === checklistTotal ? 'text-green-500' : 'text-gray-500 dark:text-gray-400'}`}>
+            <span className={`font-medium ${checklistDone === checklistTotal ? 'text-green-500' : 'text-zinc-400 dark:text-zinc-500'}`}>
               {checklistDone}/{checklistTotal}
             </span>
           </div>
         )}
-
-        {/* Meta */}
-        <div className="flex items-center justify-between text-xs text-zinc-500 dark:text-zinc-400">
-          <div className="flex items-center gap-3">
-            {project.comments.length > 0 && (
-              <span className="flex items-center gap-1">
-                <MessageSquare className="w-3 h-3" />
-                {project.comments.length}
-              </span>
-            )}
-            {project.attachments.length > 0 && (
-              <span className="flex items-center gap-1">
-                <Paperclip className="w-3 h-3" />
-                {project.attachments.length}
-              </span>
-            )}
-          </div>
-        </div>
       </div>
 
-      {/* Add Member Modal */}
+      {/* Quick-Edit Popover (pencil button visible on hover) */}
+      {!isReadOnly && (
+        <Popover open={quickEditOpen} onOpenChange={(open) => {
+          setQuickEditOpen(open);
+          if (open) setQuickEditName(project.name);
+        }}>
+          <PopoverTrigger asChild>
+            <button
+              onClick={(e) => e.stopPropagation()}
+              className="absolute top-2 right-2 z-20 opacity-0 group-hover/card:opacity-100 transition-opacity w-6 h-6 rounded-md bg-white/90 dark:bg-zinc-800/90 hover:bg-orange-500 hover:text-white flex items-center justify-center shadow-sm backdrop-blur-sm"
+            >
+              <Pencil className="w-3 h-3" />
+            </button>
+          </PopoverTrigger>
+          <PopoverContent
+            align="end"
+            side="right"
+            sideOffset={8}
+            className="w-56 p-3 space-y-2.5 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-lg"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <p className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider">Quick Edit</p>
+
+            {/* Name */}
+            <div>
+              <label className="text-[10px] text-zinc-400 uppercase">Name</label>
+              <input
+                className="w-full mt-0.5 px-2 py-1.5 text-sm rounded-md border border-zinc-200 dark:border-zinc-700 bg-transparent dark:text-white focus:outline-none focus:ring-1 focus:ring-orange-500"
+                value={quickEditName}
+                onChange={(e) => setQuickEditName(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleQuickSaveName()}
+                autoFocus
+              />
+            </div>
+
+            {/* Priority */}
+            {canChangePriority && (
+              <div>
+                <label className="text-[10px] text-zinc-400 uppercase">Priority</label>
+                <div className="flex gap-1 mt-1">
+                  {Object.entries(PRIORITY_STYLES).map(([key, style]) => (
+                    <button
+                      key={key}
+                      onClick={() => handleQuickPriority(key)}
+                      className={`flex-1 text-[10px] py-1 rounded-md font-medium transition-colors ${
+                        project.priority === key
+                          ? 'bg-orange-500 text-white'
+                          : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 hover:bg-orange-500/20'
+                      }`}
+                    >
+                      {style.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Status */}
+            <div>
+              <label className="text-[10px] text-zinc-400 uppercase">Move to</label>
+              <div className="grid grid-cols-2 gap-1 mt-1">
+                {DEFAULT_KANBAN_COLUMNS.map((col) => (
+                  <button
+                    key={col.status}
+                    onClick={() => handleQuickStatus(col.status)}
+                    className={`text-[10px] py-1 rounded-md font-medium transition-colors ${
+                      project.status === col.status
+                        ? 'bg-orange-500 text-white'
+                        : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 hover:bg-orange-500/20'
+                    }`}
+                  >
+                    {col.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Save */}
+            <button
+              onClick={handleQuickSaveName}
+              className="w-full py-1.5 text-xs font-medium rounded-md bg-orange-500 text-white hover:bg-orange-600 transition-colors"
+            >
+              Save
+            </button>
+          </PopoverContent>
+        </Popover>
+      )}
+
+      {/* Add Member Modal (kept as Dialog — opened from project modal, not card surface) */}
       <Dialog open={showTagModal} onOpenChange={setShowTagModal}>
         <DialogContent className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800" onClick={(e) => e.stopPropagation()}>
           <DialogHeader>
@@ -476,10 +407,9 @@ export function ProjectCard({ project, onCardClick }: ProjectCardProps) {
               className="w-full"
             />
 
-            {/* Current members */}
             {project.assignments.length > 0 && (
               <div>
-                <p className="text-xs text-gray-400 mb-2">Current Members ({project.assignments.length})</p>
+                <p className="text-xs text-zinc-400 mb-2">Current Members ({project.assignments.length})</p>
                 <div className="flex flex-wrap gap-2">
                   {project.assignments.map((assignment) => {
                     const mAvatar = assignment.user?.avatar ? getUserAvatar(assignment.userId) : undefined;
@@ -490,8 +420,8 @@ export function ProjectCard({ project, onCardClick }: ProjectCardProps) {
                           <AvatarFallback className="text-[8px] bg-orange-500 text-white">{getInitials(assignment.user?.name || '')}</AvatarFallback>
                         </Avatar>
                         <span className="text-xs text-orange-400 font-medium">{assignment.user?.name}</span>
-                        <span className="text-[10px] text-gray-400">({assignment.role === 'PRIMARY' ? 'Primary' : 'Collab'})</span>
-                        <button onClick={(e) => handleRemoveMember(e, assignment.id)} className="text-gray-400 hover:text-red-400">
+                        <span className="text-[10px] text-zinc-400">({assignment.role === 'PRIMARY' ? 'Primary' : 'Collab'})</span>
+                        <button onClick={(e) => handleRemoveMember(e, assignment.id)} className="text-zinc-400 hover:text-red-400">
                           <X className="w-3 h-3" />
                         </button>
                       </div>
@@ -510,7 +440,7 @@ export function ProjectCard({ project, onCardClick }: ProjectCardProps) {
                     className={`w-full flex items-center gap-3 p-3 rounded-lg border transition-colors ${
                       isAlreadyMember
                         ? 'border-green-500/30 bg-green-500/5 opacity-60 cursor-default'
-                        : 'border-gray-300 dark:border-gray-600 hover:bg-orange-50 dark:hover:bg-orange-900/20 hover:border-orange-500'
+                        : 'border-zinc-200 dark:border-zinc-700 hover:bg-orange-50 dark:hover:bg-orange-900/20 hover:border-orange-500'
                     }`}
                   >
                     <Avatar className="w-8 h-8">
@@ -524,7 +454,7 @@ export function ProjectCard({ project, onCardClick }: ProjectCardProps) {
                           <span className="text-[10px] px-1.5 py-0.5 rounded bg-green-500/20 text-green-400 font-medium">Added</span>
                         )}
                       </div>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">{user.email}</p>
+                      <p className="text-xs text-zinc-500 dark:text-zinc-400">{user.email}</p>
                     </div>
                     {!isAlreadyMember && (
                       <div className="flex gap-1">
@@ -542,7 +472,7 @@ export function ProjectCard({ project, onCardClick }: ProjectCardProps) {
                 );
               })}
               {filteredUsers.length === 0 && (
-                <p className="text-center text-gray-500 dark:text-gray-400 py-4">No users found</p>
+                <p className="text-center text-zinc-500 dark:text-zinc-400 py-4">No users found</p>
               )}
             </div>
           </div>

@@ -55,10 +55,10 @@ export function Column({ status, label, color, projects, onCardClick, onAddCard 
   return (
     <div
       ref={setNodeRef}
-      className={`flex flex-col rounded-xl p-4 w-[320px] min-w-[320px] max-w-[320px] h-[calc(100vh-200px)] transition-colors ${
+      className={`flex flex-col rounded-xl p-3 w-[300px] min-w-[300px] max-w-[300px] h-[calc(100vh-200px)] transition-colors ${
         isOver
-          ? 'bg-orange-50 dark:bg-[#e05c29]/10 border-2 border-dashed border-[#e05c29]/40'
-          : 'bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800'
+          ? 'bg-orange-50/80 dark:bg-[#e05c29]/5 border-2 border-dashed border-[#e05c29]/30'
+          : 'bg-zinc-100/70 dark:bg-zinc-900/40 border border-transparent'
       }`}
     >
       {/* Fixed Header */}
@@ -82,9 +82,9 @@ export function Column({ status, label, color, projects, onCardClick, onAddCard 
       </div>
 
       {/* Scrollable Cards Container */}
-      <div className="flex-1 overflow-y-auto pr-1 space-y-3">
+      <div className="flex-1 overflow-y-auto pr-1 space-y-2">
         <SortableContext items={projects.map((p) => p.id)} strategy={verticalListSortingStrategy}>
-          <div className="space-y-3 min-h-[60px]">
+          <div className="space-y-2 min-h-[60px]">
             {projects.length === 0 && !showForm ? (
               <div className={`flex flex-col items-center justify-center py-12 rounded-lg transition-colors ${
                 isOver

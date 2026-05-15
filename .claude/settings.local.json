@@ -34,7 +34,9 @@
       "Bash(npm run:*)",
       "Bash(DATABASE_URL=\"postgresql://postgres:PJEGMQUYGIBPANktROhvDhjrGrzmosnP@metro.proxy.rlwy.net:26362/railway\" npx ts-node -e \":*)",
       "Bash(DATABASE_URL=\"postgresql://postgres:PJEGMQUYGIBPANktROhvDhjrGrzmosnP@metro.proxy.rlwy.net:26362/railway\" node -e \":*)",
-      "Bash(mkdir:*)"
+      "Bash(mkdir:*)",
+      "Bash(find /f/downloads-new/MANAGEMENT-main/MANAGEMENT-main/frontend/src -type f \\\\\\(-name *.tsx -o -name *.ts -o -name *.jsx -o -name *.js \\\\\\))",
+      "Bash(wc:*)"
     ]
   }
 }

@@ -366,7 +366,7 @@ export function Board({ searchQuery = '', filterPriority = 'all', filterAssignee
         onDragEnd={handleDragEnd}
       >
         <div className="overflow-x-auto pb-4">
-          <div className="flex gap-4 min-w-max">
+          <div className="flex gap-5 min-w-max">
             {allColumns.map((col) => (
               <Column
                 key={col.status}
@@ -383,7 +383,7 @@ export function Board({ searchQuery = '', filterPriority = 'all', filterAssignee
 
         <DragOverlay dropAnimation={null}>
           {activeProject ? (
-            <div className="opacity-95 rotate-1 scale-105 shadow-2xl shadow-orange-500/30">
+            <div className="opacity-90 rotate-1 scale-[1.02] shadow-xl shadow-black/10 dark:shadow-black/30">
               <ProjectCard
                 project={activeProject}
                 onCardClick={() => {}}
