@@ -388,6 +388,11 @@ export const boardAPI = {
     });
     return await response.json();
   },
+
+  getAllColumns: async () => {
+    const response = await apiFetch(`${API_BASE_URL}/boards/columns/all`);
+    return await response.json();
+  },
 };
 
 // Admin APIs (Executive only)
