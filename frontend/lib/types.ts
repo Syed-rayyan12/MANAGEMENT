@@ -317,3 +317,33 @@ export interface AppState {
   notifications: Notification[];
   activityLog: ActivityLog[];
 }
+
+export interface TrashItem {
+  id: string;
+  name: string;
+  deletedAt: string;
+  deletedBy: { id: string; name: string } | null;
+  daysRemaining: number;
+}
+
+export interface TrashBoard extends TrashItem {
+  slug: string;
+  _count: { columns: number; projects: number };
+}
+
+export interface TrashColumn extends TrashItem {
+  key: string;
+  board: { id: string; name: string; slug: string };
+}
+
+export interface TrashProject extends TrashItem {
+  priority: string;
+  status: string;
+  board: { id: string; name: string; slug: string };
+}
+
+export interface TrashData {
+  boards: TrashBoard[];
+  columns: TrashColumn[];
+  projects: TrashProject[];
+}

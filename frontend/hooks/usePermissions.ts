@@ -50,6 +50,9 @@ export function usePermissions() {
     // Drag and drop
     canDragCards: isPM || isTL || isProd,
 
+    // Trash / soft-delete
+    canSoftDelete: isPM || isProd,
+
     // General
     isReadOnly: isExec,
     canAccessAdmin: isExec,

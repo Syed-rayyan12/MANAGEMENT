@@ -488,3 +488,41 @@ export const assignmentAPI = {
     return await response.json();
   },
 };
+
+// Trash APIs
+export const trashAPI = {
+  getAll: async () => {
+    const response = await apiFetch(`${API_BASE_URL}/trash`);
+    return await response.json();
+  },
+
+  restore: async (type: 'board' | 'column' | 'project', id: string) => {
+    const response = await apiFetch(`${API_BASE_URL}/trash/restore`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type, id }),
+    });
+    return await response.json();
+  },
+
+  softDeleteBoard: async (boardId: string) => {
+    const response = await apiFetch(`${API_BASE_URL}/boards/${boardId}/soft-delete`, {
+      method: 'POST',
+    });
+    return await response.json();
+  },
+
+  softDeleteColumn: async (boardId: string, columnId: string) => {
+    const response = await apiFetch(`${API_BASE_URL}/boards/${boardId}/columns/${columnId}/soft-delete`, {
+      method: 'POST',
+    });
+    return await response.json();
+  },
+
+  softDeleteProject: async (projectId: string) => {
+    const response = await apiFetch(`${API_BASE_URL}/projects/${projectId}/soft-delete`, {
+      method: 'POST',
+    });
+    return await response.json();
+  },
+};
