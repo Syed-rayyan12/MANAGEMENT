@@ -11,6 +11,7 @@ import {
   getBoardRole,
   SHEET_COLUMNS,
 } from '../utils/googleSheets';
+import { emitBoardEvent } from '../socket/emitHelper';
 
 // Shared include for loading project relations
 const projectIncludes = {
@@ -248,6 +249,16 @@ export const createProject = async (req: Request, res: Response): Promise<void> 
       message: 'Project created',
       data: { project: fullProject },
     });
+
+    // ── Real-time broadcast ──────────────────────────
+    if (fullProject?.board?.slug) {
+      emitBoardEvent(
+        fullProject.board.slug,
+        'project:created',
+        fullProject,
+        req.headers['x-socket-id'] as string | undefined,
+      );
+    }
   } catch (error) {
     console.error('Create project error:', error);
     res.status(500).json({ success: false, message: 'Internal server error' });
@@ -286,6 +297,34 @@ export const updateProject = async (req: Request, res: Response): Promise<void> 
     if (!existing) {
       res.status(404).json({ success: false, message: 'Project not found' });
       return;
+    }
+
+    // ── Conflict detection (optimistic concurrency) ──
+    if (updateData.lastUpdatedAt) {
+      const clientUpdatedAt = new Date(updateData.lastUpdatedAt).getTime();
+      const serverUpdatedAt = existing.updatedAt.getTime();
+      if (clientUpdatedAt !== serverUpdatedAt) {
+        // Someone else modified this project since the client last fetched it
+        const currentProject = await prisma.project.findUnique({
+          where: { id },
+          include: projectCardIncludes,
+        });
+        const lastEditor = await prisma.activityLog.findFirst({
+          where: { projectId: id },
+          orderBy: { createdAt: 'desc' },
+          include: { user: { select: { name: true } } },
+        });
+        res.status(409).json({
+          success: false,
+          conflict: true,
+          message: 'Project was modified by another user',
+          updatedBy: lastEditor?.user?.name || 'someone',
+          current: currentProject,
+        });
+        return;
+      }
+      // Remove lastUpdatedAt from updateData — it's not a DB field
+      delete updateData.lastUpdatedAt;
     }
 
     // Validate status if provided
@@ -453,6 +492,16 @@ export const updateProject = async (req: Request, res: Response): Promise<void> 
     }
 
     res.status(200).json({ success: true, message: 'Project updated', data: { project } });
+
+    // ── Real-time broadcast ──────────────────────────
+    if (project.board?.slug) {
+      emitBoardEvent(
+        project.board.slug,
+        'project:updated',
+        project,
+        req.headers['x-socket-id'] as string | undefined,
+      );
+    }
   } catch (error) {
     console.error('Update project error:', error);
     res.status(500).json({ success: false, message: 'Internal server error' });
@@ -506,6 +555,20 @@ export const deleteProject = async (req: Request, res: Response): Promise<void> 
     }
 
     res.status(200).json({ success: true, message: 'Project deleted' });
+
+    // ── Real-time broadcast ──────────────────────────
+    const boardForBroadcast = await prisma.board.findUnique({
+      where: { id: existing.boardId },
+      select: { slug: true },
+    });
+    if (boardForBroadcast?.slug) {
+      emitBoardEvent(
+        boardForBroadcast.slug,
+        'project:deleted',
+        { projectId: existing.id },
+        req.headers['x-socket-id'] as string | undefined,
+      );
+    }
   } catch (error) {
     console.error('Delete project error:', error);
     res.status(500).json({ success: false, message: 'Internal server error' });
@@ -572,6 +635,26 @@ export const addComment = async (req: Request, res: Response): Promise<void> => 
     await createManyNotifications(notifItems);
 
     res.status(201).json({ success: true, data: { comment } });
+
+    // ── Real-time broadcast ──────────────────────────
+    const boardForComment = await prisma.board.findUnique({
+      where: { id: project.boardId },
+      select: { slug: true },
+    });
+    if (boardForComment?.slug) {
+      const updatedProject = await prisma.project.findUnique({
+        where: { id },
+        include: projectCardIncludes,
+      });
+      if (updatedProject) {
+        emitBoardEvent(
+          boardForComment.slug,
+          'project:updated',
+          updatedProject,
+          req.headers['x-socket-id'] as string | undefined,
+        );
+      }
+    }
   } catch (error) {
     console.error('Add comment error:', error);
     res.status(500).json({ success: false, message: 'Internal server error' });
@@ -658,6 +741,28 @@ export const updateChecklist = async (req: Request, res: Response): Promise<void
     }
 
     res.status(200).json({ success: true, data: { checklist } });
+
+    // ── Real-time broadcast ──────────────────────────
+    if (project.boardId) {
+      const boardForChecklist = await prisma.board.findUnique({
+        where: { id: project.boardId },
+        select: { slug: true },
+      });
+      if (boardForChecklist?.slug) {
+        const updatedProject = await prisma.project.findUnique({
+          where: { id },
+          include: projectCardIncludes,
+        });
+        if (updatedProject) {
+          emitBoardEvent(
+            boardForChecklist.slug,
+            'project:updated',
+            updatedProject,
+            req.headers['x-socket-id'] as string | undefined,
+          );
+        }
+      }
+    }
   } catch (error) {
     console.error('Update checklist error:', error);
     res.status(500).json({ success: false, message: 'Internal server error' });
@@ -731,7 +836,7 @@ export const addAttachment = async (req: Request, res: Response): Promise<void> 
 
     // Notify assigned users about new file
     const uploaderName = (await prisma.user.findUnique({ where: { id: req.user!.id }, select: { name: true } }))?.name || 'Someone';
-    const project = await prisma.project.findUnique({ where: { id }, select: { name: true } });
+    const project = await prisma.project.findUnique({ where: { id }, select: { name: true, boardId: true } });
     if (project) {
       const assignedForAttachment = await prisma.projectAssignment.findMany({
         where: { projectId: id },
@@ -749,6 +854,28 @@ export const addAttachment = async (req: Request, res: Response): Promise<void> 
     }
 
     res.status(201).json({ success: true, data: { attachment } });
+
+    // ── Real-time broadcast ──────────────────────────
+    if (project?.boardId) {
+      const boardForAttachment = await prisma.board.findUnique({
+        where: { id: project.boardId },
+        select: { slug: true },
+      });
+      if (boardForAttachment?.slug) {
+        const updatedProject = await prisma.project.findUnique({
+          where: { id },
+          include: projectCardIncludes,
+        });
+        if (updatedProject) {
+          emitBoardEvent(
+            boardForAttachment.slug,
+            'project:updated',
+            updatedProject,
+            req.headers['x-socket-id'] as string | undefined,
+          );
+        }
+      }
+    }
   } catch (error) {
     console.error('Add attachment error:', error);
     res.status(500).json({ success: false, message: 'Internal server error' });
