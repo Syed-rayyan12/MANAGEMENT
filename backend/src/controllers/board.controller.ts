@@ -128,7 +128,7 @@ export const createBoard = async (req: Request, res: Response): Promise<void> =>
  * Get all board columns (with phase) for boards the user has projects on.
  * GET /api/boards/columns/all
  */
-export const getAllBoardColumns = async (req: Request, res: Response): Promise<void> => {
+export const getAllBoardColumns = async (_req: Request, res: Response): Promise<void> => {
   try {
     const columns = await prisma.boardColumn.findMany({
       orderBy: { position: 'asc' },
