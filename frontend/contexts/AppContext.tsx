@@ -18,7 +18,6 @@ export type AppAction =
   | { type: 'ADD_LABEL'; payload: { projectId: string; label: Label; userId: string } }
   | { type: 'REMOVE_LABEL'; payload: { projectId: string; labelId: string; userId: string } }
   | { type: 'UPDATE_DUE_DATE'; payload: { projectId: string; dueDate: Date | null; userId: string } }
-  | { type: 'UPDATE_DEVELOPER'; payload: { projectId: string; developerId: string | null; userId: string } }
   | { type: 'UPDATE_PRIORITY'; payload: { projectId: string; priority: Project['priority']; userId: string } }
   | { type: 'UPDATE_DESCRIPTION'; payload: { projectId: string; description: string; userId: string } }
   | { type: 'UPDATE_NAME'; payload: { projectId: string; name: string; userId: string } }
@@ -298,31 +297,6 @@ function appReducer(state: AppState, action: AppAction): AppState {
       };
     }
 
-    case 'UPDATE_DEVELOPER': {
-      const { projectId, developerId, userId } = action.payload;
-      return {
-        ...state,
-        projects: state.projects.map((p) =>
-          p.id === projectId
-            ? {
-                ...p,
-                developer: developerId,
-                updatedAt: new Date(),
-                activityLog: [
-                  ...p.activityLog,
-                  {
-                    id: Math.random().toString(36),
-                    userId,
-                    action: `Changed developer to ${developerId || 'Unassigned'}`,
-                    timestamp: new Date(),
-                  },
-                ],
-              }
-            : p
-        ),
-      };
-    }
-
     case 'UPDATE_PRIORITY': {
       const { projectId, priority, userId } = action.payload;
       return {
@@ -537,8 +511,23 @@ function mapApiProject(p: any): Project {
     status: p.status || 'todo',
     priority: (p.priority?.toLowerCase() || 'medium') as Project['priority'],
     dueDate: p.dueDate ? new Date(p.dueDate) : null,
-    pm: p.pmId || p.pm?.id || '',
-    developer: p.developerId || p.developer?.id || null,
+    assignments: (p.assignments || []).map((a: any) => ({
+      id: a.id,
+      projectId: a.projectId,
+      userId: a.userId || a.user?.id,
+      user: a.user ? {
+        id: a.user.id,
+        name: a.user.name,
+        email: a.user.email,
+        avatar: a.user.avatar || null,
+        role: a.user.role,
+        specialization: a.user.specialization || undefined,
+      } : null,
+      role: a.role || 'PRIMARY',
+      status: a.status || 'ACTIVE',
+      assignedAt: a.assignedAt,
+      completedAt: a.completedAt || null,
+    })),
     boardId: p.boardId || p.board?.id || '',
     board: p.board ? { id: p.board.id, name: p.board.name, slug: p.board.slug } : undefined,
     teamId: p.teamId || p.team?.id || undefined,
