@@ -43,7 +43,10 @@
       "Bash(find /f/downloads-new/MANAGEMENT-main/MANAGEMENT-main/backend -name *board*controller* -o -name *controller*board*)",
       "Bash(DATABASE_URL=\"postgresql://postgres:PJEGMQUYGIBPANktROhvDhjrGrzmosnP@metro.proxy.rlwy.net:26362/railway\" npx prisma migrate dev --name add-column-phase)",
       "Bash(DATABASE_URL=\"postgresql://postgres:PJEGMQUYGIBPANktROhvDhjrGrzmosnP@metro.proxy.rlwy.net:26362/railway\" npx prisma db seed)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(find /f/downloads-new/MANAGEMENT-main/MANAGEMENT-main/frontend/components -type f -name *idebar* -o -name *nav*)",
+      "Bash(DATABASE_URL=\"postgresql://postgres:PJEGMQUYGIBPANktROhvDhjrGrzmosnP@metro.proxy.rlwy.net:26362/railway\" npx prisma migrate dev --name add-soft-delete-fields)",
+      "Bash(DATABASE_URL=\"postgresql://postgres:PJEGMQUYGIBPANktROhvDhjrGrzmosnP@metro.proxy.rlwy.net:26362/railway\" npx prisma migrate dev --name add-soft-delete-fields --create-only)"
     ]
   }
 }
