@@ -39,7 +39,11 @@
       "Bash(wc:*)",
       "Bash(grep -n updateProject /f/downloads-new/MANAGEMENT-main/MANAGEMENT-main/backend/src/routes/*.ts)",
       "Bash(find F:downloads-newMANAGEMENT-mainMANAGEMENT-main -name *.tsx -o -name *.ts)",
-      "Bash(DATABASE_URL=\"postgresql://postgres:PJEGMQUYGIBPANktROhvDhjrGrzmosnP@metro.proxy.rlwy.net:26362/railway\" npx prisma migrate dev --name add-user-cascade-deletes)"
+      "Bash(DATABASE_URL=\"postgresql://postgres:PJEGMQUYGIBPANktROhvDhjrGrzmosnP@metro.proxy.rlwy.net:26362/railway\" npx prisma migrate dev --name add-user-cascade-deletes)",
+      "Bash(find /f/downloads-new/MANAGEMENT-main/MANAGEMENT-main/backend -name *board*controller* -o -name *controller*board*)",
+      "Bash(DATABASE_URL=\"postgresql://postgres:PJEGMQUYGIBPANktROhvDhjrGrzmosnP@metro.proxy.rlwy.net:26362/railway\" npx prisma migrate dev --name add-column-phase)",
+      "Bash(DATABASE_URL=\"postgresql://postgres:PJEGMQUYGIBPANktROhvDhjrGrzmosnP@metro.proxy.rlwy.net:26362/railway\" npx prisma db seed)",
+      "Bash(git commit:*)"
     ]
   }
 }
