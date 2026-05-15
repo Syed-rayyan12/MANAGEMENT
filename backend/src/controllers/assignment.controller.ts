@@ -65,7 +65,7 @@ export const updateAssignment = async (req: Request, res: Response): Promise<voi
     // Permission check for status toggle: own assignment OR PM/TL
     if (status && existing.userId !== req.user?.id) {
       const requester = await prisma.user.findUnique({ where: { id: req.user?.id }, select: { role: true } });
-      if (requester?.role !== 'PM' && requester?.role !== 'TL') {
+      if (requester?.role !== 'PM' && requester?.role !== 'TL' && requester?.role !== 'EXECUTIVE' && requester?.role !== 'PRODUCTION') {
         res.status(403).json({ success: false, message: 'You can only toggle your own assignment status' });
         return;
       }
