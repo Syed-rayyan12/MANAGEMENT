@@ -15,6 +15,7 @@ import { Calendar, MessageSquare, Paperclip, Clock, X, AlertTriangle, CheckCircl
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { usePermissions } from '@/hooks/usePermissions';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface ProjectCardProps {
   project: Project;
@@ -27,6 +28,7 @@ export function ProjectCard({ project, onCardClick }: ProjectCardProps) {
   });
   const { state, getUserName, getUserAvatar, getAllUsers, dispatch } = useApp();
   const { isReadOnly, canChangePriority } = usePermissions();
+  const isMobile = useIsMobile();
   const [showTagModal, setShowTagModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [quickEditOpen, setQuickEditOpen] = useState(false);
@@ -241,7 +243,7 @@ export function ProjectCard({ project, onCardClick }: ProjectCardProps) {
         )}
 
         {/* Compact Footer: priority dot + due date + meta icons */}
-        <div className="flex items-center gap-2 text-[11px] text-zinc-400 dark:text-zinc-500 pt-0.5">
+        <div className={`flex items-center gap-2 ${isMobile ? 'text-xs' : 'text-[11px]'} text-zinc-400 dark:text-zinc-500 pt-0.5`}>
           {/* Priority dot + label */}
           <span className="flex items-center gap-1">
             <span className={`w-2 h-2 rounded-full ${priorityDotColor[project.priority] || 'bg-zinc-400'}`} />
@@ -291,7 +293,7 @@ export function ProjectCard({ project, onCardClick }: ProjectCardProps) {
 
         {/* Checklist Progress (only if checklist exists) */}
         {checklistTotal > 0 && (
-          <div className="flex items-center gap-2 text-[11px]">
+          <div className={`flex items-center gap-2 ${isMobile ? 'text-xs' : 'text-[11px]'}`}>
             <div className="flex-1 bg-zinc-100 dark:bg-zinc-800 rounded-full h-1">
               <div
                 className={`h-1 rounded-full transition-all ${checklistDone === checklistTotal ? 'bg-green-500' : 'bg-orange-500'}`}
@@ -314,7 +316,7 @@ export function ProjectCard({ project, onCardClick }: ProjectCardProps) {
           <PopoverTrigger asChild>
             <button
               onClick={(e) => e.stopPropagation()}
-              className="absolute top-2 right-2 z-20 opacity-0 group-hover/card:opacity-100 transition-opacity w-6 h-6 rounded-md bg-white/90 dark:bg-zinc-800/90 hover:bg-orange-500 hover:text-white flex items-center justify-center shadow-sm backdrop-blur-sm"
+              className={`absolute top-2 right-2 z-20 ${isMobile ? 'opacity-100 w-8 h-8' : 'opacity-0 group-hover/card:opacity-100 w-6 h-6'} transition-opacity rounded-md bg-white/90 dark:bg-zinc-800/90 hover:bg-orange-500 hover:text-white flex items-center justify-center shadow-sm backdrop-blur-sm`}
             >
               <Pencil className="w-3 h-3" />
             </button>
