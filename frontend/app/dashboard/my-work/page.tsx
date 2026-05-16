@@ -15,6 +15,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Filter, SortAsc, X, Briefcase, Calendar, MessageSquare, Clock } from 'lucide-react';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { ProjectModal } from '@/components/project/ProjectModal';
 import { Project, ColumnPhase } from '@/lib/types';
 import { PRIORITY_STYLES } from '@/lib/constants';
@@ -44,6 +45,7 @@ export default function MyWorkPage() {
   const [phaseMapLoading, setPhaseMapLoading] = useState(true);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
 
+  const isMobile = useIsMobile();
   const currentUserId = state.currentUser?.id;
 
   // Fetch boards and phase map
@@ -145,18 +147,18 @@ export default function MyWorkPage() {
   return (
     <div className="space-y-6 p-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-lg bg-orange-500/20 flex items-center justify-center">
             <Briefcase className="w-5 h-5 text-orange-500" />
           </div>
           <div>
-            <h1 className="text-3xl font-semibold text-zinc-900 dark:text-zinc-100">My Work</h1>
+            <h1 className="text-2xl sm:text-3xl font-semibold text-zinc-900 dark:text-zinc-100">My Work</h1>
             <p className="text-zinc-500 dark:text-zinc-400 mt-0.5">All tasks assigned to you across boards</p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm">
@@ -259,17 +261,41 @@ export default function MyWorkPage() {
         </div>
       )}
 
+      {/* Mobile Phase Indicator Bar */}
+      {isMobile && (
+        <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+          {PHASE_ORDER.map((phase) => {
+            const config = PHASE_CONFIG[phase];
+            const count = projectsByPhase[phase].length;
+            return (
+              <button
+                key={phase}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 flex-shrink-0"
+              >
+                <span className={`w-2 h-2 rounded-full flex-shrink-0 ${
+                  phase === 'NOT_STARTED' ? 'bg-zinc-400' :
+                  phase === 'IN_PROGRESS' ? 'bg-blue-500' :
+                  phase === 'DONE' ? 'bg-emerald-500' : 'bg-amber-500'
+                }`} />
+                {config.label}
+                <span className="text-zinc-400 dark:text-zinc-500">({count})</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       {/* Phase Lanes */}
       {isLoading || phaseMapLoading ? (
         <BoardSkeleton />
       ) : (
-        <div className="overflow-x-auto pb-4">
-          <div className="flex gap-5 min-w-max">
+        <div className={`overflow-x-auto pb-4 ${isMobile ? 'snap-x snap-mandatory scroll-smooth' : ''}`}>
+          <div className={`flex gap-5 ${isMobile ? '' : 'min-w-max'}`}>
             {PHASE_ORDER.map((phase) => {
               const config = PHASE_CONFIG[phase];
               const projects = projectsByPhase[phase];
               return (
-                <div key={phase} className={`flex flex-col rounded-xl p-3 w-[300px] min-w-[300px] max-w-[300px] h-[calc(100vh-280px)] border border-transparent ${config.bgColor}`}>
+                <div key={phase} className={`flex flex-col rounded-xl p-3 ${isMobile ? 'w-[85vw] min-w-[85vw] max-w-[85vw] snap-center' : 'w-[300px] min-w-[300px] max-w-[300px]'} h-[calc(100vh-280px)] border border-transparent ${config.bgColor}`}>
                   {/* Header */}
                   <div className="mb-3 flex items-center gap-2 flex-shrink-0">
                     <span className={`w-2.5 h-2.5 rounded-full ${
@@ -319,6 +345,7 @@ export default function MyWorkPage() {
 }
 
 function MyWorkCard({ project, boardName, onClick }: { project: Project; boardName?: string; onClick: () => void }) {
+  const isMobile = useIsMobile();
   const priorityStyle = PRIORITY_STYLES[project.priority];
   const isOverdue = project.dueDate && new Date(project.dueDate) < new Date() && project.status !== 'completed';
 
@@ -345,7 +372,7 @@ function MyWorkCard({ project, boardName, onClick }: { project: Project; boardNa
       </h4>
 
       {/* Footer */}
-      <div className="flex items-center gap-2 text-[11px] text-zinc-400 dark:text-zinc-500">
+      <div className={`flex items-center gap-2 ${isMobile ? 'text-xs' : 'text-[11px]'} text-zinc-400 dark:text-zinc-500`}>
         <span className="flex items-center gap-1">
           <span className={`w-2 h-2 rounded-full ${priorityDotColor[project.priority] || 'bg-zinc-400'}`} />
           <span className={`font-medium ${priorityStyle.color}`}>{priorityStyle.label}</span>
