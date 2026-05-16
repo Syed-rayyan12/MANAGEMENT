@@ -120,9 +120,6 @@ export interface Project {
   activityLog: ActivityLog[];
   createdAt: Date;
   updatedAt: Date;
-  minorChanges?: number;
-  majorChanges?: number;
-  majorChangeReason?: string;
   clientId?: string | null;
   client?: { id: string; name: string; contactEmail: string | null } | null;
 }
@@ -302,13 +299,37 @@ export interface EmployeePerformance {
   newClientsThisMonth?: number;
   // TL team
   team?: TeamAggregate;
-  // Production
+  // Production (new)
   specialization?: Specialization;
-  liveProjects?: number;
-  totalMinorChanges?: number;
-  totalMajorChanges?: number;
-  averageChangesPerProject?: number;
-  completionRatio?: number;
+  avgTurnaround?: number;
+  fastestTurnaround?: number;
+  slowestTurnaround?: number;
+  onTimeRate?: number | null;
+  onTimeCount?: number;
+  lateCount?: number;
+  withDueDateCount?: number;
+  totalRegressions?: number;
+  regressionsThisMonth?: number;
+  regressionRate?: number;
+  completionTrend?: { month: string; count: number }[];
+  recentCompletions?: {
+    projectId: string;
+    projectName: string;
+    board: string;
+    boardSlug: string;
+    assignedAt: string;
+    completedAt: string | null;
+    turnaroundDays: number | null;
+    onTime: boolean | null;
+  }[];
+  recentRegressions?: {
+    projectId: string;
+    projectName: string;
+    causedBy: string;
+    fromColumn: string;
+    toColumn: string;
+    createdAt: string;
+  }[];
 }
 
 export interface AppState {

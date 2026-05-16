@@ -624,13 +624,10 @@ function PerformanceContent({ employee, performance }: { employee: Employee; per
           )}
 
           <div className="grid grid-cols-2 gap-3">
-            {(employee.specialization === 'DEVELOPER' || employee.specialization === 'QA') && (
-              <PerfStat label="Live Projects" value={String(performance.liveProjects || 0)} />
-            )}
-            <PerfStat label="Minor Changes" value={String(performance.totalMinorChanges || 0)} />
-            <PerfStat label="Major Changes" value={String(performance.totalMajorChanges || 0)} />
-            <PerfStat label="Avg Changes/Project" value={String(performance.averageChangesPerProject || 0)} />
-            <PerfStat label="Completion Rate" value={`${performance.completionRatio || 0}%`} />
+            <PerfStat label="Avg Turnaround" value={performance.avgTurnaround != null ? `${performance.avgTurnaround}d` : '—'} />
+            <PerfStat label="On-Time Rate" value={performance.onTimeRate != null ? `${performance.onTimeRate}%` : '—'} />
+            <PerfStat label="Regressions" value={String(performance.totalRegressions || 0)} />
+            <PerfStat label="Regressions (mo.)" value={String(performance.regressionsThisMonth || 0)} />
           </div>
         </>
       )}
