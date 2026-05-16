@@ -3,15 +3,12 @@ import { useApp } from '@/contexts/useApp';
 /**
  * Role-based permission helpers.
  *
- * Roles hierarchy (highest → lowest):
- *   PM > TL > EXECUTIVE > PRODUCTION
- *
  * Permissions:
- *   - canCreateProject: PM only
- *   - canDeleteProject: PM only
- *   - canAddColumn: PM, TL
- *   - canChangePriority: PM, TL
- *   - canEditProject: PM, TL, PRODUCTION (the assigned developer)
+ *   - canCreateProject: PM, TL, PRODUCTION
+ *   - canDeleteProject: PM, PRODUCTION
+ *   - canAddColumn: PM, TL, PRODUCTION
+ *   - canChangePriority: PM, TL, PRODUCTION, EXECUTIVE
+ *   - canEditProject: PM, TL, PRODUCTION
  *   - canComment: everyone
  *   - isReadOnly: EXECUTIVE (view-only)
  */
@@ -28,7 +25,7 @@ export function usePermissions() {
   return {
     // Project CRUD
     canCreateProject: true,
-    canDeleteProject: isPM,
+    canDeleteProject: isPM || isProd,
 
     // Board management
     canAddColumn: true,
@@ -36,7 +33,7 @@ export function usePermissions() {
     // Project fields
     canChangePriority: isPM || isTL || isExec || isProd,
     canChangeStatus: isPM || isTL || isProd,
-    canEditProjectFields: isPM || isTL,
+    canEditProjectFields: isPM || isTL || isProd,
 
     // Interaction
     canComment: true, // everyone can comment
@@ -52,6 +49,9 @@ export function usePermissions() {
 
     // Trash / soft-delete
     canSoftDelete: isPM || isProd,
+
+    // Performance
+    canAccessPerformance: isProd,
 
     // General
     isReadOnly: isExec,
