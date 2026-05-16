@@ -36,7 +36,6 @@ export const updateProjectSchema = z.object({
   priority: z.enum(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']).optional(),
   dueDate: z.string().optional().nullable(),
   image: optionalUrl,
-  changeType: z.enum(['NONE', 'MINOR', 'MAJOR']).optional(),
   clientId: z.string().uuid().optional().nullable(),
 });
 
