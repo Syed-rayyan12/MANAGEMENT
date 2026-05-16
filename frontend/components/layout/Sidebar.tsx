@@ -111,17 +111,19 @@ export function Sidebar({ collapsed, onToggle, isMobile = false, mobileOpen = fa
           : collapsed ? 'w-16' : 'w-60'
       )}
     >
-      {/* Toggle button */}
-      <button
-        onClick={onToggle}
-        className="absolute -right-3 top-6 z-50 w-6 h-6 rounded-full bg-orange-500 text-white flex items-center justify-center shadow-lg hover:bg-orange-600 transition-colors"
-      >
-        {collapsed ? (
-          <ChevronRight className="w-3.5 h-3.5" />
-        ) : (
-          <ChevronLeft className="w-3.5 h-3.5" />
-        )}
-      </button>
+      {/* Toggle button — hidden on mobile where hamburger menu controls the drawer */}
+      {!isMobile && (
+        <button
+          onClick={onToggle}
+          className="absolute -right-3 top-6 z-50 w-6 h-6 rounded-full bg-orange-500 text-white flex items-center justify-center shadow-lg hover:bg-orange-600 transition-colors"
+        >
+          {collapsed ? (
+            <ChevronRight className="w-3.5 h-3.5" />
+          ) : (
+            <ChevronLeft className="w-3.5 h-3.5" />
+          )}
+        </button>
+      )}
 
       {/* Navigation */}
       <nav className="flex-1 py-4 px-2 space-y-1 overflow-y-auto">
