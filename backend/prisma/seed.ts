@@ -192,18 +192,18 @@ async function main() {
 
     const sampleProjects = [
       // Team 1, Web Dev board — multiple assignments
-      { name: 'ABC Corp Website', boardSlug: 'web-development', teamSlug: 'team-1', status: 'completed', priority: 'HIGH' as const, minorChanges: 5, majorChanges: 2, assignments: [
+      { name: 'ABC Corp Website', boardSlug: 'web-development', teamSlug: 'team-1', status: 'completed', priority: 'HIGH' as const, assignments: [
         { userId: azhar!.id, role: 'PRIMARY' as const, status: 'DONE' as const },
         { userId: abubakar!.id, role: 'PRIMARY' as const, status: 'DONE' as const },
         { userId: arshan!.id, role: 'PRIMARY' as const, status: 'DONE' as const },
         { userId: syedAkbar!.id, role: 'COLLABORATOR' as const, status: 'DONE' as const },
       ]},
-      { name: 'XYZ Landing Page', boardSlug: 'web-development', teamSlug: 'team-1', status: 'in-progress', priority: 'MEDIUM' as const, minorChanges: 2, majorChanges: 0, assignments: [
+      { name: 'XYZ Landing Page', boardSlug: 'web-development', teamSlug: 'team-1', status: 'in-progress', priority: 'MEDIUM' as const, assignments: [
         { userId: azhar!.id, role: 'PRIMARY' as const, status: 'ACTIVE' as const },
         { userId: syedTaha!.id, role: 'PRIMARY' as const, status: 'ACTIVE' as const },
         { userId: binSaud!.id, role: 'COLLABORATOR' as const, status: 'DONE' as const },
       ]},
-      { name: 'StartupHub Platform', boardSlug: 'web-development', teamSlug: 'team-1', status: 'live', priority: 'CRITICAL' as const, minorChanges: 8, majorChanges: 3, assignments: [
+      { name: 'StartupHub Platform', boardSlug: 'web-development', teamSlug: 'team-1', status: 'live', priority: 'CRITICAL' as const, assignments: [
         { userId: mujtaba!.id, role: 'PRIMARY' as const, status: 'DONE' as const },
         { userId: syedRayyan!.id, role: 'PRIMARY' as const, status: 'DONE' as const },
         { userId: arshan!.id, role: 'COLLABORATOR' as const, status: 'DONE' as const },
@@ -211,40 +211,40 @@ async function main() {
         { userId: tahir!.id, role: 'COLLABORATOR' as const, status: 'DONE' as const },
       ]},
       // Team 2, Logo board
-      { name: 'TechVenture Logo', boardSlug: 'logo-design', teamSlug: 'team-2', status: 'completed', priority: 'MEDIUM' as const, minorChanges: 3, majorChanges: 1, assignments: [
+      { name: 'TechVenture Logo', boardSlug: 'logo-design', teamSlug: 'team-2', status: 'completed', priority: 'MEDIUM' as const, assignments: [
         { userId: rehan!.id, role: 'PRIMARY' as const, status: 'DONE' as const },
         { userId: syedMuslim!.id, role: 'PRIMARY' as const, status: 'DONE' as const },
         { userId: qasim!.id, role: 'COLLABORATOR' as const, status: 'DONE' as const },
       ]},
-      { name: 'GreenLeaf Branding', boardSlug: 'logo-design', teamSlug: 'team-2', status: 'in-progress', priority: 'LOW' as const, minorChanges: 1, majorChanges: 0, assignments: [
+      { name: 'GreenLeaf Branding', boardSlug: 'logo-design', teamSlug: 'team-2', status: 'in-progress', priority: 'LOW' as const, assignments: [
         { userId: rehan!.id, role: 'PRIMARY' as const, status: 'ACTIVE' as const },
         { userId: qasim!.id, role: 'PRIMARY' as const, status: 'ACTIVE' as const },
       ]},
       // Team 1, Web Design board
-      { name: 'FoodDelivery App UI', boardSlug: 'web-design', teamSlug: 'team-1', status: 'revisions', priority: 'HIGH' as const, minorChanges: 4, majorChanges: 2, assignments: [
+      { name: 'FoodDelivery App UI', boardSlug: 'web-design', teamSlug: 'team-1', status: 'revisions', priority: 'HIGH' as const, assignments: [
         { userId: mujtaba!.id, role: 'PRIMARY' as const, status: 'ACTIVE' as const },
         { userId: arshan!.id, role: 'PRIMARY' as const, status: 'ACTIVE' as const },
         { userId: binSaud!.id, role: 'PRIMARY' as const, status: 'ACTIVE' as const },
       ]},
       // Team 2, Content board
-      { name: 'TechBlog Launch Content', boardSlug: 'content', teamSlug: 'team-2', status: 'completed', priority: 'MEDIUM' as const, minorChanges: 2, majorChanges: 0, assignments: [
+      { name: 'TechBlog Launch Content', boardSlug: 'content', teamSlug: 'team-2', status: 'completed', priority: 'MEDIUM' as const, assignments: [
         { userId: rehan!.id, role: 'PRIMARY' as const, status: 'DONE' as const },
         { userId: tahir!.id, role: 'PRIMARY' as const, status: 'DONE' as const },
         { userId: anas!.id, role: 'COLLABORATOR' as const, status: 'DONE' as const },
       ]},
-      { name: 'SaaS Product Copy', boardSlug: 'content', teamSlug: 'team-2', status: 'in-progress', priority: 'HIGH' as const, minorChanges: 0, majorChanges: 0, assignments: [
+      { name: 'SaaS Product Copy', boardSlug: 'content', teamSlug: 'team-2', status: 'in-progress', priority: 'HIGH' as const, assignments: [
         { userId: aqsa!.id, role: 'PRIMARY' as const, status: 'ACTIVE' as const },
         { userId: anas!.id, role: 'PRIMARY' as const, status: 'ACTIVE' as const },
       ]},
       // More web dev for richer KPI data
-      { name: 'E-Commerce Platform', boardSlug: 'web-development', teamSlug: 'team-2', status: 'in-progress', priority: 'CRITICAL' as const, minorChanges: 6, majorChanges: 1, assignments: [
+      { name: 'E-Commerce Platform', boardSlug: 'web-development', teamSlug: 'team-2', status: 'in-progress', priority: 'CRITICAL' as const, assignments: [
         { userId: rehan!.id, role: 'PRIMARY' as const, status: 'ACTIVE' as const },
         { userId: abubakar!.id, role: 'PRIMARY' as const, status: 'ACTIVE' as const },
         { userId: syedRayyan!.id, role: 'COLLABORATOR' as const, status: 'ACTIVE' as const },
         { userId: arshan!.id, role: 'COLLABORATOR' as const, status: 'DONE' as const },
         { userId: syedAkbar!.id, role: 'PRIMARY' as const, status: 'ACTIVE' as const },
       ]},
-      { name: 'Portfolio Revamp', boardSlug: 'web-development', teamSlug: 'team-1', status: 'live', priority: 'MEDIUM' as const, minorChanges: 3, majorChanges: 1, assignments: [
+      { name: 'Portfolio Revamp', boardSlug: 'web-development', teamSlug: 'team-1', status: 'live', priority: 'MEDIUM' as const, assignments: [
         { userId: azhar!.id, role: 'PRIMARY' as const, status: 'DONE' as const },
         { userId: syedTaha!.id, role: 'PRIMARY' as const, status: 'DONE' as const },
         { userId: shakeeb!.id, role: 'COLLABORATOR' as const, status: 'DONE' as const },
@@ -262,8 +262,6 @@ async function main() {
           teamId: teams[proj.teamSlug].id,
           status: proj.status,
           priority: proj.priority,
-          minorChanges: proj.minorChanges,
-          majorChanges: proj.majorChanges,
         },
       });
 
