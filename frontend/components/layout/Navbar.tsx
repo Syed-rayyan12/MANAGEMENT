@@ -15,7 +15,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Search, LogOut, Settings, User, Moon, Sun, Menu } from 'lucide-react';
+import { Search, LogOut, Settings, User, Moon, Sun, Menu, X } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { NotificationsPanel } from './NotificationsPanel';
 import { useTheme } from 'next-themes';
@@ -30,6 +30,7 @@ export function Navbar({ searchQuery, onSearchChange, onMenuToggle }: NavbarProp
   const router = useRouter();
   const { state, dispatch } = useApp();
   const { theme, setTheme } = useTheme();
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
 
   const handleLogout = async () => {
     // Optionally call backend logout endpoint
@@ -87,6 +88,15 @@ export function Navbar({ searchQuery, onSearchChange, onMenuToggle }: NavbarProp
 
         {/* Right Actions */}
         <div className="flex items-center gap-4">
+          {/* Mobile Search Button */}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setMobileSearchOpen(true)}
+            className="sm:hidden"
+          >
+            <Search className="w-5 h-5 text-zinc-600 dark:text-zinc-400" />
+          </Button>
           {/* Dark Mode Toggle */}
           <Button
             variant="ghost"
@@ -136,6 +146,36 @@ export function Navbar({ searchQuery, onSearchChange, onMenuToggle }: NavbarProp
           </DropdownMenu>
         </div>
       </div>
+      {/* Mobile Search Overlay */}
+      {mobileSearchOpen && (
+        <div className="absolute top-full left-0 right-0 bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800 p-3 shadow-lg sm:hidden z-50">
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-zinc-400 w-4 h-4" />
+              <Input
+                placeholder="Search projects..."
+                value={searchQuery}
+                onChange={(e) => onSearchChange(e.target.value)}
+                className="pl-9"
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === 'Escape') {
+                    setMobileSearchOpen(false);
+                  }
+                }}
+              />
+            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setMobileSearchOpen(false)}
+              className="flex-shrink-0"
+            >
+              <X className="w-5 h-5" />
+            </Button>
+          </div>
+        </div>
+      )}
     </header>
   );
 }
