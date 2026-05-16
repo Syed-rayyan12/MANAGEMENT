@@ -459,21 +459,203 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
       <DialogContent className={`${isMobile ? 'h-[100dvh] w-full max-w-full rounded-none' : 'max-w-7xl h-[90vh] rounded-2xl'} overflow-hidden p-0 gap-0 flex flex-col backdrop-blur-md bg-white/80 dark:bg-zinc-900/80 border border-zinc-200/50 dark:border-white/10 ring-1 ring-[#e05c29]/10 shadow-2xl`}>
         <DialogDescription className="sr-only">Project details and management</DialogDescription>
 
-        {/* Left-Right Layout */}
-        <div className={`${isMobile ? 'flex flex-col' : 'flex'} flex-1 min-h-0`}>
+        {isMobile ? (
+          <>
+            {/* Mobile: Sticky Header */}
+            <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-200 dark:border-zinc-800 flex-shrink-0">
+              <button onClick={onClose} className="p-1">
+                <X className="w-5 h-5 text-zinc-500" />
+              </button>
+              <h2 className="flex-1 text-sm font-semibold text-zinc-900 dark:text-zinc-100 truncate mx-3">
+                {project.name}
+              </h2>
+              {canDeleteProject && (
+                <button onClick={() => setShowDeleteConfirm(true)} className="p-1">
+                  <Trash2 className="w-5 h-5 text-zinc-400" />
+                </button>
+              )}
+            </div>
 
-          {/* Left Sidebar */}
-          <div className={`${isMobile ? 'w-full border-b max-h-[40vh] overflow-y-auto' : 'w-96 border-r'} border-zinc-200 dark:border-zinc-800 flex flex-col min-h-0`}>
-            {/* Cover Photo Section */}
-            <div className={`relative group flex-shrink-0 ${isMobile ? 'hidden' : ''}`}>
-              {project.image ? (
-                <>
-                  <img
-                    src={project.image}
-                    alt={project.name}
-                    className="w-full h-48 object-cover"
-                  />
-                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+            {/* Mobile: Scrollable Content */}
+            <div className="flex-1 overflow-y-auto">
+              {/* Cover Image */}
+              {project.image && (
+                <img src={project.image} alt={project.name} className="w-full h-48 object-cover" />
+              )}
+
+              <div className="p-4 space-y-5">
+                {/* Title (tappable to edit) */}
+                {editingName ? (
+                  <div className="space-y-2">
+                    <Input value={editingTitle} onChange={(e) => setEditingTitle(e.target.value)} className="text-lg font-bold" autoFocus />
+                    <div className="flex gap-2">
+                      <Button size="sm" onClick={handleSaveName}>Save</Button>
+                      <Button size="sm" variant="outline" onClick={() => setEditingName(false)}>Cancel</Button>
+                    </div>
+                  </div>
+                ) : (
+                  <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-100" onClick={() => setEditingName(true)}>
+                    {project.name}
+                  </h2>
+                )}
+
+                {/* Status & Priority row */}
+                <div className="flex gap-3">
+                  <div className="flex-1">
+                    <Label className="text-xs font-medium uppercase tracking-wide text-zinc-400">Status</Label>
+                    <Select value={project.status} onValueChange={handleUpdateStatus}>
+                      <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {KANBAN_COLUMNS.map((col) => (
+                          <SelectItem key={col.status} value={col.status}>{col.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex-1">
+                    <Label className="text-xs font-medium uppercase tracking-wide text-zinc-400">Priority</Label>
+                    {canChangePriority ? (
+                      <Select value={project.priority} onValueChange={handleUpdatePriority}>
+                        <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          {Object.entries(PRIORITY_STYLES).map(([key, style]) => (
+                            <SelectItem key={key} value={key}>{style.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <div className="mt-1 px-3 py-2 rounded-lg border border-zinc-200 dark:border-zinc-700 text-sm text-zinc-900 dark:text-zinc-100">
+                        {PRIORITY_STYLES[project.priority]?.label || project.priority}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Record Change */}
+                {!isReadOnly && (
+                  <div>
+                    <Label className="text-xs font-medium uppercase tracking-wide text-zinc-400">Record Change</Label>
+                    <Select onValueChange={handleChangeType} disabled={submittingChange} value="">
+                      <SelectTrigger className="mt-1">
+                        <SelectValue placeholder={submittingChange ? 'Saving...' : 'None'} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="MINOR">Minor Change</SelectItem>
+                        <SelectItem value="MAJOR">Major Change</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {((project.minorChanges || 0) > 0 || (project.majorChanges || 0) > 0) && (
+                      <p className="mt-1 text-xs text-zinc-500">
+                        Minor: {project.minorChanges || 0} | Major: {project.majorChanges || 0}
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {/* Members -- avatar row */}
+                <div>
+                  <Label className="text-xs font-medium uppercase tracking-wide text-zinc-400 mb-2 block">Members</Label>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {project.assignments.map((assignment: ProjectAssignment) => (
+                      <div key={assignment.id} className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700">
+                        <Avatar className="w-6 h-6">
+                          <AvatarImage src={assignment.user?.avatar || undefined} />
+                          <AvatarFallback className="text-[10px] bg-orange-500 text-white">{assignment.user?.name?.[0]}</AvatarFallback>
+                        </Avatar>
+                        <span className="text-xs font-medium text-zinc-700 dark:text-zinc-300">{assignment.user?.name}</span>
+                        {assignment.status === 'DONE' && <Check className="w-3 h-3 text-green-500" />}
+                      </div>
+                    ))}
+                    {!isReadOnly && (
+                      <button
+                        onClick={() => setShowMemberModal(true)}
+                        className="flex items-center gap-1 px-3 py-1.5 rounded-full border border-dashed border-zinc-300 dark:border-zinc-600 text-xs text-zinc-500 hover:border-orange-500 hover:text-orange-500 transition-colors"
+                      >
+                        + Add
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Due Date */}
+                <div>
+                  <Label className="text-xs font-medium uppercase tracking-wide text-zinc-400">Due Date</Label>
+                  <div className="flex items-center gap-2 mt-1">
+                    <Input
+                      type="date"
+                      value={project.dueDate ? format(new Date(project.dueDate), 'yyyy-MM-dd') : ''}
+                      onChange={(e) => handleUpdateDueDate(e.target.value)}
+                      min={format(new Date(), 'yyyy-MM-dd')}
+                      className="flex-1"
+                    />
+                    {isOverdue && (
+                      <span className="text-xs font-medium text-red-500 bg-red-500/10 px-2 py-1 rounded">Overdue</span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Description */}
+                <div>
+                  <Label className="text-xs font-medium uppercase tracking-wide text-zinc-400">Description</Label>
+                  {editingDescription ? (
+                    <div className="space-y-2 mt-2">
+                      <Textarea value={editingDesc} onChange={(e) => setEditingDesc(e.target.value)} className="min-h-32" autoFocus />
+                      <div className="flex gap-2">
+                        <Button size="sm" onClick={handleSaveDescription}>Save</Button>
+                        <Button size="sm" variant="outline" onClick={() => setEditingDescription(false)}>Cancel</Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div
+                      onClick={() => setEditingDescription(true)}
+                      className="mt-2 p-3 border border-zinc-200 dark:border-zinc-800 rounded-xl bg-zinc-50 dark:bg-zinc-900 min-h-16 whitespace-pre-wrap text-sm text-zinc-700 dark:text-zinc-300"
+                    >
+                      {project.description || 'Tap to add description...'}
+                    </div>
+                  )}
+                </div>
+
+                {/* Checklist */}
+                <ChecklistSection project={project} />
+
+                {/* Attachments */}
+                <AttachmentsSection project={project} />
+
+                {/* Activity & Comments (inline, not in tabs) */}
+                <ActivitySection project={project} />
+                <CommentsSection project={project} />
+              </div>
+            </div>
+          </>
+        ) : (
+          /* === DESKTOP LAYOUT (unchanged) === */
+          <div className="flex flex-1 min-h-0">
+
+            {/* Left Sidebar */}
+            <div className="w-96 border-r border-zinc-200 dark:border-zinc-800 flex flex-col min-h-0">
+              {/* Cover Photo Section */}
+              <div className="relative group flex-shrink-0">
+                {project.image ? (
+                  <>
+                    <img
+                      src={project.image}
+                      alt={project.name}
+                      className="w-full h-48 object-cover"
+                    />
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => setShowCoverPhotoModal(true)}
+                        className="bg-white/90 hover:bg-white"
+                      >
+                        <ImageIcon className="w-4 h-4 mr-2" />
+                        Change Cover
+                      </Button>
+                    </div>
+                  </>
+                ) : (
+                  <div className="w-full h-32 bg-gradient-to-br from-[#e05c29]/20 via-orange-400/10 to-amber-400/5 flex items-center justify-center">
                     <Button
                       variant="secondary"
                       size="sm"
@@ -481,298 +663,285 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
                       className="bg-white/90 hover:bg-white"
                     >
                       <ImageIcon className="w-4 h-4 mr-2" />
-                      Change Cover
+                      Add Cover
                     </Button>
                   </div>
-                </>
-              ) : (
-                <div className="w-full h-32 bg-gradient-to-br from-[#e05c29]/20 via-orange-400/10 to-amber-400/5 flex items-center justify-center">
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => setShowCoverPhotoModal(true)}
-                    className="bg-white/90 hover:bg-white"
-                  >
-                    <ImageIcon className="w-4 h-4 mr-2" />
-                    Add Cover
-                  </Button>
-                </div>
-              )}
-            </div>
-
-            {/* Sidebar Content */}
-            <div className={`flex-1 overflow-y-auto ${isMobile ? 'p-4 space-y-3' : 'p-6 space-y-6'}`}>
-              {/* Project Title */}
-              <div>
-                {editingName ? (
-                  <div className="space-y-2">
-                    <Input
-                      value={editingTitle}
-                      onChange={(e) => setEditingTitle(e.target.value)}
-                      className="font-bold"
-                      autoFocus
-
-                    />
-                    <div className="flex gap-2">
-                      <Button size="sm" onClick={handleSaveName}>Save</Button>
-                      <Button size="sm" variant="outline" onClick={() => setEditingName(false)}>Cancel</Button>
-                    </div>
-                  </div>
-                ) : (
-                  <h2
-                    className="text-xl font-semibold cursor-pointer hover:text-[#e05c29] text-zinc-900 dark:text-zinc-100"
-                    onClick={() => setEditingName(true)}
-                  >
-                    {project.name}
-                  </h2>
                 )}
               </div>
 
-              {/* Status */}
-              <div>
-                <Label className="text-xs font-medium uppercase tracking-wide text-zinc-400">Status</Label>
-                <Select value={project.status} onValueChange={handleUpdateStatus}>
-                  <SelectTrigger className="mt-1">
-                    <SelectValue placeholder="Select status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {KANBAN_COLUMNS.map((col) => (
-                      <SelectItem key={col.status} value={col.status}>
-                        {col.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              {/* Sidebar Content */}
+              <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                {/* Project Title */}
+                <div>
+                  {editingName ? (
+                    <div className="space-y-2">
+                      <Input
+                        value={editingTitle}
+                        onChange={(e) => setEditingTitle(e.target.value)}
+                        className="font-bold"
+                        autoFocus
+                      />
+                      <div className="flex gap-2">
+                        <Button size="sm" onClick={handleSaveName}>Save</Button>
+                        <Button size="sm" variant="outline" onClick={() => setEditingName(false)}>Cancel</Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <h2
+                      className="text-xl font-semibold cursor-pointer hover:text-[#e05c29] text-zinc-900 dark:text-zinc-100"
+                      onClick={() => setEditingName(true)}
+                    >
+                      {project.name}
+                    </h2>
+                  )}
+                </div>
 
-              {/* Priority */}
-              <div>
-                <Label className="text-xs font-medium uppercase tracking-wide text-zinc-400">Priority</Label>
-                {canChangePriority ? (
-                  <Select value={project.priority} onValueChange={handleUpdatePriority}>
+                {/* Status */}
+                <div>
+                  <Label className="text-xs font-medium uppercase tracking-wide text-zinc-400">Status</Label>
+                  <Select value={project.status} onValueChange={handleUpdateStatus}>
                     <SelectTrigger className="mt-1">
-                      <SelectValue placeholder="Select priority" />
+                      <SelectValue placeholder="Select status" />
                     </SelectTrigger>
                     <SelectContent>
-                      {Object.entries(PRIORITY_STYLES).map(([key, style]) => (
-                        <SelectItem key={key} value={key}>
-                          {style.label}
+                      {KANBAN_COLUMNS.map((col) => (
+                        <SelectItem key={col.status} value={col.status}>
+                          {col.label}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
-                ) : (
-                  <div className="mt-1 px-3 py-2 rounded-lg border border-zinc-200 dark:border-zinc-700 text-sm text-zinc-900 dark:text-zinc-100">
-                    {PRIORITY_STYLES[project.priority]?.label || project.priority}
+                </div>
+
+                {/* Priority */}
+                <div>
+                  <Label className="text-xs font-medium uppercase tracking-wide text-zinc-400">Priority</Label>
+                  {canChangePriority ? (
+                    <Select value={project.priority} onValueChange={handleUpdatePriority}>
+                      <SelectTrigger className="mt-1">
+                        <SelectValue placeholder="Select priority" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Object.entries(PRIORITY_STYLES).map(([key, style]) => (
+                          <SelectItem key={key} value={key}>
+                            {style.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <div className="mt-1 px-3 py-2 rounded-lg border border-zinc-200 dark:border-zinc-700 text-sm text-zinc-900 dark:text-zinc-100">
+                      {PRIORITY_STYLES[project.priority]?.label || project.priority}
+                    </div>
+                  )}
+                </div>
+
+                {/* Record Change */}
+                {!isReadOnly && (
+                  <div>
+                    <Label className="text-xs font-medium uppercase tracking-wide text-zinc-400">Record Change</Label>
+                    <Select onValueChange={handleChangeType} disabled={submittingChange} value="">
+                      <SelectTrigger className="mt-1">
+                        <SelectValue placeholder={submittingChange ? 'Saving...' : 'None'} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="MINOR">Minor Change</SelectItem>
+                        <SelectItem value="MAJOR">Major Change</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {((project.minorChanges || 0) > 0 || (project.majorChanges || 0) > 0) && (
+                      <p className="mt-1 text-xs text-zinc-500">
+                        Minor: {project.minorChanges || 0} | Major: {project.majorChanges || 0}
+                      </p>
+                    )}
                   </div>
                 )}
-              </div>
 
-              {/* Record Change */}
-              {!isReadOnly && (
+                {/* Due Date */}
                 <div>
-                  <Label className="text-xs font-medium uppercase tracking-wide text-zinc-400">Record Change</Label>
-                  <Select onValueChange={handleChangeType} disabled={submittingChange} value="">
-                    <SelectTrigger className="mt-1">
-                      <SelectValue placeholder={submittingChange ? 'Saving...' : 'None'} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="MINOR">Minor Change</SelectItem>
-                      <SelectItem value="MAJOR">Major Change</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  {((project.minorChanges || 0) > 0 || (project.majorChanges || 0) > 0) && (
-                    <p className="mt-1 text-xs text-zinc-500">
-                      Minor: {project.minorChanges || 0} | Major: {project.majorChanges || 0}
-                    </p>
-                  )}
+                  <Label className="text-xs font-medium uppercase tracking-wide text-zinc-400">Due Date</Label>
+                  <div className="flex items-center gap-2 mt-1">
+                    <Input
+                      type="date"
+                      value={project.dueDate ? format(new Date(project.dueDate), 'yyyy-MM-dd') : ''}
+                      onChange={(e) => handleUpdateDueDate(e.target.value)}
+                      min={format(new Date(), 'yyyy-MM-dd')}
+                      className="flex-1"
+                    />
+                    {isOverdue && (
+                      <AlertCircle className="w-4 h-4 text-red-600" />
+                    )}
+                  </div>
                 </div>
-              )}
 
-              {/* Due Date */}
-              <div>
-                <Label className="text-xs font-medium uppercase tracking-wide text-zinc-400">Due Date</Label>
-                <div className="flex items-center gap-2 mt-1">
-                  <Input
-                    type="date"
-                    value={project.dueDate ? format(new Date(project.dueDate), 'yyyy-MM-dd') : ''}
-                    onChange={(e) => handleUpdateDueDate(e.target.value)}
-                    min={format(new Date(), 'yyyy-MM-dd')}
-                    className="flex-1"
-                  />
-                  {isOverdue && (
-                    <AlertCircle className="w-4 h-4 text-red-600" />
-                  )}
-                </div>
-              </div>
-
-              {/* Primary Member */}
-              <div>
-                <Label className="text-xs font-medium uppercase tracking-wide text-zinc-400 mb-2 block">Primary Member</Label>
-                {(() => {
-                  const primaryAssignment = project.assignments[0];
-                  return (
-                    <div className="flex items-center gap-2 p-3 bg-zinc-50 dark:bg-zinc-800 rounded-xl border border-zinc-200 dark:border-zinc-700">
-                      <Avatar className="w-8 h-8">
-                        <AvatarImage src={primaryAssignment?.user?.avatar || undefined} alt={primaryAssignment?.user?.name} />
-                        <AvatarFallback>{primaryAssignment?.user?.name?.[0]}</AvatarFallback>
-                      </Avatar>
-                      <span className="text-sm font-medium text-zinc-900 dark:text-zinc-100">{primaryAssignment?.user?.name || 'Unassigned'}</span>
-                    </div>
-                  );
-                })()}
-              </div>
-
-              {/* Members */}
-              <div>
-                <Label className="text-xs font-medium uppercase tracking-wide text-zinc-400 mb-2 block">Members</Label>
-                {/* Current assignments list */}
-                <div className="space-y-0 mb-2 max-h-64 overflow-y-auto border border-zinc-200 dark:border-zinc-700 rounded-xl divide-y divide-zinc-100 dark:divide-zinc-800">
-                  {project.assignments.map((assignment: ProjectAssignment) => (
-                    <div key={assignment.id} className="flex items-center justify-between py-2 px-3 last:border-0">
-                      <div className="flex items-center gap-2">
+                {/* Primary Member */}
+                <div>
+                  <Label className="text-xs font-medium uppercase tracking-wide text-zinc-400 mb-2 block">Primary Member</Label>
+                  {(() => {
+                    const primaryAssignment = project.assignments[0];
+                    return (
+                      <div className="flex items-center gap-2 p-3 bg-zinc-50 dark:bg-zinc-800 rounded-xl border border-zinc-200 dark:border-zinc-700">
                         <Avatar className="w-8 h-8">
-                          <AvatarImage src={assignment.user?.avatar || undefined} />
-                          <AvatarFallback className="text-xs bg-orange-500 text-white">{assignment.user?.name?.[0]}</AvatarFallback>
+                          <AvatarImage src={primaryAssignment?.user?.avatar || undefined} alt={primaryAssignment?.user?.name} />
+                          <AvatarFallback>{primaryAssignment?.user?.name?.[0]}</AvatarFallback>
                         </Avatar>
-                        <div>
-                          <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">{assignment.user?.name}</p>
-                          <div className="flex items-center gap-1.5">
-                            {assignment.user?.specialization && (
-                              <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
-                                {assignment.user?.specialization?.replace(/_/g, ' ')}
+                        <span className="text-sm font-medium text-zinc-900 dark:text-zinc-100">{primaryAssignment?.user?.name || 'Unassigned'}</span>
+                      </div>
+                    );
+                  })()}
+                </div>
+
+                {/* Members */}
+                <div>
+                  <Label className="text-xs font-medium uppercase tracking-wide text-zinc-400 mb-2 block">Members</Label>
+                  {/* Current assignments list */}
+                  <div className="space-y-0 mb-2 max-h-64 overflow-y-auto border border-zinc-200 dark:border-zinc-700 rounded-xl divide-y divide-zinc-100 dark:divide-zinc-800">
+                    {project.assignments.map((assignment: ProjectAssignment) => (
+                      <div key={assignment.id} className="flex items-center justify-between py-2 px-3 last:border-0">
+                        <div className="flex items-center gap-2">
+                          <Avatar className="w-8 h-8">
+                            <AvatarImage src={assignment.user?.avatar || undefined} />
+                            <AvatarFallback className="text-xs bg-orange-500 text-white">{assignment.user?.name?.[0]}</AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">{assignment.user?.name}</p>
+                            <div className="flex items-center gap-1.5">
+                              {assignment.user?.specialization && (
+                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
+                                  {assignment.user?.specialization?.replace(/_/g, ' ')}
+                                </span>
+                              )}
+                              <span className="text-[10px] px-1.5 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-500">
+                                {assignment.role === 'PRIMARY' ? 'Primary' : 'Collaborator'}
                               </span>
-                            )}
-                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-500">
-                              {assignment.role === 'PRIMARY' ? 'Primary' : 'Collaborator'}
-                            </span>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <button
-                          onClick={() => handleToggleStatus(assignment)}
-                          className={`px-2 py-1 rounded text-xs font-medium transition-all ${
-                            assignment.status === 'DONE'
-                              ? 'bg-green-500/15 text-green-600 dark:text-green-400'
-                              : 'bg-orange-500/15 text-orange-600 dark:text-orange-400'
-                          }`}
-                        >
-                          {assignment.status === 'DONE' ? '✓ Done' : '● Active'}
-                        </button>
-                        {!isReadOnly && (
-                          <button onClick={() => handleRemoveAssignment(assignment.id)} className="p-1 text-zinc-400 hover:text-red-500">
-                            <X className="w-3.5 h-3.5" />
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => handleToggleStatus(assignment)}
+                            className={`px-2 py-1 rounded text-xs font-medium transition-all ${
+                              assignment.status === 'DONE'
+                                ? 'bg-green-500/15 text-green-600 dark:text-green-400'
+                                : 'bg-orange-500/15 text-orange-600 dark:text-orange-400'
+                            }`}
+                          >
+                            {assignment.status === 'DONE' ? '✓ Done' : '● Active'}
                           </button>
-                        )}
+                          {!isReadOnly && (
+                            <button onClick={() => handleRemoveAssignment(assignment.id)} className="p-1 text-zinc-400 hover:text-red-500">
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  ))}
-                  {project.assignments.length === 0 && (
-                    <p className="text-xs text-gray-500 dark:text-gray-400 py-3 px-3">No members assigned</p>
+                    ))}
+                    {project.assignments.length === 0 && (
+                      <p className="text-xs text-gray-500 dark:text-gray-400 py-3 px-3">No members assigned</p>
+                    )}
+                  </div>
+                  {/* Add member button */}
+                  {!isReadOnly && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full mt-1 text-xs"
+                      onClick={() => setShowMemberModal(true)}
+                    >
+                      + Add Member
+                    </Button>
                   )}
                 </div>
-                {/* Add member button */}
-                {!isReadOnly && (
+
+                {/* Delete Button */}
+                {canDeleteProject && (
                   <Button
-                    variant="outline"
-                    size="sm"
-                    className="w-full mt-1 text-xs"
-                    onClick={() => setShowMemberModal(true)}
+                    variant="destructive"
+                    onClick={() => setShowDeleteConfirm(true)}
+                    className="w-full"
                   >
-                    + Add Member
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Delete Project
                   </Button>
                 )}
               </div>
-
-              {/* Delete Button */}
-              {canDeleteProject && (
-                <Button
-                  variant="destructive"
-                  onClick={() => setShowDeleteConfirm(true)}
-                  className="w-full"
-                >
-                  <Trash2 className="w-4 h-4 mr-2" />
-                  Delete Project
-                </Button>
-              )}
             </div>
-          </div>
 
-          {/* Right Content Area */}
-          <div className="flex-1 min-h-0 overflow-y-auto">
-            <div className={isMobile ? 'p-4' : 'p-6'}>
-              <DialogHeader>
-                <DialogTitle className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">Project Details</DialogTitle>
-              </DialogHeader>
+            {/* Right Content Area */}
+            <div className="flex-1 min-h-0 overflow-y-auto">
+              <div className="p-6">
+                <DialogHeader>
+                  <DialogTitle className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">Project Details</DialogTitle>
+                </DialogHeader>
 
-              <Tabs defaultValue="details" className="mt-6">
-                <TabsList className={`${isMobile ? 'flex overflow-x-auto w-full' : 'grid w-full grid-cols-4'}`}>
-                  <TabsTrigger value="details" className={isMobile ? 'whitespace-nowrap flex-shrink-0' : ''}>Details</TabsTrigger>
-                  <TabsTrigger value="comments" className={isMobile ? 'whitespace-nowrap flex-shrink-0' : ''}>
-                    <MessageSquare className="w-4 h-4 mr-2" />
-                    Comments ({project.comments.length})
-                  </TabsTrigger>
-                  <TabsTrigger value="attachments" className={isMobile ? 'whitespace-nowrap flex-shrink-0' : ''}>
-                    <Paperclip className="w-4 h-4 mr-2" />
-                    Files ({project.attachments.length})
-                  </TabsTrigger>
-                  <TabsTrigger value="activity" className={isMobile ? 'whitespace-nowrap flex-shrink-0' : ''}>
-                    <Activity className="w-4 h-4 mr-2" />
-                    Activity
-                  </TabsTrigger>
-                </TabsList>
+                <Tabs defaultValue="details" className="mt-6">
+                  <TabsList className="grid w-full grid-cols-4">
+                    <TabsTrigger value="details">Details</TabsTrigger>
+                    <TabsTrigger value="comments">
+                      <MessageSquare className="w-4 h-4 mr-2" />
+                      Comments ({project.comments.length})
+                    </TabsTrigger>
+                    <TabsTrigger value="attachments">
+                      <Paperclip className="w-4 h-4 mr-2" />
+                      Files ({project.attachments.length})
+                    </TabsTrigger>
+                    <TabsTrigger value="activity">
+                      <Activity className="w-4 h-4 mr-2" />
+                      Activity
+                    </TabsTrigger>
+                  </TabsList>
 
-                {/* Details Tab */}
-                <TabsContent value="details" className="space-y-6 mt-6">
-                  {/* Description */}
-                  <div>
-                    <Label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Description</Label>
-                    {editingDescription ? (
-                      <div className="space-y-2 mt-2">
-                        <Textarea
-                          value={editingDesc}
-                          onChange={(e) => setEditingDesc(e.target.value)}
-                          className="min-h-32"
-                          autoFocus
-                        />
-                        <div className="flex gap-2">
-                          <Button size="sm" onClick={handleSaveDescription}>Save</Button>
-                          <Button size="sm" variant="outline" onClick={() => setEditingDescription(false)}>Cancel</Button>
+                  {/* Details Tab */}
+                  <TabsContent value="details" className="space-y-6 mt-6">
+                    {/* Description */}
+                    <div>
+                      <Label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Description</Label>
+                      {editingDescription ? (
+                        <div className="space-y-2 mt-2">
+                          <Textarea
+                            value={editingDesc}
+                            onChange={(e) => setEditingDesc(e.target.value)}
+                            className="min-h-32"
+                            autoFocus
+                          />
+                          <div className="flex gap-2">
+                            <Button size="sm" onClick={handleSaveDescription}>Save</Button>
+                            <Button size="sm" variant="outline" onClick={() => setEditingDescription(false)}>Cancel</Button>
+                          </div>
                         </div>
-                      </div>
-                    ) : (
-                      <div
-                        onClick={() => setEditingDescription(true)}
-                        className="mt-2 p-4 border border-zinc-200 dark:border-zinc-800 rounded-xl bg-zinc-50 dark:bg-zinc-900 cursor-pointer hover:bg-zinc-100 dark:hover:bg-zinc-800 min-h-24 whitespace-pre-wrap text-sm text-zinc-700 dark:text-zinc-300 transition-all duration-200"
-                      >
-                        {project.description || 'Click to add description...'}
-                      </div>
-                    )}
-                  </div>
+                      ) : (
+                        <div
+                          onClick={() => setEditingDescription(true)}
+                          className="mt-2 p-4 border border-zinc-200 dark:border-zinc-800 rounded-xl bg-zinc-50 dark:bg-zinc-900 cursor-pointer hover:bg-zinc-100 dark:hover:bg-zinc-800 min-h-24 whitespace-pre-wrap text-sm text-zinc-700 dark:text-zinc-300 transition-all duration-200"
+                        >
+                          {project.description || 'Click to add description...'}
+                        </div>
+                      )}
+                    </div>
 
-                  {/* Checklist */}
-                  <ChecklistSection project={project} />
-                </TabsContent>
+                    {/* Checklist */}
+                    <ChecklistSection project={project} />
+                  </TabsContent>
 
-                {/* Comments Tab */}
-                <TabsContent value="comments">
-                  <CommentsSection project={project} />
-                </TabsContent>
+                  {/* Comments Tab */}
+                  <TabsContent value="comments">
+                    <CommentsSection project={project} />
+                  </TabsContent>
 
-                {/* Attachments Tab */}
-                <TabsContent value="attachments">
-                  <AttachmentsSection project={project} />
-                </TabsContent>
+                  {/* Attachments Tab */}
+                  <TabsContent value="attachments">
+                    <AttachmentsSection project={project} />
+                  </TabsContent>
 
-                {/* Activity Tab */}
-                <TabsContent value="activity">
-                  <ActivitySection project={project} />
-                </TabsContent>
-              </Tabs>
+                  {/* Activity Tab */}
+                  <TabsContent value="activity">
+                    <ActivitySection project={project} />
+                  </TabsContent>
+                </Tabs>
+              </div>
             </div>
           </div>
-        </div>
+        )}
       </DialogContent>
     </Dialog>
 
