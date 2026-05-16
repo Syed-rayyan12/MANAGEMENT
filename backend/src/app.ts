@@ -4,6 +4,7 @@ import helmet from 'helmet';
 import compression from 'compression';
 import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
+
 import authRoutes from './routes/auth.routes';
 import projectRoutes from './routes/project.routes';
 import dashboardRoutes from './routes/dashboard.routes';
@@ -17,63 +18,114 @@ import webhookRoutes from './routes/webhook.routes';
 import adminRoutes from './routes/admin.routes';
 import clientRoutes from './routes/client.routes';
 import trashRoutes from './routes/trash.routes';
+
 import { purgeExpiredTrash } from './controllers/trash.controller';
 
+// ───────────────────────────────────────────────────
 // Load environment variables
+// ───────────────────────────────────────────────────
 dotenv.config();
 
 const app: Application = express();
 
-// ─── Trust proxy (Railway reverse proxy) ───────────
+// ───────────────────────────────────────────────────
+// Trust Railway proxy
+// ───────────────────────────────────────────────────
 app.set('trust proxy', 1);
 
-// ─── Security headers ──────────────────────────────
+// ───────────────────────────────────────────────────
+// Security headers
+// ───────────────────────────────────────────────────
 app.use(helmet());
 
-// ─── Gzip compression ──────────────────────────────
+// ───────────────────────────────────────────────────
+// Compression
+// ───────────────────────────────────────────────────
 app.use(compression());
 
-// ─── Rate limiting ─────────────────────────────────
+// ───────────────────────────────────────────────────
+// Rate limiting
+// ───────────────────────────────────────────────────
 const apiLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 200, // 200 requests per window
+  windowMs: 15 * 60 * 1000,
+  max: 200,
   standardHeaders: true,
   legacyHeaders: false,
-  message: { success: false, message: 'Too many requests, please try again later.' },
+  message: {
+    success: false,
+    message: 'Too many requests, please try again later.',
+  },
 });
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 15, // 15 login attempts per 15 min
+  max: 15,
   standardHeaders: true,
   legacyHeaders: false,
-  message: { success: false, message: 'Too many login attempts, please try again later.' },
+  message: {
+    success: false,
+    message: 'Too many login attempts, please try again later.',
+  },
 });
 
-// ─── CORS ──────────────────────────────────────────
+// ───────────────────────────────────────────────────
+// Allowed origins
+// ───────────────────────────────────────────────────
 const allowedOrigins = [
   process.env.CLIENT_URL || 'http://localhost:3000',
   'http://localhost:3000',
   'http://localhost:3001',
 ].filter(Boolean);
 
-app.use(cors({
-  origin: (origin, callback) => {
-    // Allow requests with no origin (mobile apps, curl, etc.)
-    if (!origin) return callback(null, true);
-    if (allowedOrigins.includes(origin)) return callback(null, true);
-    return callback(new Error(`CORS blocked for origin: ${origin}`));
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-}));
+// ───────────────────────────────────────────────────
+// CORS
+// ───────────────────────────────────────────────────
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // Allow mobile apps / Postman / curl
+      if (!origin) {
+        return callback(null, true);
+      }
 
-// ─── Body parsing ──────────────────────────────────
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+
+      return callback(new Error(`CORS blocked for origin: ${origin}`));
+    },
+
+    credentials: true,
+
+    methods: [
+      'GET',
+      'POST',
+      'PUT',
+      'PATCH',
+      'DELETE',
+      'OPTIONS',
+    ],
+
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'x-socket-id',
+    ],
+  })
+);
+
+// Handle preflight requests
+app.options('*', cors());
+
+// ───────────────────────────────────────────────────
+// Body parsers
+// ───────────────────────────────────────────────────
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
-// ─── Health check (no rate limit) ──────────────────
+// ───────────────────────────────────────────────────
+// Health check
+// ───────────────────────────────────────────────────
 app.get('/health', (_req: Request, res: Response) => {
   res.status(200).json({
     success: true,
@@ -82,7 +134,9 @@ app.get('/health', (_req: Request, res: Response) => {
   });
 });
 
-// ─── API Routes ────────────────────────────────────
+// ───────────────────────────────────────────────────
+// API Routes
+// ───────────────────────────────────────────────────
 app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/projects', apiLimiter, projectRoutes);
 app.use('/api/dashboard', apiLimiter, dashboardRoutes);
@@ -92,15 +146,19 @@ app.use('/api/notifications', apiLimiter, notificationRoutes);
 app.use('/api/teams', apiLimiter, teamRoutes);
 app.use('/api/boards', apiLimiter, boardRoutes);
 app.use('/api/invoices', apiLimiter, invoiceRoutes);
-app.use('/api/webhooks', webhookRoutes); // No rate limit — Square needs reliable delivery
+app.use('/api/webhooks', webhookRoutes);
 app.use('/api/admin', apiLimiter, adminRoutes);
 app.use('/api/clients', apiLimiter, clientRoutes);
 app.use('/api/trash', apiLimiter, trashRoutes);
 
-// ─── Auto-purge expired trash on startup ───────────
+// ───────────────────────────────────────────────────
+// Auto purge expired trash
+// ───────────────────────────────────────────────────
 purgeExpiredTrash();
 
-// ─── 404 handler ───────────────────────────────────
+// ───────────────────────────────────────────────────
+// 404 handler
+// ───────────────────────────────────────────────────
 app.use((_req: Request, res: Response) => {
   res.status(404).json({
     success: false,
@@ -108,15 +166,21 @@ app.use((_req: Request, res: Response) => {
   });
 });
 
-// ─── Global error handler ──────────────────────────
-app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
-  console.error('Unhandled error:', err.message);
-  res.status(500).json({
-    success: false,
-    message: process.env.NODE_ENV === 'production'
-      ? 'Internal server error'
-      : err.message,
-  });
-});
+// ───────────────────────────────────────────────────
+// Global error handler
+// ───────────────────────────────────────────────────
+app.use(
+  (err: Error, _req: Request, res: Response, _next: NextFunction) => {
+    console.error('Unhandled error:', err.message);
+
+    res.status(500).json({
+      success: false,
+      message:
+        process.env.NODE_ENV === 'production'
+          ? 'Internal server error'
+          : err.message,
+    });
+  }
+);
 
 export default app;
