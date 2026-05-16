@@ -172,8 +172,8 @@ export default function WorkspacePage() {
             <p className="text-zinc-500 dark:text-zinc-400 mt-1 text-sm">Manage your {displayName.toLowerCase()} projects</p>
           </div>
         </div>
-        <div className="flex flex-wrap items-center gap-2 md:gap-5">
-          <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 md:gap-5 w-full md:w-auto">
+          <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="sm">
@@ -246,7 +246,7 @@ export default function WorkspacePage() {
                 columnCount: customColumns.length,
               })}
               variant="outline"
-              className="border-red-500/30 hover:bg-red-500/10 text-red-500 hover:text-red-600"
+              className="border-red-500/30 hover:bg-red-500/10 text-red-500 hover:text-red-600 w-full sm:w-auto"
             >
               <Trash2 className="w-4 h-4 mr-2" />
               Delete Workspace
@@ -256,7 +256,7 @@ export default function WorkspacePage() {
             <Button
               onClick={() => setShowAddColumnModal(true)}
               variant="outline"
-              className="border-orange-500/50 hover:bg-orange-500/10 dark:border-orange-500/50 dark:hover:bg-orange-500/10"
+              className="border-orange-500/50 hover:bg-orange-500/10 dark:border-orange-500/50 dark:hover:bg-orange-500/10 w-full sm:w-auto"
             >
               <Plus className="w-4 h-4 mr-2 text-orange-500" />
               <span className='text-orange-500'>
@@ -267,7 +267,7 @@ export default function WorkspacePage() {
           {canCreateProject && (
             <Button
               onClick={() => setShowCreateModal(true)}
-              className="bg-orange-500 hover:bg-orange-600 dark:bg-orange-500 dark:hover:bg-orange-600 dark:shadow-lg dark:shadow-orange-500/50"
+              className="bg-orange-500 hover:bg-orange-600 dark:bg-orange-500 dark:hover:bg-orange-600 dark:shadow-lg dark:shadow-orange-500/50 w-full sm:w-auto"
             >
               <Plus className="w-4 h-4 mr-2 text-white" />
               <span className='text-white'>
