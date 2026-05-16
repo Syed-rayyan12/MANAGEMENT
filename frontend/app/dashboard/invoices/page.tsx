@@ -5,6 +5,7 @@ import { useApp } from '@/contexts/useApp';
 import { invoiceAPI, teamAPI } from '@/lib/api-service';
 import { Invoice, InvoiceStatus } from '@/lib/types';
 import { usePermissions } from '@/hooks/usePermissions';
+import { useIsMobile } from '@/hooks/use-mobile';
 import {
   FileText,
   Plus,
@@ -71,6 +72,7 @@ function CopyButton({ text }: { text: string }) {
 export default function InvoicesPage() {
   const { state } = useApp();
   const { canCreateInvoice, canAccessInvoices } = usePermissions();
+  const isMobile = useIsMobile();
 
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
@@ -269,7 +271,7 @@ export default function InvoicesPage() {
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">Invoices</h1>
           <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
@@ -324,7 +326,7 @@ export default function InvoicesPage() {
 
       {/* Last created payment link banner */}
       {lastCreatedLink && (
-        <div className="rounded-xl bg-emerald-500/10 border border-emerald-500/20 p-4 flex items-center justify-between gap-4">
+        <div className="rounded-xl bg-emerald-500/10 border border-emerald-500/20 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3 min-w-0">
             <Check className="w-5 h-5 text-emerald-500 flex-shrink-0" />
             <div className="min-w-0">
@@ -528,7 +530,7 @@ export default function InvoicesPage() {
             className="w-full rounded-lg pl-9 pr-3 py-2 text-sm border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-[#e05c29]/30 focus:border-[#e05c29] transition-all duration-200 ease-out"
           />
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Filter className="w-4 h-4 text-zinc-400" />
           {(['ALL', 'PENDING', 'PAID', 'CANCELLED', 'REFUNDED', 'FAILED'] as const).map((s) => (
             <button
@@ -560,7 +562,78 @@ export default function InvoicesPage() {
               {invoices.length === 0 ? 'No invoices yet. Generate your first payment link!' : 'No invoices match your filters.'}
             </p>
           </div>
+        ) : isMobile ? (
+          /* Mobile: Card layout */
+          <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
+            {paginatedInvoices.map((invoice) => (
+              <div key={invoice.id} className="p-4 space-y-3">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <p className="font-medium text-zinc-900 dark:text-zinc-100">{invoice.clientName}</p>
+                    {invoice.clientEmail && (
+                      <p className="text-xs text-zinc-400 mt-0.5">{invoice.clientEmail}</p>
+                    )}
+                  </div>
+                  <span
+                    className={cn(
+                      'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium',
+                      STATUS_STYLES[invoice.status]
+                    )}
+                  >
+                    {invoice.status.charAt(0) + invoice.status.slice(1).toLowerCase()}
+                  </span>
+                </div>
+                <p className="text-sm text-zinc-600 dark:text-zinc-400 line-clamp-2">{invoice.description}</p>
+                <div className="flex items-center justify-between">
+                  <span className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
+                    £{parseFloat(invoice.amount).toLocaleString('en-GB', { minimumFractionDigits: 2 })}
+                  </span>
+                  <span className="text-xs text-zinc-400">
+                    {new Date(invoice.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  {invoice.paymentLink && (
+                    <>
+                      <CopyButton text={invoice.paymentLink} />
+                      <a
+                        href={invoice.paymentLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5" />
+                        Open
+                      </a>
+                    </>
+                  )}
+                  {invoice.status === 'PENDING' && (
+                    <button
+                      onClick={() => handleCancel(invoice.id)}
+                      disabled={cancellingId === invoice.id}
+                      className="ml-auto rounded-lg px-2.5 py-1.5 text-xs font-medium bg-red-500/10 text-red-600 dark:text-red-400 hover:bg-red-500/20 transition-all disabled:opacity-50 inline-flex items-center gap-1"
+                    >
+                      {cancellingId === invoice.id ? (
+                        <>
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                          Cancelling...
+                        </>
+                      ) : (
+                        'Cancel'
+                      )}
+                    </button>
+                  )}
+                </div>
+                {invoice.paidAt && (
+                  <p className="text-xs text-emerald-500">
+                    Paid {new Date(invoice.paidAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                  </p>
+                )}
+              </div>
+            ))}
+          </div>
         ) : (
+          /* Desktop: Table layout */
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
@@ -701,7 +774,7 @@ export default function InvoicesPage() {
 
         {/* Pagination */}
         {filtered.length > pageSize && (
-          <div className="flex items-center justify-between px-4 py-3 border-t border-zinc-100 dark:border-zinc-800">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-2 px-4 py-3 border-t border-zinc-100 dark:border-zinc-800">
             <p className="text-xs text-zinc-500 dark:text-zinc-400">
               Showing {(currentPage - 1) * pageSize + 1}–{Math.min(currentPage * pageSize, filtered.length)} of {filtered.length}
             </p>
