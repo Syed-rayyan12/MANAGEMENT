@@ -18,6 +18,7 @@ import webhookRoutes from './routes/webhook.routes';
 import adminRoutes from './routes/admin.routes';
 import clientRoutes from './routes/client.routes';
 import trashRoutes from './routes/trash.routes';
+import performanceRoutes from './routes/performance.routes';
 
 import { purgeExpiredTrash } from './controllers/trash.controller';
 
@@ -150,6 +151,7 @@ app.use('/api/webhooks', webhookRoutes);
 app.use('/api/admin', apiLimiter, adminRoutes);
 app.use('/api/clients', apiLimiter, clientRoutes);
 app.use('/api/trash', apiLimiter, trashRoutes);
+app.use('/api/performance', apiLimiter, performanceRoutes);
 
 // ───────────────────────────────────────────────────
 // Auto purge expired trash
