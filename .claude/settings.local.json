@@ -46,7 +46,10 @@
       "Bash(git commit:*)",
       "Bash(find /f/downloads-new/MANAGEMENT-main/MANAGEMENT-main/frontend/components -type f -name *idebar* -o -name *nav*)",
       "Bash(DATABASE_URL=\"postgresql://postgres:PJEGMQUYGIBPANktROhvDhjrGrzmosnP@metro.proxy.rlwy.net:26362/railway\" npx prisma migrate dev --name add-soft-delete-fields)",
-      "Bash(DATABASE_URL=\"postgresql://postgres:PJEGMQUYGIBPANktROhvDhjrGrzmosnP@metro.proxy.rlwy.net:26362/railway\" npx prisma migrate dev --name add-soft-delete-fields --create-only)"
+      "Bash(DATABASE_URL=\"postgresql://postgres:PJEGMQUYGIBPANktROhvDhjrGrzmosnP@metro.proxy.rlwy.net:26362/railway\" npx prisma migrate dev --name add-soft-delete-fields --create-only)",
+      "Bash(taskkill /F /IM node.exe)",
+      "Bash(rm:*)",
+      "Bash(cd:*)"
     ]
   }
 }
