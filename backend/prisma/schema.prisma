@@ -181,6 +181,8 @@ model User {
   deletedBoards    Board[]             @relation("deletedBoards")
   deletedColumns   BoardColumn[]       @relation("deletedColumns")
   deletedProjects  Project[]           @relation("deletedProjects")
+  regressionsReceived Regression[]     @relation("regressionTarget")
+  regressionsCaused   Regression[]     @relation("regressionCauser")
 
   @@map("users")
 }
@@ -196,11 +198,6 @@ model Project {
   dueDate     DateTime?
   image       String?
   position    Int             @default(0)
-
-  // Change tracking (synced to Google Sheets)
-  minorChanges      Int       @default(0)
-  majorChanges      Int       @default(0)
-  majorChangeReason String?
 
   // Board relation (which service board: logo, web design, etc.)
   boardId     String
@@ -223,6 +220,7 @@ model Project {
   labels      ProjectLabel[]
   attachments Attachment[]
   activities  ActivityLog[]
+  regressions Regression[]
 
   createdAt   DateTime        @default(now())
   updatedAt   DateTime        @updatedAt
@@ -250,6 +248,25 @@ model ProjectAssignment {
   @@index([userId])
   @@index([projectId])
   @@map("project_assignments")
+}
+
+// ─── REGRESSIONS (backward column moves) ─────────
+
+model Regression {
+  id         String   @id @default(uuid())
+  projectId  String
+  project    Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  userId     String   // production user whose work was regressed
+  user       User     @relation("regressionTarget", fields: [userId], references: [id], onDelete: Cascade)
+  causedById String   // who moved it backward
+  causedBy   User     @relation("regressionCauser", fields: [causedById], references: [id], onDelete: Cascade)
+  fromColumn String   // column key it was in before
+  toColumn   String   // column key it moved back to
+  createdAt  DateTime @default(now())
+
+  @@index([userId])
+  @@index([projectId])
+  @@map("regressions")
 }
 
 // ─── COMMENTS ───────────────────────────────────────
