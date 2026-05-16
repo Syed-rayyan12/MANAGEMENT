@@ -10,6 +10,7 @@ import { Project, ProjectStatus } from '@/lib/types';
 import { ProjectCard } from './Card';
 import { Plus, X, MoreVertical, Trash2 } from 'lucide-react';
 import { usePermissions } from '@/hooks/usePermissions';
+import { useIsMobile } from '@/hooks/use-mobile';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -30,6 +31,7 @@ interface ColumnProps {
 export function Column({ status, label, color, projects, onCardClick, onAddCard, onDeleteColumn }: ColumnProps) {
   const { setNodeRef, isOver } = useDroppable({ id: status });
   const { canCreateProject, canSoftDelete } = usePermissions();
+  const isMobile = useIsMobile();
   const [showForm, setShowForm] = useState(false);
   const [cardName, setCardName] = useState('');
   const [saving, setSaving] = useState(false);
@@ -62,7 +64,7 @@ export function Column({ status, label, color, projects, onCardClick, onAddCard,
   return (
     <div
       ref={setNodeRef}
-      className={`flex flex-col rounded-xl p-3 w-[300px] min-w-[300px] max-w-[300px] h-[calc(100vh-200px)] transition-colors ${
+      className={`flex flex-col rounded-xl p-3 ${isMobile ? 'w-[85vw] min-w-[85vw] max-w-[85vw] snap-center' : 'w-[300px] min-w-[300px] max-w-[300px]'} h-[calc(100vh-200px)] transition-colors ${
         isOver
           ? 'bg-orange-50/80 dark:bg-[#e05c29]/5 border-2 border-dashed border-[#e05c29]/30'
           : 'bg-zinc-100/70 dark:bg-zinc-900/40 border border-transparent'
@@ -81,7 +83,7 @@ export function Column({ status, label, color, projects, onCardClick, onAddCard,
           {canSoftDelete && onDeleteColumn && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="w-6 h-6 rounded-md flex items-center justify-center text-gray-400 dark:text-gray-500 hover:text-zinc-600 dark:hover:text-zinc-300 hover:bg-zinc-200/50 dark:hover:bg-zinc-700/50 transition-colors">
+                <button className={`${isMobile ? 'w-10 h-10' : 'w-6 h-6'} rounded-md flex items-center justify-center text-gray-400 dark:text-gray-500 hover:text-zinc-600 dark:hover:text-zinc-300 hover:bg-zinc-200/50 dark:hover:bg-zinc-700/50 transition-colors`}>
                   <MoreVertical className="w-4 h-4" />
                 </button>
               </DropdownMenuTrigger>
@@ -99,7 +101,7 @@ export function Column({ status, label, color, projects, onCardClick, onAddCard,
           {canCreateProject && !showForm && (
             <button
               onClick={() => setShowForm(true)}
-              className="w-6 h-6 rounded-md flex items-center justify-center text-gray-400 dark:text-gray-500 hover:text-orange-500 dark:hover:text-orange-400 hover:bg-orange-500/10 transition-colors"
+              className={`${isMobile ? 'w-10 h-10' : 'w-6 h-6'} rounded-md flex items-center justify-center text-gray-400 dark:text-gray-500 hover:text-orange-500 dark:hover:text-orange-400 hover:bg-orange-500/10 transition-colors`}
               title="Add a card"
             >
               <Plus className="w-4 h-4" />
