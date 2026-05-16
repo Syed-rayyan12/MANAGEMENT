@@ -7,6 +7,7 @@ import React, { useState, useEffect } from 'react';
 import { Project, ProjectAssignment } from '@/lib/types';
 import { useApp } from '@/contexts/useApp';
 import { usePermissions } from '@/hooks/usePermissions';
+import { useIsMobile } from '@/hooks/use-mobile';
 import {
   Dialog,
   DialogContent,
@@ -44,6 +45,7 @@ interface ProjectModalProps {
 export function ProjectModal({ project, onClose }: ProjectModalProps) {
   const { state, dispatch, getUserName, getAllUsers, getUserAvatar } = useApp();
   const { canDeleteProject, canChangePriority, isReadOnly } = usePermissions();
+  const isMobile = useIsMobile();
 
   // Guard: if project is somehow null/undefined during unmount, bail out
   if (!project) return null;
@@ -454,16 +456,16 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
   return (
     <>
     <Dialog open={true} onOpenChange={onClose}>
-      <DialogContent className="max-w-7xl h-[90vh] overflow-hidden p-0 gap-0 flex flex-col rounded-2xl backdrop-blur-md bg-white/80 dark:bg-zinc-900/80 border border-zinc-200/50 dark:border-white/10 ring-1 ring-[#e05c29]/10 shadow-2xl">
+      <DialogContent className={`${isMobile ? 'h-[100dvh] w-full max-w-full rounded-none' : 'max-w-7xl h-[90vh] rounded-2xl'} overflow-hidden p-0 gap-0 flex flex-col backdrop-blur-md bg-white/80 dark:bg-zinc-900/80 border border-zinc-200/50 dark:border-white/10 ring-1 ring-[#e05c29]/10 shadow-2xl`}>
         <DialogDescription className="sr-only">Project details and management</DialogDescription>
 
         {/* Left-Right Layout */}
-        <div className="flex flex-1 min-h-0">
+        <div className={`${isMobile ? 'flex flex-col' : 'flex'} flex-1 min-h-0`}>
 
           {/* Left Sidebar */}
-          <div className="w-96 border-r border-zinc-200 dark:border-zinc-800 flex flex-col min-h-0">
+          <div className={`${isMobile ? 'w-full border-b max-h-[40vh] overflow-y-auto' : 'w-96 border-r'} border-zinc-200 dark:border-zinc-800 flex flex-col min-h-0`}>
             {/* Cover Photo Section */}
-            <div className="relative group flex-shrink-0">
+            <div className={`relative group flex-shrink-0 ${isMobile ? 'hidden' : ''}`}>
               {project.image ? (
                 <>
                   <img
@@ -499,7 +501,7 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
             </div>
 
             {/* Sidebar Content */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-6">
+            <div className={`flex-1 overflow-y-auto ${isMobile ? 'p-4 space-y-3' : 'p-6 space-y-6'}`}>
               {/* Project Title */}
               <div>
                 {editingName ? (
@@ -699,23 +701,23 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
 
           {/* Right Content Area */}
           <div className="flex-1 min-h-0 overflow-y-auto">
-            <div className="p-6">
+            <div className={isMobile ? 'p-4' : 'p-6'}>
               <DialogHeader>
                 <DialogTitle className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">Project Details</DialogTitle>
               </DialogHeader>
 
               <Tabs defaultValue="details" className="mt-6">
-                <TabsList className="grid w-full grid-cols-4">
-                  <TabsTrigger value="details">Details</TabsTrigger>
-                  <TabsTrigger value="comments">
+                <TabsList className={`${isMobile ? 'flex overflow-x-auto w-full' : 'grid w-full grid-cols-4'}`}>
+                  <TabsTrigger value="details" className={isMobile ? 'whitespace-nowrap flex-shrink-0' : ''}>Details</TabsTrigger>
+                  <TabsTrigger value="comments" className={isMobile ? 'whitespace-nowrap flex-shrink-0' : ''}>
                     <MessageSquare className="w-4 h-4 mr-2" />
                     Comments ({project.comments.length})
                   </TabsTrigger>
-                  <TabsTrigger value="attachments">
+                  <TabsTrigger value="attachments" className={isMobile ? 'whitespace-nowrap flex-shrink-0' : ''}>
                     <Paperclip className="w-4 h-4 mr-2" />
                     Files ({project.attachments.length})
                   </TabsTrigger>
-                  <TabsTrigger value="activity">
+                  <TabsTrigger value="activity" className={isMobile ? 'whitespace-nowrap flex-shrink-0' : ''}>
                     <Activity className="w-4 h-4 mr-2" />
                     Activity
                   </TabsTrigger>
