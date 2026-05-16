@@ -526,3 +526,11 @@ export const trashAPI = {
     return await response.json();
   },
 };
+
+// Performance APIs
+export const performanceAPI = {
+  getMyPerformance: async () => {
+    const response = await apiFetch(`${API_BASE_URL}/performance/me`);
+    return await response.json();
+  },
+};

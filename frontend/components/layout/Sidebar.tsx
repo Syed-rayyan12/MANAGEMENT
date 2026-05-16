@@ -13,6 +13,7 @@ import {
   FileText,
   Shield,
   Trash2,
+  TrendingUp,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { BOARD_METADATA, DEFAULT_BOARD_METADATA } from '@/lib/constants';
@@ -61,6 +62,7 @@ export function Sidebar({ collapsed, onToggle, isMobile = false, mobileOpen = fa
   const userRole = state.currentUser?.role;
   const canAccessInvoices = userRole === 'PM' || userRole === 'TL' || userRole === 'EXECUTIVE';
   const canAccessAdmin = userRole === 'EXECUTIVE';
+  const canAccessPerformance = userRole === 'PRODUCTION';
   const canAccessTrash = userRole === 'PM' || userRole === 'PRODUCTION';
 
   const navItems = [
@@ -78,6 +80,13 @@ export function Sidebar({ collapsed, onToggle, isMobile = false, mobileOpen = fa
       href: '/dashboard/my-work',
       match: (p: string) => p === '/dashboard/my-work',
     },
+    ...(canAccessPerformance ? [{
+      id: 'my-performance',
+      label: 'My Performance',
+      icon: TrendingUp,
+      href: '/dashboard/my-performance',
+      match: (p: string) => p === '/dashboard/my-performance',
+    }] : []),
     ...(canAccessInvoices ? [{
       id: 'invoices',
       label: 'Invoices',
