@@ -273,19 +273,16 @@ export const getEmployeePerformance = async (req: Request, res: Response): Promi
       const assignedProjectIds = await prisma.projectAssignment.findMany({ where: { userId: id }, select: { projectId: true } });
       const projectIds = assignedProjectIds.map(a => a.projectId);
 
-      const [liveProjects, changesResult] = await Promise.all([
+      const [liveProjects, totalRegressions] = await Promise.all([
         prisma.project.count({ where: { id: { in: projectIds }, status: 'live' } }),
-        prisma.project.aggregate({ _sum: { minorChanges: true, majorChanges: true }, where: { id: { in: projectIds } } }),
+        prisma.regression.count({ where: { userId: id } }),
       ]);
 
-      const totalMinorChanges = changesResult._sum.minorChanges || 0;
-      const totalMajorChanges = changesResult._sum.majorChanges || 0;
       const totalAssigned = projectIds.length;
 
       performance = { ...performance,
         specialization: user.specialization, liveProjects,
-        totalMinorChanges, totalMajorChanges,
-        averageChangesPerProject: totalAssigned > 0 ? Math.round((totalMinorChanges + totalMajorChanges) / totalAssigned * 10) / 10 : 0,
+        totalRegressions,
         completionRatio: totalAssigned > 0 ? Math.round((doneAssignments / totalAssigned) * 100) : 0,
       };
     }
