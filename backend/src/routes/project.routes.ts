@@ -61,7 +61,7 @@ router.get('/:id', getProjectById);
 router.put('/:id', validate(updateProjectSchema), updateProject);
 
 // ─── Delete a project ─────────────────────────────
-router.delete('/:id', authorizeRoles('PM'), deleteProject);
+router.delete('/:id', authorizeRoles('PM', 'PRODUCTION'), deleteProject);
 
 // ─── Comments ──────────────────────────────────────
 router.post('/:id/comments', validate(addCommentSchema), addComment);

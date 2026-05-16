@@ -140,16 +140,28 @@ export const createProject = async (req: Request, res: Response): Promise<void> 
     }
     boardId = board.id;
 
-    // Determine teamId from the creator's team membership
-    const creatorMemberships = await prisma.teamMember.findMany({
-      where: { userId: creatorId },
-      select: { teamId: true },
-    });
-    if (creatorMemberships.length === 0) {
-      res.status(400).json({ success: false, message: 'You must belong to a team to create projects' });
-      return;
+    // Determine teamId — PRODUCTION users can specify a team, others use their membership
+    let teamId: string;
+
+    if (req.body.teamId) {
+      // Explicit team selection (used by PRODUCTION users who aren't team members)
+      const team = await prisma.team.findUnique({ where: { id: req.body.teamId } });
+      if (!team) {
+        res.status(400).json({ success: false, message: 'Specified team not found' });
+        return;
+      }
+      teamId = team.id;
+    } else {
+      const creatorMemberships = await prisma.teamMember.findMany({
+        where: { userId: creatorId },
+        select: { teamId: true },
+      });
+      if (creatorMemberships.length === 0) {
+        res.status(400).json({ success: false, message: 'You must belong to a team or specify a teamId to create projects' });
+        return;
+      }
+      teamId = creatorMemberships[0].teamId;
     }
-    const teamId = creatorMemberships[0].teamId;
 
     // Validate status against board columns if provided
     if (status) {

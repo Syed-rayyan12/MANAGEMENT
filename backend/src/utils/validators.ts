@@ -26,6 +26,7 @@ export const createProjectSchema = z.object({
   dueDate: z.string().optional().nullable(),
   image: optionalUrl,
   clientId: z.string().uuid().optional().nullable(),
+  teamId: z.string().uuid().optional(),
 });
 
 export const updateProjectSchema = z.object({
