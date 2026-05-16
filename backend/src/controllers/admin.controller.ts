@@ -270,20 +270,143 @@ export const getEmployeePerformance = async (req: Request, res: Response): Promi
         }
       }
     } else if (user.role === 'PRODUCTION') {
-      const assignedProjectIds = await prisma.projectAssignment.findMany({ where: { userId: id }, select: { projectId: true } });
-      const projectIds = assignedProjectIds.map(a => a.projectId);
+      // Get all assignments with project details for turnaround calculation
+      const allAssignments = await prisma.projectAssignment.findMany({
+        where: { userId: id },
+        include: {
+          project: { select: { id: true, name: true, status: true, dueDate: true, boardId: true } },
+        },
+      });
 
-      const [liveProjects, totalRegressions] = await Promise.all([
-        prisma.project.count({ where: { id: { in: projectIds }, status: 'live' } }),
+      const doneAssignmentsDetailed = await prisma.projectAssignment.findMany({
+        where: { userId: id, status: 'DONE' },
+        include: {
+          project: { select: { id: true, name: true, dueDate: true, boardId: true } },
+        },
+      });
+
+      // Turnaround times (days)
+      const turnaroundDays: number[] = [];
+      let onTimeCount = 0;
+      let lateCount = 0;
+      let withDueDateCount = 0;
+
+      for (const a of doneAssignmentsDetailed) {
+        if (a.completedAt && a.assignedAt) {
+          const days = (a.completedAt.getTime() - a.assignedAt.getTime()) / (1000 * 60 * 60 * 24);
+          turnaroundDays.push(Math.round(days * 10) / 10);
+        }
+        if (a.project.dueDate && a.completedAt) {
+          withDueDateCount++;
+          if (a.completedAt <= a.project.dueDate) {
+            onTimeCount++;
+          } else {
+            lateCount++;
+          }
+        }
+      }
+
+      const avgTurnaround = turnaroundDays.length > 0
+        ? Math.round(turnaroundDays.reduce((s, d) => s + d, 0) / turnaroundDays.length * 10) / 10
+        : 0;
+      const fastestTurnaround = turnaroundDays.length > 0 ? Math.min(...turnaroundDays) : 0;
+      const slowestTurnaround = turnaroundDays.length > 0 ? Math.max(...turnaroundDays) : 0;
+
+      // On-time rate (only projects with a due date)
+      const onTimeRate = withDueDateCount > 0 ? Math.round((onTimeCount / withDueDateCount) * 100) : null;
+
+      // Regressions
+      const [totalRegressions, regressionsThisMonth] = await Promise.all([
         prisma.regression.count({ where: { userId: id } }),
+        prisma.regression.count({ where: { userId: id, createdAt: { gte: startOfMonth } } }),
       ]);
 
-      const totalAssigned = projectIds.length;
+      const totalAssigned = allAssignments.length;
+      const regressionRate = totalAssigned > 0 ? Math.round((totalRegressions / totalAssigned) * 100) : 0;
 
-      performance = { ...performance,
-        specialization: user.specialization, liveProjects,
+      // Completion trend (last 6 months)
+      const monthlyCompletions: { month: string; count: number }[] = [];
+      for (let i = 5; i >= 0; i--) {
+        const monthDate = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        const monthEnd = new Date(now.getFullYear(), now.getMonth() - i + 1, 0, 23, 59, 59);
+        const monthKey = `${monthDate.getFullYear()}-${String(monthDate.getMonth() + 1).padStart(2, '0')}`;
+
+        const count = await prisma.projectAssignment.count({
+          where: {
+            userId: id,
+            status: 'DONE',
+            completedAt: { gte: monthDate, lte: monthEnd },
+          },
+        });
+        monthlyCompletions.push({ month: monthKey, count });
+      }
+
+      // Recent completions (last 10)
+      const recentCompletions = await prisma.projectAssignment.findMany({
+        where: { userId: id, status: 'DONE' },
+        orderBy: { completedAt: 'desc' },
+        take: 10,
+        include: {
+          project: {
+            select: { id: true, name: true, dueDate: true, board: { select: { name: true, slug: true } } },
+          },
+        },
+      });
+
+      const recentCompletionsList = recentCompletions.map(a => ({
+        projectId: a.project.id,
+        projectName: a.project.name,
+        board: a.project.board.name,
+        boardSlug: a.project.board.slug,
+        assignedAt: a.assignedAt,
+        completedAt: a.completedAt,
+        turnaroundDays: a.completedAt && a.assignedAt
+          ? Math.round((a.completedAt.getTime() - a.assignedAt.getTime()) / (1000 * 60 * 60 * 24) * 10) / 10
+          : null,
+        onTime: a.project.dueDate && a.completedAt ? a.completedAt <= a.project.dueDate : null,
+      }));
+
+      // Recent regressions (last 10)
+      const recentRegressions = await prisma.regression.findMany({
+        where: { userId: id },
+        orderBy: { createdAt: 'desc' },
+        take: 10,
+        include: {
+          project: { select: { id: true, name: true } },
+          causedBy: { select: { id: true, name: true } },
+        },
+      });
+
+      const regressionsList = recentRegressions.map(r => ({
+        projectId: r.project.id,
+        projectName: r.project.name,
+        causedBy: r.causedBy.name,
+        fromColumn: r.fromColumn,
+        toColumn: r.toColumn,
+        createdAt: r.createdAt,
+      }));
+
+      performance = {
+        ...performance,
+        specialization: user.specialization,
+        // Turnaround
+        avgTurnaround,
+        fastestTurnaround,
+        slowestTurnaround,
+        // On-time delivery
+        onTimeRate,
+        onTimeCount,
+        lateCount,
+        withDueDateCount,
+        // Regressions
         totalRegressions,
-        completionRatio: totalAssigned > 0 ? Math.round((doneAssignments / totalAssigned) * 100) : 0,
+        regressionsThisMonth,
+        regressionRate,
+        // Trend
+        completionTrend: monthlyCompletions,
+        // Lists
+        recentCompletions: recentCompletionsList,
+        recentRegressions: regressionsList,
       };
     }
 
