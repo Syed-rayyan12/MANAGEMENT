@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { MessageSquare, Edit, AtSign } from 'lucide-react';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface CommentsSectionProps {
   project: Project;
@@ -16,6 +17,7 @@ interface CommentsSectionProps {
 
 export function CommentsSection({ project }: CommentsSectionProps) {
   const { state, dispatch, getUserName, getAllUsers, getUserAvatar } = useApp();
+  const isMobile = useIsMobile();
   const [newComment, setNewComment] = useState('');
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [editCommentContent, setEditCommentContent] = useState('');
@@ -256,7 +258,7 @@ export function CommentsSection({ project }: CommentsSectionProps) {
         )}
       </div>
 
-      <div className="border-t pt-4 space-y-2">
+      <div className={`border-t pt-4 space-y-2 ${isMobile ? 'sticky bottom-0 bg-white dark:bg-zinc-900 pb-2 z-10' : ''}`}>
         <div className="relative">
           <Textarea
             ref={commentInputRef}
@@ -267,7 +269,7 @@ export function CommentsSection({ project }: CommentsSectionProps) {
           />
           <MentionDropdown isNewComment={true} />
         </div>
-        <div className="flex items-center justify-between">
+        <div className={`flex ${isMobile ? 'flex-col gap-2' : 'items-center justify-between'}`}>
           <p className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
             <AtSign className="w-3 h-3" />
             Type @ to mention team members
