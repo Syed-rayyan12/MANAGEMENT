@@ -28,6 +28,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { CalendarIcon, X } from 'lucide-react';
 import { format } from 'date-fns';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface CreateProjectModalProps {
   onClose: () => void;
@@ -50,6 +51,7 @@ export function CreateProjectModal({ onClose, initialStatus, initialBoard }: Cre
   const [showNewClientInput, setShowNewClientInput] = useState(false);
   const [newClientName, setNewClientName] = useState('');
 
+  const isMobile = useIsMobile();
   const allUsers = getAllUsers();
 
   useEffect(() => {
@@ -171,7 +173,7 @@ export function CreateProjectModal({ onClose, initialStatus, initialBoard }: Cre
 
   return (
     <Dialog open={true} onOpenChange={onClose}>
-      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl backdrop-blur-md bg-white/80 dark:bg-zinc-900/80 border border-zinc-200/50 dark:border-white/10 ring-1 ring-[#e05c29]/10 shadow-2xl">
+      <DialogContent className={`${isMobile ? 'h-[100dvh] w-full max-w-full rounded-none' : 'max-w-lg max-h-[90vh] rounded-2xl'} overflow-y-auto backdrop-blur-md bg-white/80 dark:bg-zinc-900/80 border border-zinc-200/50 dark:border-white/10 ring-1 ring-[#e05c29]/10 shadow-2xl`}>
         <DialogHeader>
           <DialogTitle className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">Create New Project</DialogTitle>
         </DialogHeader>
@@ -384,7 +386,7 @@ export function CreateProjectModal({ onClose, initialStatus, initialBoard }: Cre
           </div>
 
           {/* Action Buttons */}
-          <div className="flex gap-2 pt-4">
+          <div className={`flex gap-2 pt-4 ${isMobile ? 'sticky bottom-0 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md pb-4 -mx-6 px-6' : ''}`}>
             <Button onClick={handleCreate} className="flex-1 rounded-lg bg-gradient-to-r from-[#e05c29] to-orange-400 hover:to-rose-500 text-white shadow-[0_4px_20px_rgba(224,92,41,0.35)] transition-all duration-200">
               Create Project
             </Button>
