@@ -40,25 +40,33 @@ export function Sidebar({ isMobile = false, mobileOpen = false, onMobileClose }:
   const sidebarRef = useRef<HTMLElement>(null);
 
   // Fetch all org-level boards
-  useEffect(() => {
+  const fetchBoards = useCallback(async () => {
     if (!state.currentUser) return;
-    const fetchBoards = async () => {
-      try {
-        const result = await boardAPI.getAll();
-        if (result.success) {
-          setBoards(
-            result.data.boards.map((b: any) => ({
-              slug: b.slug,
-              name: b.name,
-            }))
-          );
-        }
-      } catch (error) {
-        console.error('Error fetching boards:', error);
+    try {
+      const result = await boardAPI.getAll();
+      if (result.success) {
+        setBoards(
+          result.data.boards.map((b: any) => ({
+            slug: b.slug,
+            name: b.name,
+          }))
+        );
       }
-    };
-    fetchBoards();
+    } catch (error) {
+      console.error('Error fetching boards:', error);
+    }
   }, [state.currentUser]);
+
+  useEffect(() => {
+    fetchBoards();
+  }, [fetchBoards]);
+
+  // Re-fetch boards when a workspace is created or deleted
+  useEffect(() => {
+    const handler = () => fetchBoards();
+    window.addEventListener('boards-changed', handler);
+    return () => window.removeEventListener('boards-changed', handler);
+  }, [fetchBoards]);
 
   // Gmail-style hover: show sidebar when mouse enters trigger zone or sidebar itself
   const handleMouseEnter = useCallback(() => {
