@@ -2,9 +2,27 @@ import { Request, Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { generatePresignedUploadUrl, getPublicUrl, deleteFromR2 } from '../utils/r2';
 
-// Allowed image mime types
-const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/svg+xml'];
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
+// Allowed mime types
+const ALLOWED_TYPES = [
+  // Images
+  'image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/svg+xml', 'image/bmp', 'image/x-icon',
+  // Documents
+  'application/pdf',
+  'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'text/plain', 'text/markdown', 'application/rtf',
+  // Spreadsheets
+  'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'text/csv', 'application/vnd.oasis.opendocument.spreadsheet',
+  // Presentations
+  'application/vnd.ms-powerpoint', 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  'application/vnd.oasis.opendocument.presentation',
+  // Archives
+  'application/zip', 'application/x-rar-compressed', 'application/x-7z-compressed',
+  'application/gzip', 'application/x-tar',
+  // Other docs
+  'application/vnd.oasis.opendocument.text',
+];
+const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25 MB
 
 /**
  * POST /api/upload/presign
