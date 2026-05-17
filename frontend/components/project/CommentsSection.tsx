@@ -7,7 +7,6 @@ import { toast } from 'sonner';
 import { useApp } from '@/contexts/useApp';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { MessageSquare, Edit, AtSign } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { linkifyText } from '@/lib/utils';
@@ -17,7 +16,7 @@ interface CommentsSectionProps {
 }
 
 export function CommentsSection({ project }: CommentsSectionProps) {
-  const { state, dispatch, getUserName, getAllUsers, getUserAvatar } = useApp();
+  const { state, dispatch, getUserName, getAllUsers } = useApp();
   const isMobile = useIsMobile();
   const [newComment, setNewComment] = useState('');
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
@@ -176,10 +175,9 @@ export function CommentsSection({ project }: CommentsSectionProps) {
                 onClick={() => handleSelectMention(user, isNewComment)}
                 className="w-full flex items-center gap-2 p-2 hover:bg-surface-2 transition-colors text-left"
               >
-                <Avatar className="w-6 h-6">
-                  <AvatarImage src={user.avatar} />
-                  <AvatarFallback>{user.name[0]}</AvatarFallback>
-                </Avatar>
+                <span className="w-6 h-6 rounded-full bg-accent-soft text-accent text-[9px] font-bold flex items-center justify-center flex-shrink-0">
+                  {user.name[0]}
+                </span>
                 <div>
                   <p className="text-sm font-medium text-foreground">{user.name}</p>
                   <p className="text-xs text-fg-4">{user.email}</p>
@@ -204,10 +202,9 @@ export function CommentsSection({ project }: CommentsSectionProps) {
         ) : (
           project.comments.map((comment) => (
             <div key={comment.id} className="flex gap-3 p-3 border border-border rounded-xl bg-surface-2">
-              <Avatar className="w-8 h-8">
-                <AvatarImage src={getUserAvatar(comment.userId)} alt={getUserName(comment.userId)} />
-                <AvatarFallback>{getUserName(comment.userId)[0]}</AvatarFallback>
-              </Avatar>
+              <span className="w-8 h-8 rounded-full bg-accent-soft text-accent text-[11px] font-bold flex items-center justify-center flex-shrink-0">
+                {getUserName(comment.userId)[0]}
+              </span>
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-1">
                   <span className="font-semibold text-sm text-foreground">{getUserName(comment.userId)}</span>

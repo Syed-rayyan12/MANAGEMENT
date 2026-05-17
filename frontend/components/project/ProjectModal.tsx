@@ -47,7 +47,7 @@ interface ProjectModalProps {
 }
 
 export function ProjectModal({ project, onClose }: ProjectModalProps) {
-  const { state, dispatch, getUserName, getAllUsers, getUserAvatar } = useApp();
+  const { state, dispatch, getUserName, getAllUsers } = useApp();
   const { canDeleteProject, canChangePriority, isReadOnly } = usePermissions();
   const isMobile = useIsMobile();
 
@@ -790,10 +790,9 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
                     <div className="space-y-1">
                       {project.assignments.map((assignment: ProjectAssignment, i: number) => (
                         <div key={assignment.id} className="flex items-center gap-2.5 py-1.5">
-                          <Avatar className="w-6 h-6">
-                            <AvatarImage src={assignment.user?.avatar || undefined} />
-                            <AvatarFallback className="text-[9px] bg-accent-soft text-accent">{assignment.user?.name?.[0]}</AvatarFallback>
-                          </Avatar>
+                          <span className="w-6 h-6 rounded-full bg-accent-soft text-accent text-[9px] font-bold flex items-center justify-center flex-shrink-0">
+                            {assignment.user?.name?.[0]}
+                          </span>
                           <div className="flex-1 min-w-0">
                             <div className="text-[12.5px] font-medium text-foreground truncate">{assignment.user?.name}</div>
                             <div className="text-[10.5px] text-fg-3">{i === 0 ? 'Lead' : 'Collaborator'}</div>
@@ -831,7 +830,12 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
                         <div className="h-3 w-4/5 bg-surface-3 rounded" />
                       </div>
                     ) : (
-                      <ActivitySection project={project} compact />
+                      <div className="max-h-[180px] overflow-hidden relative">
+                        <ActivitySection project={project} compact />
+                        {project.activityLog && project.activityLog.length > 4 && (
+                          <div className="absolute bottom-0 left-0 right-0 pt-6 bg-gradient-to-t from-surface to-transparent" />
+                        )}
+                      </div>
                     )}
                   </div>
                 </div>
@@ -907,10 +911,9 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
                 <div className="flex flex-wrap gap-2">
                   {project.assignments.map((assignment: ProjectAssignment) => (
                     <div key={assignment.id} className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-accent-soft border border-accent-line">
-                      <Avatar className="w-5 h-5">
-                        <AvatarImage src={assignment.user?.avatar || undefined} alt={assignment.user?.name} />
-                        <AvatarFallback className="text-[8px] bg-accent text-white">{assignment.user?.name?.[0]}</AvatarFallback>
-                      </Avatar>
+                      <span className="w-5 h-5 rounded-full bg-accent text-white text-[8px] font-bold flex items-center justify-center">
+                        {assignment.user?.name?.[0]}
+                      </span>
                       <span className="text-xs text-accent font-medium">{assignment.user?.name}</span>
                       <span className="text-[10px] text-fg-3">({assignment.role === 'PRIMARY' ? 'Lead' : 'Collab'})</span>
                       <button onClick={() => handleRemoveAssignment(assignment.id)} className="text-fg-4 hover:text-red-400">
@@ -921,23 +924,24 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
                 </div>
               </div>
             )}
-            <div className="max-h-64 overflow-y-auto space-y-2">
+            <div className="max-h-64 overflow-y-auto space-y-1">
               {filteredUsers.map((user: any) => {
                 const isAlreadyMember = project.assignments.some((a: ProjectAssignment) => a.userId === user.id);
                 return (
-                  <div
+                  <button
                     key={user.id}
-                    className={`w-full flex items-center gap-3 p-3 rounded-lg border transition-colors ${
+                    onClick={() => !isAlreadyMember && handleAddMember(user.id, 'PRIMARY')}
+                    disabled={isAlreadyMember}
+                    className={`w-full flex items-center gap-3 p-3 rounded-lg border transition-colors text-left ${
                       isAlreadyMember
                         ? 'border-green-500/30 bg-green-500/5 opacity-60 cursor-default'
-                        : 'border-border hover:bg-surface-2 hover:border-line-strong'
+                        : 'border-border hover:bg-surface-2 hover:border-line-strong cursor-pointer'
                     }`}
                   >
-                    <Avatar className="w-8 h-8">
-                      <AvatarImage src={user.avatar} />
-                      <AvatarFallback>{user.name[0]}</AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 text-left">
+                    <span className="w-8 h-8 rounded-full bg-accent-soft text-accent text-[12px] font-bold flex items-center justify-center flex-shrink-0">
+                      {user.name[0]}
+                    </span>
+                    <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <p className="text-sm font-medium text-foreground">{user.name}</p>
                         {isAlreadyMember && (
@@ -946,23 +950,7 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
                       </div>
                       <p className="text-xs text-fg-3">{user.email}</p>
                     </div>
-                    {!isAlreadyMember && (
-                      <div className="flex gap-1">
-                        <button
-                          onClick={() => handleAddMember(user.id, 'PRIMARY')}
-                          className="text-[10px] px-2 py-0.5 rounded bg-accent-soft text-accent hover:bg-accent hover:text-white"
-                        >
-                          Primary
-                        </button>
-                        <button
-                          onClick={() => handleAddMember(user.id, 'COLLABORATOR')}
-                          className="text-[10px] px-2 py-0.5 rounded bg-blue-500/20 text-blue-600 hover:bg-blue-500/30"
-                        >
-                          Collab
-                        </button>
-                      </div>
-                    )}
-                  </div>
+                  </button>
                 );
               })}
               {filteredUsers.length === 0 && (
