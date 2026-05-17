@@ -340,12 +340,13 @@ export default function WorkspacePage() {
 
       {/* Create Project Modal */}
       {showCreateModal && (
-        <CreateProjectModal 
+        <CreateProjectModal
           onClose={() => {
             setShowCreateModal(false);
             setRefreshKey(prev => prev + 1);
-          }} 
+          }}
           initialBoard={boardId}
+          boardColumns={customColumns}
         />
       )}
 

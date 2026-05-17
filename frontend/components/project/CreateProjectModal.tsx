@@ -23,7 +23,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Project, ProjectStatus, ProjectPriority, Client } from '@/lib/types';
-import { DEFAULT_KANBAN_COLUMNS, PRIORITY_STYLES } from '@/lib/constants';
+import { PRIORITY_STYLES } from '@/lib/constants';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { CalendarIcon, X } from 'lucide-react';
@@ -34,14 +34,15 @@ interface CreateProjectModalProps {
   onClose: () => void;
   initialStatus?: ProjectStatus;
   initialBoard?: string | null;
+  boardColumns?: { status: string; label: string }[];
 }
 
-export function CreateProjectModal({ onClose, initialStatus, initialBoard }: CreateProjectModalProps) {
+export function CreateProjectModal({ onClose, initialStatus, initialBoard, boardColumns = [] }: CreateProjectModalProps) {
   const { state, dispatch, getAllUsers } = useApp();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  
-  const [status, setStatus] = useState<ProjectStatus>(initialStatus || 'todo');
+
+  const [status, setStatus] = useState<ProjectStatus>(initialStatus || boardColumns[0]?.status as ProjectStatus || 'todo');
   const [priority, setPriority] = useState<ProjectPriority>('medium');
   const [dueDate, setDueDate] = useState<Date | undefined>(undefined);
   const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
@@ -269,18 +270,22 @@ export function CreateProjectModal({ onClose, initialStatus, initialBoard }: Cre
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label className="text-sm font-medium text-fg-2">Status</Label>
-              <Select value={status} onValueChange={(val) => setStatus(val as ProjectStatus)}>
-                <SelectTrigger className="mt-1">
-                  <SelectValue placeholder="Select status" />
-                </SelectTrigger>
-                <SelectContent>
-                  {DEFAULT_KANBAN_COLUMNS.map((col) => (
-                    <SelectItem key={col.status} value={col.status}>
-                      {col.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {boardColumns.length > 0 ? (
+                <Select value={status} onValueChange={(val) => setStatus(val as ProjectStatus)}>
+                  <SelectTrigger className="mt-1">
+                    <SelectValue placeholder="Select status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {boardColumns.map((col) => (
+                      <SelectItem key={col.status} value={col.status}>
+                        {col.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <p className="mt-1 text-xs text-fg-4">Add columns to this workspace first</p>
+              )}
             </div>
 
             <div>
