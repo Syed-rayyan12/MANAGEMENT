@@ -146,25 +146,23 @@ export function ChecklistSection({ project }: ChecklistSectionProps) {
               onCheckedChange={() => handleToggleCheckItem(item.id)}
               className="data-[state=checked]:bg-accent data-[state=checked]:border-accent"
             />
-            <div className="flex-1 min-w-0">
-              <span className={`text-sm ${item.completed ? 'line-through text-fg-4' : 'text-foreground'}`}>
-                {item.title}
-              </span>
-              {(item.createdBy || item.createdAt) && (
-                <div className="flex items-center gap-1.5 mt-0.5">
-                  {item.createdBy && (
-                    <span className="w-4 h-4 rounded-full bg-accent-soft text-accent text-[8px] font-bold flex items-center justify-center flex-shrink-0">
-                      {getUserName(item.createdBy)[0]}
-                    </span>
-                  )}
-                  {item.createdAt && (
-                    <span className="text-[10px] text-fg-4">
-                      {format(new Date(item.createdAt), 'MMM d')}
-                    </span>
-                  )}
-                </div>
-              )}
-            </div>
+            <span className={`flex-1 text-sm min-w-0 ${item.completed ? 'line-through text-fg-4' : 'text-foreground'}`}>
+              {item.title}
+            </span>
+            {(item.createdBy || item.createdAt) && (
+              <div className="flex items-center gap-1.5 flex-shrink-0">
+                {item.createdBy && (
+                  <span className="w-4 h-4 rounded-full bg-accent-soft text-accent text-[8px] font-bold flex items-center justify-center">
+                    {getUserName(item.createdBy)[0]}
+                  </span>
+                )}
+                {item.createdAt && (
+                  <span className="text-[10px] text-fg-4">
+                    {format(new Date(item.createdAt), 'MMM d')}
+                  </span>
+                )}
+              </div>
+            )}
             <Button
               variant="ghost"
               size="sm"
