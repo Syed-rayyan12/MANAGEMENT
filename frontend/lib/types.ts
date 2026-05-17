@@ -128,6 +128,7 @@ export interface Project {
 
 export interface CurrentUser {
   id: string;
+  username: string;
   name: string;
   email: string;
   role?: string;

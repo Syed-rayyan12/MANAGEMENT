@@ -84,6 +84,7 @@ export const login = async (
       data: {
         user: {
           id: user.id,
+          username: user.username,
           email: user.email,
           role: user.role,
           name: user.name,
