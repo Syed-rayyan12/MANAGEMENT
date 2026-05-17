@@ -45,7 +45,7 @@ export const getTrelloBoards = async (req: Request, res: Response): Promise<void
 
     if (!response.ok) {
       const errorText = await response.text();
-      res.status(response.status).json({
+      res.status(400).json({
         success: false,
         message: `Trello API error: ${errorText}`,
       });
@@ -139,7 +139,7 @@ export const importFromTrello = async (req: Request, res: Response): Promise<voi
 
     if (!response.ok) {
       const errorText = await response.text();
-      res.status(response.status).json({
+      res.status(400).json({
         success: false,
         message: `Trello API error: ${errorText}`,
       });

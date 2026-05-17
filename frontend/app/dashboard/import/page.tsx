@@ -28,7 +28,7 @@ interface ImportResult {
   skipped: number;
   failed: number;
   details: ImportDetail[];
-  newBoardsCreated?: string[];
+  newBoards?: string[];
 }
 
 export default function TrelloImportPage() {
@@ -71,8 +71,8 @@ export default function TrelloImportPage() {
         setError(res.message || 'Failed to fetch boards.');
         return;
       }
-      setBoards(res.data || []);
-      if (res.data?.length === 0) {
+      setBoards(res.data?.boards || []);
+      if (!res.data?.boards || res.data.boards.length === 0) {
         setError('No boards found for this Trello account.');
       }
     } catch (err: unknown) {
@@ -232,10 +232,10 @@ export default function TrelloImportPage() {
           </div>
 
           {/* New boards created */}
-          {result.newBoardsCreated && result.newBoardsCreated.length > 0 && (
+          {result.newBoards && result.newBoards.length > 0 && (
             <div className="rounded-md bg-accent/10 border border-accent/20 px-4 py-3 text-sm text-foreground">
               <span className="font-medium">New boards created:</span>{' '}
-              <span className="text-fg-2">{result.newBoardsCreated.join(', ')}</span>
+              <span className="text-fg-2">{result.newBoards.join(', ')}</span>
             </div>
           )}
 
