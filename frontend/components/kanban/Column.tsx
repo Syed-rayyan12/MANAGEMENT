@@ -64,33 +64,35 @@ export function Column({ status, label, color, projects, onCardClick, onAddCard,
   return (
     <div
       ref={setNodeRef}
-      className={`flex flex-col rounded-xl p-3 ${isMobile ? 'w-[85vw] min-w-[85vw] max-w-[85vw] snap-center' : 'w-[300px] min-w-[300px] max-w-[300px]'} h-[calc(100vh-200px)] transition-colors ${
+      className={`flex flex-col rounded-lg p-3 ${
+        isMobile ? 'w-[86vw] min-w-[86vw] max-w-[320px] snap-start' : 'w-[296px] min-w-[296px] max-w-[296px]'
+      } h-[calc(100vh-200px)] transition-colors duration-[120ms] ${
         isOver
-          ? 'bg-orange-50/80 dark:bg-[#e05c29]/5 border-2 border-dashed border-[#e05c29]/30'
-          : 'bg-zinc-100/70 dark:bg-zinc-900/40 border border-transparent'
+          ? 'border-2 border-accent bg-accent-soft'
+          : 'bg-surface-2 border border-border'
       }`}
     >
-      {/* Fixed Header */}
-      <div className="mb-4 flex items-center justify-between flex-shrink-0">
+      {/* Column Header */}
+      <div className="mb-3 flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded-full" style={{ backgroundColor: color }}></div>
-          <h3 className="font-semibold text-zinc-700 dark:text-zinc-300 text-sm">{label}</h3>
-          <span className="bg-zinc-200 dark:bg-zinc-700 text-zinc-500 dark:text-zinc-400 text-xs font-medium px-2 py-0.5 rounded-full">
+          <div className="w-2 h-2 rounded-full" style={{ backgroundColor: color }} />
+          <h3 className="text-[12.5px] font-semibold text-foreground">{label}</h3>
+          <span className="text-[11px] font-mono font-medium text-fg-3 bg-surface-3 px-1.5 py-0.5 rounded">
             {projects.length}
           </span>
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-0.5">
           {canSoftDelete && onDeleteColumn && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className={`${isMobile ? 'w-10 h-10' : 'w-6 h-6'} rounded-md flex items-center justify-center text-gray-400 dark:text-gray-500 hover:text-zinc-600 dark:hover:text-zinc-300 hover:bg-zinc-200/50 dark:hover:bg-zinc-700/50 transition-colors`}>
-                  <MoreVertical className="w-4 h-4" />
+                <button className="w-7 h-7 rounded-md flex items-center justify-center text-fg-3 hover:text-foreground hover:bg-surface-3 transition-colors duration-[120ms]">
+                  <MoreVertical className="w-[15px] h-[15px]" />
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem
                   onClick={() => onDeleteColumn(status as string, label, projects.length)}
-                  className="text-red-600 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-900/20"
+                  className="text-destructive focus:text-destructive"
                 >
                   <Trash2 className="w-4 h-4 mr-2" />
                   Delete Column
@@ -101,34 +103,25 @@ export function Column({ status, label, color, projects, onCardClick, onAddCard,
           {canCreateProject && !showForm && (
             <button
               onClick={() => setShowForm(true)}
-              className={`${isMobile ? 'w-10 h-10' : 'w-6 h-6'} rounded-md flex items-center justify-center text-gray-400 dark:text-gray-500 hover:text-orange-500 dark:hover:text-orange-400 hover:bg-orange-500/10 transition-colors`}
+              className="w-7 h-7 rounded-md flex items-center justify-center text-fg-3 hover:text-foreground hover:bg-surface-3 transition-colors duration-[120ms]"
               title="Add a card"
             >
-              <Plus className="w-4 h-4" />
+              <Plus className="w-[15px] h-[15px]" />
             </button>
           )}
         </div>
       </div>
 
-      {/* Scrollable Cards Container */}
-      <div className="flex-1 overflow-y-auto pr-1 space-y-2">
+      {/* Scrollable Cards */}
+      <div className="flex-1 overflow-y-auto pr-0.5 space-y-1.5">
         <SortableContext items={projects.map((p) => p.id)} strategy={verticalListSortingStrategy}>
-          <div className="space-y-2 min-h-[60px]">
+          <div className="space-y-1.5 min-h-[60px]">
             {projects.length === 0 && !showForm ? (
-              <div className={`flex flex-col items-center justify-center py-12 rounded-lg transition-colors ${
-                isOver
-                  ? 'text-orange-400 dark:text-orange-300'
-                  : 'text-gray-400 dark:text-gray-500'
+              <div className={`flex flex-col items-center justify-center py-10 rounded-md text-center ${
+                isOver ? 'text-accent' : 'text-fg-4'
               }`}>
-                <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-3 ${
-                  isOver ? 'bg-orange-100 dark:bg-orange-500/20' : 'bg-gray-200 dark:bg-[#2d3548]'
-                }`}>
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                  </svg>
-                </div>
-                <p className="text-sm font-medium">{isOver ? 'Drop here' : 'No projects yet'}</p>
-                {!isOver && <p className="text-xs mt-1">Drag a card here or use the + button</p>}
+                <p className="text-[12px] font-medium">{isOver ? 'Drop here' : 'No projects'}</p>
+                {!isOver && <p className="text-[11px] mt-0.5">Drag a card or use +</p>}
               </div>
             ) : (
               projects.map((project) => (
@@ -143,11 +136,11 @@ export function Column({ status, label, color, projects, onCardClick, onAddCard,
         </SortableContext>
       </div>
 
-      {/* Inline Add Card Form */}
+      {/* Add Card Form */}
       {canCreateProject && (
         <div className="flex-shrink-0 mt-2">
           {showForm ? (
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <textarea
                 ref={inputRef}
                 value={cardName}
@@ -155,19 +148,19 @@ export function Column({ status, label, color, projects, onCardClick, onAddCard,
                 onKeyDown={handleKeyDown}
                 placeholder="Enter card title..."
                 rows={2}
-                className="w-full px-3 py-2 text-sm rounded-lg border border-orange-500 bg-white dark:bg-[#232938] dark:text-white dark:placeholder-gray-500 focus:outline-none resize-none shadow-lg"
+                className="w-full px-2.5 py-2 text-[13px] rounded-md border border-accent-line bg-surface text-foreground placeholder:text-fg-4 focus:outline-none focus:ring-2 focus:ring-accent-soft resize-none"
               />
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5">
                 <button
                   onClick={handleSubmit}
                   disabled={!cardName.trim() || saving}
-                  className="flex-1 py-1.5 text-sm font-medium rounded-lg bg-orange-500 text-white hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className="flex-1 py-1.5 text-[12px] font-medium rounded-md bg-accent text-accent-fg hover:brightness-105 disabled:opacity-50 transition-all duration-[120ms]"
                 >
                   {saving ? 'Adding...' : 'Add card'}
                 </button>
                 <button
                   onClick={() => { setCardName(''); setShowForm(false); }}
-                  className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-white hover:bg-gray-200 dark:hover:bg-[#2d3548] transition-colors"
+                  className="w-7 h-7 flex items-center justify-center rounded-md text-fg-3 hover:text-foreground hover:bg-surface-3 transition-colors duration-[120ms]"
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -176,9 +169,9 @@ export function Column({ status, label, color, projects, onCardClick, onAddCard,
           ) : (
             <button
               onClick={() => setShowForm(true)}
-              className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-500 dark:text-gray-400 hover:text-orange-500 dark:hover:text-orange-400 hover:bg-orange-500/10 transition-colors group"
+              className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md text-[12px] text-fg-3 border border-dashed border-border hover:border-line-strong hover:text-foreground transition-colors duration-[120ms]"
             >
-              <Plus className="w-4 h-4 group-hover:text-orange-500" />
+              <Plus className="w-3.5 h-3.5" />
               Add a card
             </button>
           )}

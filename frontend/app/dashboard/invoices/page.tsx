@@ -23,11 +23,11 @@ import { toast } from 'sonner';
 // ─── Status badge styling ────────────────────────
 
 const STATUS_STYLES: Record<InvoiceStatus, string> = {
-  PENDING: 'bg-amber-500/15 text-amber-600 dark:text-amber-400',
-  PAID: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400',
-  CANCELLED: 'bg-zinc-500/15 text-zinc-600 dark:text-zinc-400',
-  REFUNDED: 'bg-[#e05c29]/15 text-[#e05c29]',
-  FAILED: 'bg-red-500/15 text-red-600 dark:text-red-400',
+  PENDING: 'bg-status-amber-soft text-status-amber',
+  PAID: 'bg-status-green-soft text-status-green',
+  CANCELLED: 'bg-surface-3 text-fg-3',
+  REFUNDED: 'bg-accent-soft text-accent',
+  FAILED: 'bg-status-red-soft text-status-red',
 };
 
 // ─── Copy button component ───────────────────────
@@ -269,12 +269,12 @@ export default function InvoicesPage() {
   }
 
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-6">
+    <div className="space-y-5">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">Invoices</h1>
-          <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
+          <h1 className="text-[24px] font-semibold text-foreground tracking-[-0.02em]">Invoices</h1>
+          <p className="text-[13px] text-fg-3 mt-0.5">
             Generate and track payment links
           </p>
         </div>
@@ -282,20 +282,20 @@ export default function InvoicesPage() {
           <button
             onClick={() => setShowForm(!showForm)}
             className={cn(
-              'inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all duration-200 ease-out',
+              'inline-flex items-center gap-2 rounded-[7px] px-3 py-1.5 text-[12.5px] font-medium transition-colors duration-[120ms]',
               showForm
-                ? 'bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700'
-                : 'text-white bg-gradient-to-r from-[#e05c29] to-orange-400 hover:to-rose-500 shadow-[0_4px_20px_rgba(224,92,41,0.35)]'
+                ? 'bg-surface-2 text-foreground border border-border hover:bg-surface-3'
+                : 'bg-accent text-accent-fg hover:brightness-105'
             )}
           >
             {showForm ? (
               <>
-                <X className="w-4 h-4" />
+                <X className="w-3.5 h-3.5" />
                 Cancel
               </>
             ) : (
               <>
-                <Plus className="w-4 h-4" />
+                <Plus className="w-3.5 h-3.5" />
                 Generate Invoice
               </>
             )}
@@ -304,21 +304,18 @@ export default function InvoicesPage() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="relative overflow-hidden rounded-xl bg-white dark:bg-zinc-900 p-5 shadow-sm">
-          <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-amber-400 to-amber-300" />
-          <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">Pending</p>
-          <p className="mt-1 text-3xl font-semibold text-zinc-900 dark:text-zinc-100">{totalPending}</p>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="rounded-lg border border-border bg-surface p-4">
+          <p className="text-[12px] font-medium text-fg-3">Pending</p>
+          <p className="mt-1 text-kpi font-mono font-medium text-foreground">{totalPending}</p>
         </div>
-        <div className="relative overflow-hidden rounded-xl bg-white dark:bg-zinc-900 p-5 shadow-sm">
-          <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-emerald-400 to-emerald-300" />
-          <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">Paid</p>
-          <p className="mt-1 text-3xl font-semibold text-zinc-900 dark:text-zinc-100">{totalPaid}</p>
+        <div className="rounded-lg border border-border bg-surface p-4">
+          <p className="text-[12px] font-medium text-fg-3">Paid</p>
+          <p className="mt-1 text-kpi font-mono font-medium text-foreground">{totalPaid}</p>
         </div>
-        <div className="relative overflow-hidden rounded-xl bg-white dark:bg-zinc-900 p-5 shadow-sm">
-          <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-[#e05c29] to-amber-400" />
-          <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">Total Revenue</p>
-          <p className="mt-1 text-3xl font-semibold text-zinc-900 dark:text-zinc-100">
+        <div className="rounded-lg border border-border bg-surface p-4">
+          <p className="text-[12px] font-medium text-fg-3">Total Revenue</p>
+          <p className="mt-1 text-kpi font-mono font-medium text-foreground">
             £{totalRevenue.toLocaleString('en-GB', { minimumFractionDigits: 2 })}
           </p>
         </div>
@@ -376,7 +373,7 @@ export default function InvoicesPage() {
                     'w-full rounded-lg px-3 py-2 text-sm border bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 focus:outline-none focus:ring-2 transition-all duration-200 ease-out',
                     formTouched.clientName && formErrors.clientName
                       ? 'border-red-400 focus:ring-red-400/30 focus:border-red-400'
-                      : 'border-zinc-200 dark:border-zinc-700 focus:ring-[#e05c29]/30 focus:border-[#e05c29]'
+                      : 'border-zinc-200 dark:border-zinc-700 focus:ring-accent-soft focus:border-accent-line'
                   )}
                 />
                 {formTouched.clientName && formErrors.clientName && (
@@ -399,7 +396,7 @@ export default function InvoicesPage() {
                     'w-full rounded-lg px-3 py-2 text-sm border bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 focus:outline-none focus:ring-2 transition-all duration-200 ease-out',
                     formTouched.clientEmail && formErrors.clientEmail
                       ? 'border-red-400 focus:ring-red-400/30 focus:border-red-400'
-                      : 'border-zinc-200 dark:border-zinc-700 focus:ring-[#e05c29]/30 focus:border-[#e05c29]'
+                      : 'border-zinc-200 dark:border-zinc-700 focus:ring-accent-soft focus:border-accent-line'
                   )}
                 />
                 {formTouched.clientEmail && formErrors.clientEmail && (
@@ -426,7 +423,7 @@ export default function InvoicesPage() {
                       'w-full rounded-lg pl-7 pr-3 py-2 text-sm border bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 focus:outline-none focus:ring-2 transition-all duration-200 ease-out',
                       formTouched.amount && formErrors.amount
                         ? 'border-red-400 focus:ring-red-400/30 focus:border-red-400'
-                        : 'border-zinc-200 dark:border-zinc-700 focus:ring-[#e05c29]/30 focus:border-[#e05c29]'
+                        : 'border-zinc-200 dark:border-zinc-700 focus:ring-accent-soft focus:border-accent-line'
                     )}
                   />
                 </div>
@@ -448,7 +445,7 @@ export default function InvoicesPage() {
                     'w-full rounded-lg px-3 py-2 text-sm border bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 transition-all duration-200 ease-out',
                     formTouched.selectedTeamId && formErrors.selectedTeamId
                       ? 'border-red-400 focus:ring-red-400/30 focus:border-red-400'
-                      : 'border-zinc-200 dark:border-zinc-700 focus:ring-[#e05c29]/30 focus:border-[#e05c29]'
+                      : 'border-zinc-200 dark:border-zinc-700 focus:ring-accent-soft focus:border-accent-line'
                   )}
                 >
                   <option value="">Select team</option>
@@ -479,7 +476,7 @@ export default function InvoicesPage() {
                   'w-full rounded-lg px-3 py-2 text-sm border bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 focus:outline-none focus:ring-2 transition-all duration-200 ease-out resize-none',
                   formTouched.description && formErrors.description
                     ? 'border-red-400 focus:ring-red-400/30 focus:border-red-400'
-                    : 'border-zinc-200 dark:border-zinc-700 focus:ring-[#e05c29]/30 focus:border-[#e05c29]'
+                    : 'border-zinc-200 dark:border-zinc-700 focus:ring-accent-soft focus:border-accent-line'
                 )}
               />
               {formTouched.description && formErrors.description && (
@@ -499,7 +496,7 @@ export default function InvoicesPage() {
               <button
                 type="submit"
                 disabled={creating}
-                className="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-[#e05c29] to-orange-400 hover:to-rose-500 shadow-[0_4px_20px_rgba(224,92,41,0.35)] transition-all duration-200 ease-out disabled:opacity-50 disabled:cursor-not-allowed"
+                className="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium bg-accent text-accent-fg hover:bg-accent/90 transition-all duration-200 ease-out disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {creating ? (
                   <>
@@ -527,7 +524,7 @@ export default function InvoicesPage() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search invoices..."
-            className="w-full rounded-lg pl-9 pr-3 py-2 text-sm border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-[#e05c29]/30 focus:border-[#e05c29] transition-all duration-200 ease-out"
+            className="w-full rounded-lg pl-9 pr-3 py-2 text-sm border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-accent-soft focus:border-accent-line transition-all duration-200 ease-out"
           />
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -539,7 +536,7 @@ export default function InvoicesPage() {
               className={cn(
                 'rounded-full px-3 py-1 text-xs font-medium transition-all duration-200 ease-out',
                 statusFilter === s
-                  ? 'bg-[#e05c29]/15 text-[#e05c29]'
+                  ? 'bg-accent-soft text-accent'
                   : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700'
               )}
             >
@@ -553,7 +550,7 @@ export default function InvoicesPage() {
       <div className="rounded-xl bg-white dark:bg-zinc-900 shadow-sm border border-zinc-200 dark:border-zinc-800 overflow-hidden">
         {loading ? (
           <div className="flex items-center justify-center py-20">
-            <Loader2 className="w-6 h-6 animate-spin text-[#e05c29]" />
+            <Loader2 className="w-6 h-6 animate-spin text-accent" />
           </div>
         ) : paginatedInvoices.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-center">
@@ -671,7 +668,7 @@ export default function InvoicesPage() {
                 {paginatedInvoices.map((invoice) => (
                   <tr
                     key={invoice.id}
-                    className="bg-white dark:bg-zinc-900 border-b border-zinc-100 dark:border-zinc-800 hover:bg-[#e05c29]/4 dark:hover:bg-[#e05c29]/6 transition-colors duration-150 group"
+                    className="bg-white dark:bg-zinc-900 border-b border-zinc-100 dark:border-zinc-800 hover:bg-accent-soft/40 transition-colors duration-150 group"
                   >
                     <td className="px-4 py-3">
                       <div>
@@ -699,7 +696,7 @@ export default function InvoicesPage() {
                             href={invoice.paymentLink}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="p-1.5 rounded-lg text-zinc-400 hover:text-[#e05c29] hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all duration-200"
+                            className="p-1.5 rounded-lg text-zinc-400 hover:text-accent hover:bg-surface-2 transition-all duration-200"
                             title="Open payment link"
                           >
                             <ExternalLink className="w-3.5 h-3.5" />
@@ -737,8 +734,8 @@ export default function InvoicesPage() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
-                        <div className="w-6 h-6 rounded-full bg-orange-500/20 flex items-center justify-center flex-shrink-0">
-                          <span className="text-[10px] font-semibold text-orange-500">
+                        <div className="w-6 h-6 rounded-full bg-accent-soft flex items-center justify-center flex-shrink-0">
+                          <span className="text-[10px] font-semibold text-accent">
                             {invoice.createdBy.name.charAt(0).toUpperCase()}
                           </span>
                         </div>
@@ -793,7 +790,7 @@ export default function InvoicesPage() {
                   className={cn(
                     'w-8 h-8 text-xs font-medium rounded-lg transition-all duration-200',
                     currentPage === page
-                      ? 'bg-[#e05c29] text-white'
+                      ? 'bg-accent text-accent-fg'
                       : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700'
                   )}
                 >

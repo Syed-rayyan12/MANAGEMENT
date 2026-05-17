@@ -86,7 +86,7 @@ export default function TrashPage() {
               onClick={() => setActiveTab(tab.key)}
               className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
                 activeTab === tab.key
-                  ? 'border-orange-500 text-orange-500'
+                  ? 'border-accent text-accent'
                   : 'border-transparent text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'
               }`}
             >
@@ -95,7 +95,7 @@ export default function TrashPage() {
               {tab.count > 0 && (
                 <span className={`text-xs px-1.5 py-0.5 rounded-full ${
                   activeTab === tab.key
-                    ? 'bg-orange-500/15 text-orange-500'
+                    ? 'bg-accent-soft text-accent'
                     : 'bg-zinc-200 dark:bg-zinc-700 text-zinc-500'
                 }`}>
                   {tab.count}

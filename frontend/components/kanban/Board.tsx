@@ -461,7 +461,7 @@ export function Board({ searchQuery = '', filterPriority = 'all', filterAssignee
                   container.scrollTo({ left: columnWidth * index, behavior: 'smooth' });
                 }
               }}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 hover:border-orange-500/50 transition-colors flex-shrink-0"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 hover:border-accent-line transition-colors flex-shrink-0"
             >
               <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: col.color }} />
               {col.label}
@@ -479,7 +479,7 @@ export function Board({ searchQuery = '', filterPriority = 'all', filterAssignee
         onDragEnd={handleDragEnd}
       >
         <div ref={scrollContainerRef} className={`overflow-x-auto pb-4 ${isMobile ? 'snap-x snap-mandatory scroll-smooth' : ''}`}>
-          <div className={`flex gap-5 ${isMobile ? '' : 'min-w-max'}`}>
+          <div className={`flex gap-3 ${isMobile ? '' : 'min-w-max'}`}>
             {allColumns.map((col) => (
               <Column
                 key={col.status}

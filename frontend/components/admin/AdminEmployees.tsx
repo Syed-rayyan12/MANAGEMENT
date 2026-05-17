@@ -50,7 +50,7 @@ function roleBadge(role: string) {
     PM: 'bg-blue-500/15 text-blue-600 dark:text-blue-400',
     TL: 'bg-purple-500/15 text-purple-600 dark:text-purple-400',
     PRODUCTION: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400',
-    EXECUTIVE: 'bg-[#e05c29]/15 text-[#e05c29]',
+    EXECUTIVE: 'bg-accent-soft text-accent',
   };
   return (
     <span className={cn('inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium', styles[role] || 'bg-zinc-100 dark:bg-zinc-800 text-zinc-500')}>
@@ -130,7 +130,7 @@ export function AdminEmployees() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-16">
-        <Loader2 className="w-6 h-6 animate-spin text-[#e05c29]" />
+        <Loader2 className="w-6 h-6 animate-spin text-accent" />
       </div>
     );
   }
@@ -147,7 +147,7 @@ export function AdminEmployees() {
               className={cn(
                 'rounded-lg px-3 py-1.5 text-xs font-medium transition-all',
                 activeTab === tab
-                  ? 'bg-[#e05c29]/15 text-[#e05c29]'
+                  ? 'bg-accent-soft text-accent'
                   : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'
               )}
             >
@@ -163,7 +163,7 @@ export function AdminEmployees() {
               placeholder="Search employees..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full sm:w-56 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 pl-9 pr-3 py-2 text-sm placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-[#e05c29]/30 focus:border-[#e05c29]"
+              className="w-full sm:w-56 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 pl-9 pr-3 py-2 text-sm placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-accent-soft focus:border-accent-line"
             />
           </div>
           <button
@@ -172,7 +172,7 @@ export function AdminEmployees() {
               'inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all whitespace-nowrap',
               showForm
                 ? 'bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300'
-                : 'text-white bg-gradient-to-r from-[#e05c29] to-orange-400 hover:to-rose-500 shadow-[0_4px_20px_rgba(224,92,41,0.35)]'
+                : 'bg-accent hover:bg-accent/90'
             )}
           >
             {showForm ? <><X className="w-4 h-4" /> Cancel</> : <><Plus className="w-4 h-4" /> Add Employee</>}
@@ -224,7 +224,7 @@ export function AdminEmployees() {
                       <div className="flex items-center justify-end gap-1">
                         <button
                           onClick={() => setSelectedEmployee(emp)}
-                          className="p-1.5 rounded-lg text-zinc-400 hover:text-[#e05c29] hover:bg-[#e05c29]/10 transition-all"
+                          className="p-1.5 rounded-lg text-zinc-400 hover:text-accent hover:bg-accent-soft transition-all"
                           title="View performance"
                         >
                           <Eye className="w-4 h-4" />
@@ -266,7 +266,7 @@ export function AdminEmployees() {
                   className={cn(
                     'w-7 h-7 rounded text-xs font-medium transition-all',
                     currentPage === page
-                      ? 'bg-[#e05c29] text-white'
+                      ? 'bg-accent text-accent-fg'
                       : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800'
                   )}
                 >
@@ -387,7 +387,7 @@ function CreateEmployeeForm({
             value={name}
             onChange={e => setName(e.target.value)}
             placeholder="John Smith"
-            className="w-full rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 py-2 text-sm placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-[#e05c29]/30 focus:border-[#e05c29]"
+            className="w-full rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 py-2 text-sm placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-accent-soft focus:border-accent-line"
           />
           {errors.name && <p className="text-xs text-red-500 mt-1">{errors.name}</p>}
         </div>
@@ -400,7 +400,7 @@ function CreateEmployeeForm({
             value={email}
             onChange={e => setEmail(e.target.value)}
             placeholder="john@company.com"
-            className="w-full rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 py-2 text-sm placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-[#e05c29]/30 focus:border-[#e05c29]"
+            className="w-full rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 py-2 text-sm placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-accent-soft focus:border-accent-line"
           />
           {errors.email && <p className="text-xs text-red-500 mt-1">{errors.email}</p>}
         </div>
@@ -411,7 +411,7 @@ function CreateEmployeeForm({
           <select
             value={role}
             onChange={e => handleRoleChange(e.target.value)}
-            className="w-full rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#e05c29]/30 focus:border-[#e05c29]"
+            className="w-full rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent-soft focus:border-accent-line"
           >
             {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
           </select>
@@ -426,7 +426,7 @@ function CreateEmployeeForm({
             value={username}
             onChange={e => setUsername(e.target.value)}
             placeholder={`${ROLE_PREFIXES[role] || ''}username`}
-            className="w-full rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 py-2 text-sm placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-[#e05c29]/30 focus:border-[#e05c29]"
+            className="w-full rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 py-2 text-sm placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-accent-soft focus:border-accent-line"
           />
           {errors.username && <p className="text-xs text-red-500 mt-1">{errors.username}</p>}
         </div>
@@ -438,7 +438,7 @@ function CreateEmployeeForm({
             <select
               value={specialization}
               onChange={e => setSpecialization(e.target.value as Specialization)}
-              className="w-full rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#e05c29]/30 focus:border-[#e05c29]"
+              className="w-full rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent-soft focus:border-accent-line"
             >
               <option value="">Select specialization...</option>
               {SPECIALIZATIONS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
@@ -454,7 +454,7 @@ function CreateEmployeeForm({
             <select
               value={teamId}
               onChange={e => setTeamId(e.target.value)}
-              className="w-full rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#e05c29]/30 focus:border-[#e05c29]"
+              className="w-full rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent-soft focus:border-accent-line"
             >
               <option value="">No team</option>
               {teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
@@ -474,7 +474,7 @@ function CreateEmployeeForm({
           <button
             type="submit"
             disabled={submitting}
-            className="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-[#e05c29] to-orange-400 hover:to-rose-500 disabled:opacity-60 transition-all"
+            className="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-accent-fg bg-accent hover:bg-accent/90 disabled:opacity-60 transition-all"
           >
             {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
             Create Employee
@@ -514,7 +514,7 @@ function PerformanceModal({ employee, open, onClose }: { employee: Employee | nu
 
         {loading && (
           <div className="flex items-center justify-center py-12">
-            <Loader2 className="w-6 h-6 animate-spin text-[#e05c29]" />
+            <Loader2 className="w-6 h-6 animate-spin text-accent" />
           </div>
         )}
 

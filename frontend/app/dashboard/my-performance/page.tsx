@@ -131,7 +131,7 @@ export default function MyPerformancePage() {
               <div key={m.month} className="flex-1 flex flex-col items-center gap-1">
                 <span className="text-xs font-medium text-zinc-600 dark:text-zinc-400">{m.count}</span>
                 <div
-                  className="w-full rounded-t bg-orange-500 dark:bg-orange-400 min-h-[4px]"
+                  className="w-full rounded-t bg-accent min-h-[4px]"
                   style={{ height: `${height}%` }}
                 />
                 <span className="text-[10px] text-zinc-400">

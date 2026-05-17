@@ -24,7 +24,6 @@ export function LoginForm() {
     setIsLoading(true);
 
     try {
-      // Use environment variable for API URL
       const response = await fetch(`${API_BASE_URL}/auth/login`, {
         method: 'POST',
         headers: {
@@ -41,12 +40,10 @@ export function LoginForm() {
         return;
       }
 
-      // Store token in localStorage (ensure client-side)
       if (typeof window !== 'undefined') {
         localStorage.setItem('token', data.data.token);
       }
 
-      // Login successful
       dispatch({
         type: 'SET_USER',
         payload: {
@@ -58,7 +55,6 @@ export function LoginForm() {
         },
       });
 
-      // Redirect to dashboard
       router.push('/dashboard');
     } catch (err) {
       console.error('Login error:', err);
@@ -68,19 +64,19 @@ export function LoginForm() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-zinc-50 dark:bg-zinc-950 p-4">
-      <Card className="w-full max-w-md shadow-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
+    <div className="min-h-screen flex items-center justify-center bg-background p-4">
+      <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <div className="mx-auto mb-2 w-12 h-12 rounded-xl bg-gradient-to-br from-[#e05c29] to-orange-400 flex items-center justify-center text-white font-bold text-xl shadow-[0_4px_20px_rgba(224,92,41,0.35)]">
-            X
+          <div className="mx-auto mb-2 w-10 h-10 rounded-lg bg-foreground flex items-center justify-center ring-1 ring-accent/30">
+            <span className="text-background font-bold text-lg">X</span>
           </div>
-          <CardTitle className="text-3xl font-semibold text-zinc-900 dark:text-zinc-100">XRM</CardTitle>
-          <CardDescription className="text-zinc-500 dark:text-zinc-400">Enterprise Project Management System</CardDescription>
+          <CardTitle className="text-[24px] tracking-[-0.02em]">XRM</CardTitle>
+          <CardDescription>Enterprise Project Management System</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="username" className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Username</Label>
+            <div className="space-y-1.5">
+              <Label htmlFor="username" className="text-[12px] font-medium text-fg-2">Username</Label>
               <Input
                 id="username"
                 type="text"
@@ -94,8 +90,8 @@ export function LoginForm() {
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="password" className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Password</Label>
+            <div className="space-y-1.5">
+              <Label htmlFor="password" className="text-[12px] font-medium text-fg-2">Password</Label>
               <Input
                 id="password"
                 type="password"
@@ -110,13 +106,13 @@ export function LoginForm() {
             </div>
 
             {error && (
-              <div className="flex items-center gap-2 text-red-600 dark:text-red-400 text-sm bg-red-500/15 p-3 rounded-lg">
-                <AlertCircle size={16} />
+              <div className="flex items-center gap-2 text-status-red text-[12px] bg-status-red-soft p-2.5 rounded-md">
+                <AlertCircle size={14} />
                 {error}
               </div>
             )}
 
-            <Button type="submit" className="w-full text-white bg-gradient-to-r from-[#e05c29] to-orange-400 hover:to-rose-500 shadow-[0_4px_20px_rgba(224,92,41,0.35)] transition-all duration-200" disabled={isLoading}>
+            <Button type="submit" variant="accent" className="w-full" disabled={isLoading}>
               {isLoading ? 'Logging in...' : 'Sign In'}
             </Button>
           </form>

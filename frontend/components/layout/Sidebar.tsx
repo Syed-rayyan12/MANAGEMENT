@@ -1,42 +1,42 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useApp } from '@/contexts/useApp';
 import { boardAPI } from '@/lib/api-service';
 import {
   LayoutDashboard,
   Briefcase,
-  ChevronLeft,
-  ChevronRight,
-  User,
+  Inbox,
   FileText,
-  Shield,
-  Trash2,
   TrendingUp,
+  Trash2,
+  Shield,
+  Search,
+  User,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { BOARD_METADATA, DEFAULT_BOARD_METADATA } from '@/lib/constants';
 
 interface SidebarProps {
-  collapsed: boolean;
-  onToggle: () => void;
   isMobile?: boolean;
   mobileOpen?: boolean;
   onMobileClose?: () => void;
 }
-
 
 interface BoardItem {
   slug: string;
   name: string;
 }
 
-export function Sidebar({ collapsed, onToggle, isMobile = false, mobileOpen = false, onMobileClose }: SidebarProps) {
+export function Sidebar({ isMobile = false, mobileOpen = false, onMobileClose }: SidebarProps) {
   const router = useRouter();
   const pathname = usePathname();
   const { state } = useApp();
   const [boards, setBoards] = useState<BoardItem[]>([]);
+  const [isVisible, setIsVisible] = useState(false);
+  const hideTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const sidebarRef = useRef<HTMLElement>(null);
 
   // Fetch all org-level boards
   useEffect(() => {
@@ -58,6 +58,30 @@ export function Sidebar({ collapsed, onToggle, isMobile = false, mobileOpen = fa
     };
     fetchBoards();
   }, [state.currentUser]);
+
+  // Gmail-style hover: show sidebar when mouse enters trigger zone or sidebar itself
+  const handleMouseEnter = useCallback(() => {
+    if (isMobile) return;
+    if (hideTimeoutRef.current) {
+      clearTimeout(hideTimeoutRef.current);
+      hideTimeoutRef.current = null;
+    }
+    setIsVisible(true);
+  }, [isMobile]);
+
+  const handleMouseLeave = useCallback(() => {
+    if (isMobile) return;
+    hideTimeoutRef.current = setTimeout(() => {
+      setIsVisible(false);
+    }, 300);
+  }, [isMobile]);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (hideTimeoutRef.current) clearTimeout(hideTimeoutRef.current);
+    };
+  }, []);
 
   const userRole = state.currentUser?.role;
   const canAccessInvoices = userRole === 'PM' || userRole === 'TL' || userRole === 'EXECUTIVE';
@@ -87,12 +111,26 @@ export function Sidebar({ collapsed, onToggle, isMobile = false, mobileOpen = fa
       href: '/dashboard/my-performance',
       match: (p: string) => p === '/dashboard/my-performance',
     }] : []),
+    {
+      id: 'inbox',
+      label: 'Inbox',
+      icon: Inbox,
+      href: '/dashboard/inbox',
+      match: (p: string) => p === '/dashboard/inbox',
+    },
     ...(canAccessInvoices ? [{
       id: 'invoices',
       label: 'Invoices',
       icon: FileText,
       href: '/dashboard/invoices',
       match: (p: string) => p === '/dashboard/invoices',
+    }] : []),
+    ...(canAccessAdmin ? [{
+      id: 'insights',
+      label: 'Insights',
+      icon: TrendingUp,
+      href: '/dashboard/insights',
+      match: (p: string) => p.startsWith('/dashboard/insights') || p.startsWith('/dashboard/admin'),
     }] : []),
     ...(canAccessTrash ? [{
       id: 'trash',
@@ -101,134 +139,159 @@ export function Sidebar({ collapsed, onToggle, isMobile = false, mobileOpen = fa
       href: '/dashboard/trash',
       match: (p: string) => p === '/dashboard/trash',
     }] : []),
-    ...(canAccessAdmin ? [{
-      id: 'admin',
-      label: 'Management',
-      icon: Shield,
-      href: '/dashboard/admin',
-      match: (p: string) => p.startsWith('/dashboard/admin'),
-    }] : []),
   ];
 
+  const navigate = (href: string) => {
+    router.push(href);
+    onMobileClose?.();
+  };
+
+  // Determine if sidebar should show
+  const shouldShow = isMobile ? mobileOpen : isVisible;
+
   return (
-    <aside
-      className={cn(
-        'fixed left-0 top-16 h-[calc(100vh-4rem)] z-40 flex flex-col border-r transition-all duration-300 ease-in-out',
-        'bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800',
-        isMobile
-          ? cn('w-60', mobileOpen ? 'translate-x-0' : '-translate-x-full')
-          : collapsed ? 'w-16' : 'w-60'
-      )}
-    >
-      {/* Toggle button — hidden on mobile where hamburger menu controls the drawer */}
+    <>
+      {/* Hover trigger zone — invisible strip on left edge (desktop only) */}
       {!isMobile && (
-        <button
-          onClick={onToggle}
-          className="absolute -right-3 top-6 z-50 w-6 h-6 rounded-full bg-orange-500 text-white flex items-center justify-center shadow-lg hover:bg-orange-600 transition-colors"
-        >
-          {collapsed ? (
-            <ChevronRight className="w-3.5 h-3.5" />
-          ) : (
-            <ChevronLeft className="w-3.5 h-3.5" />
-          )}
-        </button>
+        <div
+          className="fixed left-0 top-0 w-[40px] h-full z-40"
+          onMouseEnter={handleMouseEnter}
+          onMouseLeave={handleMouseLeave}
+        />
       )}
 
-      {/* Navigation */}
-      <nav className="flex-1 py-4 px-2 space-y-1 overflow-y-auto">
-        {/* Main nav */}
-        {navItems.map((item) => {
-          const Icon = item.icon;
-          const isActive = item.match(pathname);
-          return (
-            <button
-              key={item.id}
-              onClick={() => { router.push(item.href); onMobileClose?.(); }}
-              className={cn(
-                'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all',
-                isActive
-                  ? 'bg-gradient-to-r from-[#e05c29]/15 to-[#e05c29]/5 text-[#e05c29] border-l-2 border-[#e05c29] font-medium'
-                  : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-zinc-100'
-              )}
-              title={collapsed ? item.label : undefined}
-            >
-              <Icon className={cn('w-5 h-5 flex-shrink-0', isActive && 'text-orange-500')} />
-              {!collapsed && <span className="truncate">{item.label}</span>}
-            </button>
-          );
-        })}
+      {/* Mobile scrim overlay */}
+      {isMobile && mobileOpen && (
+        <div
+          className="fixed inset-0 bg-black/40 z-40"
+          onClick={onMobileClose}
+        />
+      )}
 
-        {/* Divider */}
-        <div className="my-3 mx-2">
-          <div className="border-t border-zinc-200 dark:border-zinc-800" />
-          {!collapsed && (
-            <span className="block text-[10px] uppercase tracking-widest text-zinc-400 mt-3 mb-1 px-1">
-              Boards
-            </span>
-          )}
+      {/* Sidebar panel */}
+      <aside
+        ref={sidebarRef}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+        className={cn(
+          'fixed left-0 top-0 h-full z-50 flex flex-col w-[232px]',
+          'bg-background border-r border-border',
+          'transition-transform duration-[220ms] ease-out',
+          shouldShow ? 'translate-x-0' : '-translate-x-full',
+          shouldShow && !isMobile && 'shadow-3',
+        )}
+      >
+        {/* Brand block */}
+        <div className="px-4 pt-4 pb-2">
+          <div className="flex items-center gap-2.5">
+            <div className="w-[26px] h-[26px] rounded-md bg-foreground flex items-center justify-center ring-1 ring-accent/30">
+              <span className="text-background text-xs font-bold">X</span>
+            </div>
+            <div className="flex flex-col">
+              <span className="text-[13px] font-semibold text-foreground leading-tight">Xpert Studio</span>
+              <span className="text-kicker uppercase text-fg-3 tracking-widest">workspace</span>
+            </div>
+          </div>
         </div>
 
-        {/* Dynamic board links */}
-        {boards.map((board) => {
-          const style = BOARD_METADATA[board.slug] || DEFAULT_BOARD_METADATA;
-          const Icon = style.icon;
-          const isActive = pathname === `/dashboard/${board.slug}`;
-          return (
-            <button
-              key={board.slug}
-              onClick={() => { router.push(`/dashboard/${board.slug}`); onMobileClose?.(); }}
-              className={cn(
-                'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all',
-                isActive
-                  ? 'bg-gradient-to-r from-[#e05c29]/15 to-[#e05c29]/5 text-[#e05c29] border-l-2 border-[#e05c29] font-medium'
-                  : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-zinc-100'
-              )}
-              title={collapsed ? board.name : undefined}
-            >
-              <div
+        {/* Search / Command Palette trigger */}
+        <div className="px-3 py-2">
+          <button
+            className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md border border-border bg-surface text-fg-3 text-[12.5px] hover:bg-surface-2 transition-colors duration-[120ms]"
+            onClick={() => {
+              // Will wire to Command Palette in Phase 2
+              document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true }));
+            }}
+          >
+            <Search className="w-3.5 h-3.5" />
+            <span className="flex-1 text-left">Search...</span>
+            <kbd className="text-[10px] text-fg-4 font-mono bg-surface-2 px-1 py-0.5 rounded">⌘K</kbd>
+          </button>
+        </div>
+
+        {/* Navigation */}
+        <nav className="flex-1 py-2 px-2 space-y-0.5 overflow-y-auto">
+          {navItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = item.match(pathname);
+            return (
+              <button
+                key={item.id}
+                onClick={() => navigate(item.href)}
                 className={cn(
-                  'w-5 h-5 rounded flex items-center justify-center flex-shrink-0',
+                  'w-full flex items-center gap-2.5 px-2.5 py-2 rounded-md text-[13px] font-medium transition-colors duration-[120ms]',
                   isActive
-                    ? `bg-gradient-to-br ${style.sidebarGradient}`
-                    : 'bg-gray-200 dark:bg-[#2d3548]'
+                    ? 'bg-surface-3 text-foreground'
+                    : 'text-fg-2 hover:bg-surface-2 hover:text-foreground'
                 )}
               >
-                <Icon className={cn('w-3 h-3', isActive ? 'text-white' : 'text-gray-500 dark:text-gray-400')} />
-              </div>
-              {!collapsed && <span className="truncate">{board.name}</span>}
-            </button>
-          );
-        })}
-      </nav>
+                <Icon className="w-[18px] h-[18px] flex-shrink-0" />
+                <span className="truncate">{item.label}</span>
+              </button>
+            );
+          })}
 
-      {/* User info at bottom */}
-      {state.currentUser && (
-        <div className={cn(
-          'border-t border-zinc-200 dark:border-zinc-800 p-3',
-          collapsed ? 'flex justify-center' : ''
-        )}>
-          <div className={cn('flex items-center gap-3', collapsed && 'justify-center')}>
-            <div className="w-8 h-8 rounded-full bg-orange-500/20 flex items-center justify-center flex-shrink-0">
-              <User className="w-4 h-4 text-orange-500" />
-            </div>
-            {!collapsed && (
-              <div className="min-w-0">
-                <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100 truncate">
+          {/* Workspaces section */}
+          <div className="pt-4 pb-1 px-1">
+            <span className="text-kicker uppercase text-fg-4 tracking-widest">
+              Workspaces
+            </span>
+          </div>
+
+          {boards.map((board) => {
+            const style = BOARD_METADATA[board.slug] || DEFAULT_BOARD_METADATA;
+            const Icon = style.icon;
+            const isActive = pathname === `/dashboard/${board.slug}`;
+            return (
+              <button
+                key={board.slug}
+                onClick={() => navigate(`/dashboard/${board.slug}`)}
+                className={cn(
+                  'w-full flex items-center gap-2.5 px-2.5 py-2 rounded-md text-[13px] font-medium transition-colors duration-[120ms]',
+                  isActive
+                    ? 'bg-surface-3 text-foreground'
+                    : 'text-fg-2 hover:bg-surface-2 hover:text-foreground'
+                )}
+              >
+                <div
+                  className="w-[18px] h-[18px] rounded flex items-center justify-center flex-shrink-0"
+                  style={{ backgroundColor: style.accentColor, opacity: 0.15 }}
+                >
+                  <Icon className="w-3 h-3" style={{ color: style.accentColor }} />
+                </div>
+                <span className="truncate">{board.name}</span>
+                {isActive && (
+                  <div className="ml-auto w-1.5 h-1.5 rounded-full" style={{ backgroundColor: style.accentColor }} />
+                )}
+              </button>
+            );
+          })}
+        </nav>
+
+        {/* User footer */}
+        {state.currentUser && (
+          <div className="border-t border-border px-3 py-3">
+            <div className="flex items-center gap-2.5">
+              <div className="w-7 h-7 rounded-full bg-accent-soft flex items-center justify-center flex-shrink-0">
+                <User className="w-3.5 h-3.5 text-accent" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-[12.5px] font-medium text-foreground truncate">
                   {state.currentUser.name}
                 </p>
-                <p className="text-[11px] text-gray-500 dark:text-gray-400 truncate">
+                <p className="text-[11px] text-fg-3 truncate">
                   {state.currentUser.role}
                   {state.currentUser.teams && state.currentUser.teams.length > 0 && (
-                    <span className="ml-1 text-orange-400 font-medium">
-                      · {state.currentUser.teams.map(t => t.name).join(', ')}
+                    <span className="ml-1 text-fg-4">
+                      · {state.currentUser.teams.map((t: any) => t.name).join(', ')}
                     </span>
                   )}
                 </p>
               </div>
-            )}
+            </div>
           </div>
-        </div>
-      )}
-    </aside>
+        )}
+      </aside>
+    </>
   );
 }

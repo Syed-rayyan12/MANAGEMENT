@@ -23,7 +23,7 @@ function Calendar({
         months: 'flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0',
         month: 'space-y-4',
         caption: 'flex justify-center pt-1 relative items-center',
-        caption_label: 'text-sm font-medium text-white',
+        caption_label: 'text-sm font-medium text-foreground',
         nav: 'space-x-1 flex items-center',
         nav_button: cn(
           buttonVariants({ variant: 'outline' }),
@@ -34,22 +34,22 @@ function Calendar({
         table: 'w-full border-collapse space-y-1',
         head_row: 'flex',
         head_cell:
-          'text-white rounded-md w-9 font-normal text-[0.8rem]',
+          'text-fg-3 rounded-md w-9 font-normal text-[0.8rem]',
         row: 'flex w-full mt-2',
-        cell: 'h-9 w-9 text-center text-sm p-0 relative [&:has([aria-selected].day-range-end)]:rounded-r-md [&:has([aria-selected].day-outside)]:bg-orange-500/50 [&:has([aria-selected])]:bg-orange-500 first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20',
+        cell: 'h-9 w-9 text-center text-sm p-0 relative [&:has([aria-selected].day-range-end)]:rounded-r-md [&:has([aria-selected].day-outside)]:bg-accent/50 [&:has([aria-selected])]:bg-accent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20',
         day: cn(
           buttonVariants({ variant: 'ghost' }),
-          'h-9 w-9 p-0 font-normal text-white aria-selected:opacity-100',
+          'h-9 w-9 p-0 font-normal text-foreground aria-selected:opacity-100',
         ),
         day_range_end: 'day-range-end',
         day_selected:
-          'bg-orange-500 text-white hover:bg-orange-600 hover:text-white focus:bg-orange-500 focus:text-white',
-        day_today: 'bg-gray-100 dark:bg-gray-800 text-white border border-orange-500',
+          'bg-accent text-white hover:bg-accent/90 hover:text-white focus:bg-accent focus:text-white',
+        day_today: 'bg-accent-soft text-accent font-semibold border border-accent',
         day_outside:
-          'day-outside text-gray-400 aria-selected:bg-orange-400 aria-selected:text-white',
+          'day-outside text-fg-4 aria-selected:bg-accent aria-selected:text-accent-fg',
         day_disabled: 'text-gray-500 opacity-50',
         day_range_middle:
-          'aria-selected:bg-orange-400 aria-selected:text-white',
+          'aria-selected:bg-accent/20 aria-selected:text-foreground',
         day_hidden: 'invisible',
         ...classNames,
       }}

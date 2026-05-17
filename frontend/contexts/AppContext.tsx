@@ -164,10 +164,10 @@ function appReducer(state: AppState, action: AppAction): AppState {
           p.id === projectId
             ? {
                 ...p,
-                comments: [...p.comments, comment],
+                comments: [...(p.comments || []), comment],
                 updatedAt: new Date(),
                 activityLog: [
-                  ...p.activityLog,
+                  ...(p.activityLog || []),
                   {
                     id: Math.random().toString(36),
                     userId,

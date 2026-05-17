@@ -49,7 +49,10 @@
       "Bash(DATABASE_URL=\"postgresql://postgres:PJEGMQUYGIBPANktROhvDhjrGrzmosnP@metro.proxy.rlwy.net:26362/railway\" npx prisma migrate dev --name add-soft-delete-fields --create-only)",
       "Bash(taskkill /F /IM node.exe)",
       "Bash(rm:*)",
-      "Bash(cd:*)"
+      "Bash(cd:*)",
+      "Bash(grep -o '\"\"cmdk\"\"[^,]*' package.json)",
+      "Bash(taskkill //F //IM \"node.exe\")",
+      "Bash(pkill -f \"next dev\")"
     ]
   }
 }

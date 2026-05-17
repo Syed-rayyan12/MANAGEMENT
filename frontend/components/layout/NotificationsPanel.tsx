@@ -68,8 +68,8 @@ const TYPE_CONFIG: Record<
   },
   attachment: {
     icon: <Paperclip className="w-3.5 h-3.5" />,
-    bg: 'bg-orange-100 dark:bg-orange-500/20',
-    text: 'text-orange-600 dark:text-orange-400',
+    bg: 'bg-accent-soft',
+    text: 'text-accent',
   },
   checklist: {
     icon: <ListChecks className="w-3.5 h-3.5" />,
@@ -126,24 +126,24 @@ export function NotificationsPanel() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" className="relative">
-          <Bell className="w-5 h-5 text-gray-600 dark:text-orange-400" />
+        <button className="relative w-7 h-7 flex items-center justify-center rounded-md text-fg-3 hover:bg-surface-2 hover:text-foreground transition-colors duration-[120ms]">
+          <Bell className="w-[15px] h-[15px]" />
           {unreadNotifications.length > 0 && (
-            <span className="absolute top-1 right-1 bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1 leading-none">
+            <span className="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-[9px] font-bold rounded-full min-w-[15px] h-[15px] flex items-center justify-center px-0.5 leading-none">
               {unreadNotifications.length > 99 ? '99+' : unreadNotifications.length}
             </span>
           )}
-        </Button>
+        </button>
       </DropdownMenuTrigger>
 
       <DropdownMenuContent align="end" className="w-96 max-h-[520px] overflow-hidden flex flex-col dark:bg-[#1a1f2e] dark:border-[#2d3548]">
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b dark:border-[#2d3548] flex-shrink-0">
           <div className="flex items-center gap-2">
-            <Bell className="w-4 h-4 text-orange-500" />
-            <h3 className="font-semibold text-sm dark:text-white">Notifications</h3>
+            <Bell className="w-4 h-4 text-accent" />
+            <h3 className="font-semibold text-[13px] text-foreground">Notifications</h3>
             {unreadNotifications.length > 0 && (
-              <span className="bg-orange-100 dark:bg-orange-500/20 text-orange-600 dark:text-orange-400 text-xs font-medium px-2 py-0.5 rounded-full">
+              <span className="bg-accent-soft text-accent text-[11px] font-medium px-1.5 py-0.5 rounded-full">
                 {unreadNotifications.length} new
               </span>
             )}
@@ -216,7 +216,7 @@ export function NotificationsPanel() {
                   e.stopPropagation();
                   setVisibleCount((c) => c + NOTIF_PAGE_SIZE);
                 }}
-                className="text-xs font-medium text-[#e05c29] hover:text-orange-600 dark:hover:text-orange-300 transition-colors"
+                className="text-[11px] font-medium text-accent hover:brightness-110 transition-colors duration-[120ms]"
               >
                 Load more ({sortedNotifications.length - visibleCount} remaining)
               </button>

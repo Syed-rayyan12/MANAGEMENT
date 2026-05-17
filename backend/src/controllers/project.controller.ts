@@ -157,10 +157,21 @@ export const createProject = async (req: Request, res: Response): Promise<void> 
         select: { teamId: true },
       });
       if (creatorMemberships.length === 0) {
-        res.status(400).json({ success: false, message: 'You must belong to a team or specify a teamId to create projects' });
-        return;
+        // PRODUCTION users may not be team members — assign to first available team
+        if (req.user?.role === 'PRODUCTION') {
+          const firstTeam = await prisma.team.findFirst({ select: { id: true } });
+          if (!firstTeam) {
+            res.status(400).json({ success: false, message: 'No teams available' });
+            return;
+          }
+          teamId = firstTeam.id;
+        } else {
+          res.status(400).json({ success: false, message: 'You must belong to a team or specify a teamId to create projects' });
+          return;
+        }
+      } else {
+        teamId = creatorMemberships[0].teamId;
       }
-      teamId = creatorMemberships[0].teamId;
     }
 
     // Validate status against board columns if provided

@@ -3,8 +3,9 @@
 import { useEffect, useState, createContext, useContext } from 'react';
 import { useRouter } from 'next/navigation';
 import { useApp } from '@/contexts/useApp';
-import { Navbar } from '@/components/layout/Navbar';
+import { Topbar } from '@/components/layout/Topbar';
 import { Sidebar } from '@/components/layout/Sidebar';
+import { CommandPalette } from '@/components/shared/CommandPalette';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { useIsMobile } from '@/hooks/use-mobile';
 
@@ -29,50 +30,24 @@ export default function DashboardLayout({
   const { state, dispatch } = useApp();
   const [searchQuery, setSearchQuery] = useState('');
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const isMobile = useIsMobile();
 
-  // Auto-collapse sidebar on mobile
+  // Close mobile menu on route change
   useEffect(() => {
-    if (isMobile) {
-      setSidebarCollapsed(true);
-      setMobileMenuOpen(false);
-    }
-  }, [isMobile]);
-
-  // Persist sidebar state (desktop only)
-  useEffect(() => {
-    if (!isMobile) {
-      const stored = localStorage.getItem('sidebar-collapsed');
-      if (stored === 'true') setSidebarCollapsed(true);
-    }
-  }, [isMobile]);
-
-  const handleSidebarToggle = () => {
-    if (isMobile) {
-      setMobileMenuOpen((prev) => !prev);
-    } else {
-      setSidebarCollapsed((prev) => {
-        const next = !prev;
-        localStorage.setItem('sidebar-collapsed', String(next));
-        return next;
-      });
-    }
-  };
+    setMobileMenuOpen(false);
+  }, []);
 
   useEffect(() => {
-    // Check authentication on mount
     const checkAuth = async () => {
       const token = localStorage.getItem('token');
       const storedUser = localStorage.getItem('user');
-      
+
       if (!token || !storedUser) {
         router.push('/');
         return;
       }
 
-      // If user is not in state but exists in localStorage, restore it
       if (!state.currentUser && storedUser) {
         try {
           const user = JSON.parse(storedUser);
@@ -92,13 +67,12 @@ export default function DashboardLayout({
     checkAuth();
   }, []);
 
-  // Show loading while checking auth
   if (isCheckingAuth) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-zinc-50 dark:bg-zinc-950">
+      <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
-          <div className="w-16 h-16 border-4 border-[#e05c29] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-zinc-900 dark:text-zinc-100">Loading...</p>
+          <div className="w-12 h-12 border-2 border-accent border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
+          <p className="text-fg-3 text-[13px]">Loading...</p>
         </div>
       </div>
     );
@@ -110,32 +84,24 @@ export default function DashboardLayout({
 
   return (
     <SearchContext.Provider value={{ searchQuery, setSearchQuery }}>
-      <Navbar searchQuery={searchQuery} onSearchChange={setSearchQuery} onMenuToggle={isMobile ? handleSidebarToggle : undefined} />
+      <CommandPalette />
 
-      {/* Mobile overlay */}
-      {isMobile && mobileMenuOpen && (
-        <div
-          className="fixed inset-0 bg-black/40 z-30 md:hidden"
-          onClick={() => setMobileMenuOpen(false)}
-        />
-      )}
-
+      {/* Gmail-style sidebar: overlays content, doesn't push it */}
       <Sidebar
-        collapsed={isMobile ? !mobileMenuOpen : sidebarCollapsed}
-        onToggle={handleSidebarToggle}
         isMobile={isMobile}
         mobileOpen={mobileMenuOpen}
         onMobileClose={() => setMobileMenuOpen(false)}
       />
-      <main
-        className={`min-h-screen relative transition-all duration-300 bg-zinc-50 dark:bg-zinc-950 pt-16 ${
-          isMobile ? 'ml-0' : sidebarCollapsed ? 'ml-16' : 'ml-60'
-        }`}
-      >
-        <ErrorBoundary>
-          {children}
-        </ErrorBoundary>
-      </main>
+
+      {/* Main content area — full width */}
+      <div className="min-h-screen bg-background">
+        <Topbar onMenuToggle={isMobile ? () => setMobileMenuOpen(prev => !prev) : undefined} />
+        <main className="px-6 py-5 max-[980px]:px-4 max-[980px]:py-4 max-[600px]:px-3 max-[600px]:py-3">
+          <ErrorBoundary>
+            {children}
+          </ErrorBoundary>
+        </main>
+      </div>
     </SearchContext.Provider>
   );
 }

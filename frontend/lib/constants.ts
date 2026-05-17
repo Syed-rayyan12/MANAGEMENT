@@ -14,10 +14,10 @@ export const DEFAULT_KANBAN_COLUMNS: KanbanColumn[] = [
 export const KANBAN_COLUMNS = DEFAULT_KANBAN_COLUMNS;
 
 export const PRIORITY_STYLES: Record<ProjectPriority, { label: string; color: string; bgColor: string }> = {
-  low: { label: 'Low', color: 'text-zinc-600 dark:text-zinc-400', bgColor: 'bg-zinc-500/15' },
-  medium: { label: 'Medium', color: 'text-amber-600 dark:text-amber-400', bgColor: 'bg-amber-500/15' },
-  high: { label: 'High', color: 'text-[#e05c29]', bgColor: 'bg-[#e05c29]/15' },
-  critical: { label: 'Critical', color: 'text-red-600 dark:text-red-400', bgColor: 'bg-red-500/15' },
+  low: { label: 'Low', color: 'text-fg-3', bgColor: 'bg-surface-3' },
+  medium: { label: 'Medium', color: 'text-status-amber', bgColor: 'bg-status-amber-soft' },
+  high: { label: 'High', color: 'text-accent', bgColor: 'bg-accent-soft' },
+  critical: { label: 'Critical', color: 'text-status-red', bgColor: 'bg-status-red-soft' },
 };
 
 export const LABEL_COLORS = [
@@ -38,6 +38,7 @@ export interface BoardMetadata {
   image: string;
   gradient: string;
   sidebarGradient: string;
+  accentColor: string;
   description: string;
 }
 
@@ -45,29 +46,33 @@ export const BOARD_METADATA: Record<string, BoardMetadata> = {
   'logo-design': {
     icon: Sparkles,
     image: '/logo-section.png',
-    gradient: 'from-[#e05c29] via-rose-500 to-orange-400',
-    sidebarGradient: 'from-[#e05c29] to-rose-500',
+    gradient: 'accent',
+    sidebarGradient: 'accent',
+    accentColor: 'var(--ws-logo)',
     description: 'Brand identity, logos, and visual branding',
   },
   'web-design': {
     icon: Palette,
     image: '/web-design.jpg',
-    gradient: 'from-[#e05c29] via-orange-400 to-amber-400',
-    sidebarGradient: 'from-[#e05c29] to-amber-400',
+    gradient: 'accent',
+    sidebarGradient: 'accent',
+    accentColor: 'var(--ws-web-design)',
     description: 'UI/UX design, mockups, and prototypes',
   },
   'web-development': {
     icon: Code,
     image: '/web-development.jpg',
-    gradient: 'from-orange-400 via-[#e05c29] to-rose-500',
-    sidebarGradient: 'from-orange-400 to-[#e05c29]',
+    gradient: 'accent',
+    sidebarGradient: 'accent',
+    accentColor: 'var(--ws-web-dev)',
     description: 'Frontend, backend, and full-stack development',
   },
   'content': {
     icon: FileText,
     image: '/content-writer.jpg',
-    gradient: 'from-amber-500 via-orange-400 to-[#e05c29]',
-    sidebarGradient: 'from-amber-500 to-orange-400',
+    gradient: 'accent',
+    sidebarGradient: 'accent',
+    accentColor: 'var(--ws-content)',
     description: 'Copywriting, documentation, and media',
   },
 };
@@ -75,7 +80,8 @@ export const BOARD_METADATA: Record<string, BoardMetadata> = {
 export const DEFAULT_BOARD_METADATA: BoardMetadata = {
   icon: FolderKanban,
   image: '/logo-section.png',
-  gradient: 'from-gray-500 via-gray-600 to-gray-700',
-  sidebarGradient: 'from-gray-500 to-gray-600',
+  gradient: 'accent',
+  sidebarGradient: 'accent',
+  accentColor: 'var(--fg-3)',
   description: 'Manage projects in this workspace',
 };

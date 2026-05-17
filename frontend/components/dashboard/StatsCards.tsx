@@ -96,10 +96,10 @@ export function StatsCards() {
       {statItems.map((item) => {
         const Icon = item.icon;
         return (
-          <Card key={item.title} className="hover:shadow-md dark:hover:shadow-orange-500/20 transition-shadow dark:bg-[#1a1f2e] dark:border-[#2d3548]">
+          <Card key={item.title} className="hover:shadow-1 transition-shadow dark:bg-[#1a1f2e] dark:border-[#2d3548]">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-gray-700 dark:text-orange-400">{item.title}</CardTitle>
-              <div className={`p-2 rounded-lg ${item.color} dark:bg-orange-500/20 dark:text-orange-400`}>
+              <div className={`p-2 rounded-lg ${item.color} dark:bg-accent-soft dark:text-accent`}>
                 <Icon className="w-4 h-4" />
               </div>
             </CardHeader>

@@ -10,6 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { MessageSquare, Edit, AtSign } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { linkifyText } from '@/lib/utils';
 
 interface CommentsSectionProps {
   project: Project;
@@ -145,6 +146,7 @@ export function CommentsSection({ project }: CommentsSectionProps) {
   };
 
   const renderCommentWithMentions = (text: string) => {
+    if (!text) return null;
     const parts = text.split(/(@[a-zA-Z0-9_]+)/g);
     return parts.map((part, index) => {
       if (part.startsWith('@')) {
@@ -152,35 +154,35 @@ export function CommentsSection({ project }: CommentsSectionProps) {
         const user = allUsers.find(u => u.name.toLowerCase().replace(/\s+/g, '') === username.toLowerCase());
         if (user) {
           return (
-            <span key={index} className="text-[#e05c29] font-semibold bg-[#e05c29]/10 px-1 rounded">
+            <span key={index} className="text-accent font-semibold bg-accent-soft px-1 rounded">
               @{user.name}
             </span>
           );
         }
       }
-      return <span key={index}>{part}</span>;
+      return <span key={index}>{linkifyText(part)}</span>;
     });
   };
 
   const MentionDropdown = ({ isNewComment }: { isNewComment: boolean }) => (
     <>
       {showMentionDropdown && (
-        <div ref={mentionDropdownRef} className="absolute bottom-full left-0 mb-1 w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-lg shadow-black/10 max-h-40 overflow-y-auto z-50">
+        <div ref={mentionDropdownRef} className="absolute bottom-full left-0 mb-1 w-full bg-surface border border-border rounded-xl shadow-lg shadow-black/10 max-h-40 overflow-y-auto z-50">
           {allUsers
             .filter(u => u.name.toLowerCase().includes(mentionSearchQuery))
             .map(user => (
               <button
                 key={user.id}
                 onClick={() => handleSelectMention(user, isNewComment)}
-                className="w-full flex items-center gap-2 p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors text-left"
+                className="w-full flex items-center gap-2 p-2 hover:bg-surface-2 transition-colors text-left"
               >
                 <Avatar className="w-6 h-6">
                   <AvatarImage src={user.avatar} />
                   <AvatarFallback>{user.name[0]}</AvatarFallback>
                 </Avatar>
                 <div>
-                  <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">{user.name}</p>
-                  <p className="text-xs text-zinc-400">{user.email}</p>
+                  <p className="text-sm font-medium text-foreground">{user.name}</p>
+                  <p className="text-xs text-fg-4">{user.email}</p>
                 </div>
               </button>
             ))
@@ -193,23 +195,23 @@ export function CommentsSection({ project }: CommentsSectionProps) {
   return (
     <div className="space-y-4 mt-4">
       <div className="space-y-4 max-h-96 overflow-y-auto">
-        {project.comments.length === 0 ? (
-          <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+        {(!project.comments || project.comments.length === 0) ? (
+          <div className="text-center py-8 text-fg-3">
             <MessageSquare className="w-8 h-8 mx-auto mb-2 opacity-50" />
             <p>No comments yet</p>
             <p className="text-xs mt-1">Start a conversation about this project</p>
           </div>
         ) : (
           project.comments.map((comment) => (
-            <div key={comment.id} className="flex gap-3 p-3 border border-zinc-200 dark:border-zinc-800 rounded-xl bg-zinc-50 dark:bg-zinc-900">
+            <div key={comment.id} className="flex gap-3 p-3 border border-border rounded-xl bg-surface-2">
               <Avatar className="w-8 h-8">
                 <AvatarImage src={getUserAvatar(comment.userId)} alt={getUserName(comment.userId)} />
                 <AvatarFallback>{getUserName(comment.userId)[0]}</AvatarFallback>
               </Avatar>
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-1">
-                  <span className="font-semibold text-sm text-zinc-900 dark:text-zinc-100">{getUserName(comment.userId)}</span>
-                  <span className="text-xs text-zinc-400">
+                  <span className="font-semibold text-sm text-foreground">{getUserName(comment.userId)}</span>
+                  <span className="text-xs text-fg-4">
                     {new Date(comment.timestamp).toLocaleDateString()} at {new Date(comment.timestamp).toLocaleTimeString()}
                   </span>
                 </div>
@@ -235,7 +237,7 @@ export function CommentsSection({ project }: CommentsSectionProps) {
                   </div>
                 ) : (
                   <>
-                    <p className="text-sm text-zinc-700 dark:text-zinc-300">{renderCommentWithMentions(comment.content)}</p>
+                    <p className="text-sm text-fg-2">{renderCommentWithMentions(comment.content)}</p>
                     {state.currentUser?.id === comment.userId && (
                       <Button
                         variant="ghost"
@@ -258,7 +260,7 @@ export function CommentsSection({ project }: CommentsSectionProps) {
         )}
       </div>
 
-      <div className={`border-t pt-4 space-y-2 ${isMobile ? 'sticky bottom-0 bg-white dark:bg-zinc-900 pb-2 z-10' : ''}`}>
+      <div className={`border-t pt-4 space-y-2 ${isMobile ? 'sticky bottom-0 bg-surface pb-2 z-10' : ''}`}>
         <div className="relative">
           <Textarea
             ref={commentInputRef}
@@ -270,11 +272,11 @@ export function CommentsSection({ project }: CommentsSectionProps) {
           <MentionDropdown isNewComment={true} />
         </div>
         <div className={`flex ${isMobile ? 'flex-col gap-2' : 'items-center justify-between'}`}>
-          <p className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
+          <p className="text-xs text-fg-3 flex items-center gap-1">
             <AtSign className="w-3 h-3" />
             Type @ to mention team members
           </p>
-          <Button onClick={handleAddComment} className="rounded-lg bg-gradient-to-r from-[#e05c29] to-orange-400 hover:to-rose-500 text-white shadow-[0_4px_20px_rgba(224,92,41,0.35)] transition-all duration-200">
+          <Button onClick={handleAddComment} className="rounded-lg bg-accent hover:bg-accent/90 text-accent-fg transition-all duration-200">
             <MessageSquare className="w-4 h-4 mr-2" />
             Post Comment
           </Button>

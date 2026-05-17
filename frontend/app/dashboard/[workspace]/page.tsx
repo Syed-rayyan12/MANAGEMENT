@@ -256,10 +256,10 @@ export default function WorkspacePage() {
             <Button
               onClick={() => setShowAddColumnModal(true)}
               variant="outline"
-              className="border-orange-500/50 hover:bg-orange-500/10 dark:border-orange-500/50 dark:hover:bg-orange-500/10 w-full sm:w-auto"
+              className="border-accent hover:bg-accent-soft w-full sm:w-auto"
             >
-              <Plus className="w-4 h-4 mr-2 text-orange-500" />
-              <span className='text-orange-500'>
+              <Plus className="w-4 h-4 mr-2 text-accent" />
+              <span className='text-accent'>
                 Add Column
               </span>
             </Button>
@@ -267,7 +267,7 @@ export default function WorkspacePage() {
           {canCreateProject && (
             <Button
               onClick={() => setShowCreateModal(true)}
-              className="bg-orange-500 hover:bg-orange-600 dark:bg-orange-500 dark:hover:bg-orange-600 dark:shadow-lg dark:shadow-orange-500/50 w-full sm:w-auto"
+              className="bg-accent hover:bg-accent/90 text-accent-fg w-full sm:w-auto"
             >
               <Plus className="w-4 h-4 mr-2 text-white" />
               <span className='text-white'>
@@ -283,14 +283,14 @@ export default function WorkspacePage() {
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-sm text-gray-400">Active filters:</span>
           {searchQuery && (
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-orange-500/15 text-orange-400 border border-orange-500/30">
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-accent-soft text-accent border border-accent-line">
               Search: &quot;{searchQuery}&quot;
             </span>
           )}
           {filterPriority !== 'all' && (
             <button
               onClick={() => setFilterPriority('all')}
-              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-orange-500/15 text-orange-400 border border-orange-500/30 hover:bg-orange-500/25 transition-colors"
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-accent-soft text-accent border border-accent-line hover:bg-accent-soft/80 transition-colors"
             >
               Priority: {filterPriority}
               <X className="w-3 h-3" />
@@ -299,7 +299,7 @@ export default function WorkspacePage() {
           {filterAssignee !== 'all' && (
             <button
               onClick={() => setFilterAssignee('all')}
-              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-orange-500/15 text-orange-400 border border-orange-500/30 hover:bg-orange-500/25 transition-colors"
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-accent-soft text-accent border border-accent-line hover:bg-accent-soft/80 transition-colors"
             >
               Assignee: {getUserName(filterAssignee)}
               <X className="w-3 h-3" />
@@ -422,7 +422,7 @@ function AddColumnModal({ onClose, onAdd }: { onClose: () => void; onAdd: (name:
                   onClick={() => setColumnPhase(p.value)}
                   className={`text-left px-3 py-2 rounded-lg border transition-colors ${
                     columnPhase === p.value
-                      ? 'border-orange-500 bg-orange-500/10'
+                      ? 'border-accent bg-accent-soft'
                       : 'border-zinc-200 dark:border-zinc-700 hover:border-zinc-300 dark:hover:border-zinc-600'
                   }`}
                 >
@@ -441,7 +441,7 @@ function AddColumnModal({ onClose, onAdd }: { onClose: () => void; onAdd: (name:
                   key={color}
                   onClick={() => setColumnColor(color)}
                   className={`w-8 h-8 rounded-full border-2 ${
-                    columnColor === color ? 'border-orange-500 scale-110' : 'border-gray-300'
+                    columnColor === color ? 'border-accent scale-110' : 'border-gray-300'
                   } transition-all`}
                   style={{ backgroundColor: color }}
                 />
@@ -450,10 +450,10 @@ function AddColumnModal({ onClose, onAdd }: { onClose: () => void; onAdd: (name:
           </div>
 
           <div className="flex gap-2 pt-4">
-            <Button onClick={handleAddColumn} className="flex-1 text-white bg-gradient-to-r from-[#e05c29] to-orange-400 hover:to-rose-500 shadow-[0_4px_20px_rgba(224,92,41,0.35)]">
+            <Button onClick={handleAddColumn} variant="accent" className="flex-1">
               Add Column
             </Button>
-            <Button onClick={onClose} variant="outline" className="flex-1 text-zinc-700 dark:text-zinc-300">
+            <Button onClick={onClose} variant="ghost" className="flex-1">
               Cancel
             </Button>
           </div>

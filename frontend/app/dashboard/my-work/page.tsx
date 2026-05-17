@@ -21,10 +21,10 @@ import { Project, ColumnPhase } from '@/lib/types';
 import { PRIORITY_STYLES } from '@/lib/constants';
 
 const PHASE_CONFIG: Record<ColumnPhase, { label: string; color: string; bgColor: string; borderColor: string }> = {
-  NOT_STARTED: { label: 'Not Started', color: 'text-zinc-500', bgColor: 'bg-zinc-100/70 dark:bg-zinc-900/40', borderColor: 'border-zinc-300 dark:border-zinc-700' },
-  IN_PROGRESS: { label: 'In Progress', color: 'text-blue-500', bgColor: 'bg-blue-50/50 dark:bg-blue-900/10', borderColor: 'border-blue-300 dark:border-blue-800' },
-  DONE: { label: 'Done', color: 'text-emerald-500', bgColor: 'bg-emerald-50/50 dark:bg-emerald-900/10', borderColor: 'border-emerald-300 dark:border-emerald-800' },
-  ON_HOLD: { label: 'On Hold', color: 'text-amber-500', bgColor: 'bg-amber-50/50 dark:bg-amber-900/10', borderColor: 'border-amber-300 dark:border-amber-800' },
+  NOT_STARTED: { label: 'Not Started', color: 'text-fg-3', bgColor: 'bg-surface-2', borderColor: 'border-border' },
+  IN_PROGRESS: { label: 'In Progress', color: 'text-status-blue', bgColor: 'bg-status-blue-soft', borderColor: 'border-status-blue/20' },
+  DONE: { label: 'Done', color: 'text-status-green', bgColor: 'bg-status-green-soft', borderColor: 'border-status-green/20' },
+  ON_HOLD: { label: 'On Hold', color: 'text-status-amber', bgColor: 'bg-status-amber-soft', borderColor: 'border-status-amber/20' },
 };
 
 const PHASE_ORDER: ColumnPhase[] = ['NOT_STARTED', 'IN_PROGRESS', 'DONE', 'ON_HOLD'];
@@ -145,17 +145,12 @@ export default function MyWorkPage() {
   const selectedProject = state.projects.find(p => p.id === selectedProjectId) || null;
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-5">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-orange-500/20 flex items-center justify-center">
-            <Briefcase className="w-5 h-5 text-orange-500" />
-          </div>
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-semibold text-zinc-900 dark:text-zinc-100">My Work</h1>
-            <p className="text-zinc-500 dark:text-zinc-400 mt-0.5">All tasks assigned to you across boards</p>
-          </div>
+        <div>
+          <h1 className="text-[24px] font-semibold text-foreground tracking-[-0.02em]">My Work</h1>
+          <p className="text-[13px] text-fg-3 mt-0.5">All tasks assigned to you across boards</p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
@@ -241,17 +236,17 @@ export default function MyWorkPage() {
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-sm text-zinc-400">Active filters:</span>
           {searchQuery && (
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-orange-500/15 text-orange-400 border border-orange-500/30">
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-accent-soft text-accent border border-accent-line">
               Search: &quot;{searchQuery}&quot;
             </span>
           )}
           {filterPriority !== 'all' && (
-            <button onClick={() => setFilterPriority('all')} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-orange-500/15 text-orange-400 border border-orange-500/30 hover:bg-orange-500/25 transition-colors">
+            <button onClick={() => setFilterPriority('all')} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-accent-soft text-accent border border-accent-line hover:bg-accent-soft/80 transition-colors">
               Priority: {filterPriority} <X className="w-3 h-3" />
             </button>
           )}
           {filterBoard !== 'all' && (
-            <button onClick={() => setFilterBoard('all')} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-orange-500/15 text-orange-400 border border-orange-500/30 hover:bg-orange-500/25 transition-colors">
+            <button onClick={() => setFilterBoard('all')} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-accent-soft text-accent border border-accent-line hover:bg-accent-soft/80 transition-colors">
               Board: {boardOptions.find(b => b.id === filterBoard)?.name || filterBoard} <X className="w-3 h-3" />
             </button>
           )}
@@ -270,7 +265,7 @@ export default function MyWorkPage() {
             return (
               <button
                 key={phase}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 flex-shrink-0"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap border border-border bg-surface text-fg-2 flex-shrink-0"
               >
                 <span className={`w-2 h-2 rounded-full flex-shrink-0 ${
                   phase === 'NOT_STARTED' ? 'bg-zinc-400' :
@@ -278,7 +273,7 @@ export default function MyWorkPage() {
                   phase === 'DONE' ? 'bg-emerald-500' : 'bg-amber-500'
                 }`} />
                 {config.label}
-                <span className="text-zinc-400 dark:text-zinc-500">({count})</span>
+                <span className="text-fg-4">({count})</span>
               </button>
             );
           })}
@@ -295,16 +290,16 @@ export default function MyWorkPage() {
               const config = PHASE_CONFIG[phase];
               const projects = projectsByPhase[phase];
               return (
-                <div key={phase} className={`flex flex-col rounded-xl p-3 ${isMobile ? 'w-[85vw] min-w-[85vw] max-w-[85vw] snap-center' : 'w-[300px] min-w-[300px] max-w-[300px]'} h-[calc(100vh-280px)] border border-transparent ${config.bgColor}`}>
+                <div key={phase} className={`flex flex-col rounded-lg p-3 ${isMobile ? 'w-[86vw] min-w-[86vw] max-w-[320px] snap-start' : 'w-[296px] min-w-[296px] max-w-[296px]'} h-[calc(100vh-280px)] bg-surface-2 border border-border`}>
                   {/* Header */}
                   <div className="mb-3 flex items-center gap-2 flex-shrink-0">
-                    <span className={`w-2.5 h-2.5 rounded-full ${
+                    <div className={`w-2 h-2 rounded-full ${
                       phase === 'NOT_STARTED' ? 'bg-zinc-400' :
                       phase === 'IN_PROGRESS' ? 'bg-blue-500' :
                       phase === 'DONE' ? 'bg-emerald-500' : 'bg-amber-500'
                     }`} />
-                    <h3 className={`font-semibold text-sm ${config.color}`}>{config.label}</h3>
-                    <span className="bg-zinc-200 dark:bg-zinc-700 text-zinc-500 dark:text-zinc-400 text-xs font-medium px-2 py-0.5 rounded-full">
+                    <h3 className="text-[12.5px] font-semibold text-foreground">{config.label}</h3>
+                    <span className="text-[11px] font-mono font-medium text-fg-3 bg-surface-3 px-1.5 py-0.5 rounded">
                       {projects.length}
                     </span>
                   </div>
@@ -352,7 +347,7 @@ function MyWorkCard({ project, boardName, onClick }: { project: Project; boardNa
   const priorityDotColor: Record<string, string> = {
     low: 'bg-zinc-400',
     medium: 'bg-amber-500',
-    high: 'bg-[#e05c29]',
+    high: 'bg-accent',
     critical: 'bg-red-500',
   };
 

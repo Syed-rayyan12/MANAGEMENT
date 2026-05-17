@@ -139,7 +139,7 @@ export function ChecklistSection({ project }: ChecklistSectionProps) {
             <Checkbox
               checked={item.completed}
               onCheckedChange={() => handleToggleCheckItem(item.id)}
-              className="data-[state=checked]:bg-orange-500 data-[state=checked]:border-orange-500"
+              className="data-[state=checked]:bg-accent data-[state=checked]:border-accent"
             />
             <span className={`flex-1 text-sm ${item.completed ? 'line-through text-gray-400 dark:text-gray-500' : 'text-gray-700 dark:text-gray-300'}`}>
               {item.title}
@@ -174,7 +174,7 @@ export function ChecklistSection({ project }: ChecklistSectionProps) {
             autoFocus
             className="flex-1"
           />
-          <Button size="sm" onClick={handleAddCheckItem} className="bg-orange-500 hover:bg-orange-600 text-white">
+          <Button size="sm" onClick={handleAddCheckItem} className="bg-accent hover:bg-accent/90 text-accent-fg">
             Add
           </Button>
           <Button size="sm" variant="outline" onClick={() => { setShowAddCheckItem(false); setNewCheckItemTitle(''); }}>

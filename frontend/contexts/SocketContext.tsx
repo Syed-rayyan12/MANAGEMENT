@@ -52,12 +52,10 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
     socketRef.current = socket;
 
     socket.on('connect', () => {
-      console.log('[Socket] Connected:', socket.id);
       setIsConnected(true);
     });
 
-    socket.on('disconnect', (reason) => {
-      console.log('[Socket] Disconnected:', reason);
+    socket.on('disconnect', () => {
       setIsConnected(false);
     });
 

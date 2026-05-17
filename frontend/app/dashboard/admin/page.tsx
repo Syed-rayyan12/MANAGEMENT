@@ -17,25 +17,25 @@ export default function AdminPage() {
     return (
       <div className="flex items-center justify-center h-[60vh]">
         <div className="text-center">
-          <Shield className="w-12 h-12 text-zinc-300 dark:text-zinc-600 mx-auto mb-3" />
-          <p className="text-zinc-500 dark:text-zinc-400">You don&apos;t have access to this page.</p>
+          <Shield className="w-10 h-10 text-fg-4 mx-auto mb-3" />
+          <p className="text-[13px] text-fg-3">You don&apos;t have access to this page.</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-6">
+    <div className="space-y-5">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">Management</h1>
-        <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
+        <h1 className="text-[24px] font-semibold text-foreground tracking-[-0.02em]">Insights</h1>
+        <p className="text-[13px] text-fg-3 mt-0.5">
           Business overview and employee management
         </p>
       </div>
 
       {/* Tab navigation */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1.5">
         {([
           { id: 'overview' as AdminTab, label: 'Overview', icon: BarChart3 },
           { id: 'employees' as AdminTab, label: 'Employees', icon: Users },
@@ -46,13 +46,13 @@ export default function AdminPage() {
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               className={cn(
-                'inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all',
+                'inline-flex items-center gap-2 rounded-md px-3 py-1.5 text-[12.5px] font-medium transition-colors duration-[120ms]',
                 activeTab === tab.id
-                  ? 'bg-[#e05c29]/15 text-[#e05c29]'
-                  : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'
+                  ? 'bg-surface-3 text-foreground'
+                  : 'text-fg-3 hover:bg-surface-2 hover:text-foreground'
               )}
             >
-              <Icon className="w-4 h-4" />
+              <Icon className="w-3.5 h-3.5" />
               {tab.label}
             </button>
           );

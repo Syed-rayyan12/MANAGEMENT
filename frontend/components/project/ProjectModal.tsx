@@ -15,7 +15,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  Sheet,
+  SheetContent,
+} from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -28,9 +31,10 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { X, AlertCircle, MessageSquare, Paperclip, Check, Trash2, Upload, Image as ImageIcon, Activity, Loader2 } from 'lucide-react';
+import { X, AlertCircle, MessageSquare, Paperclip, Check, Trash2, Upload, Image as ImageIcon, Activity, Loader2, Copy } from 'lucide-react';
 import { PRIORITY_STYLES, KANBAN_COLUMNS } from '@/lib/constants';
 import { format } from 'date-fns';
+import { linkifyText } from '@/lib/utils';
 
 import { CommentsSection } from './CommentsSection';
 import { ChecklistSection } from './ChecklistSection';
@@ -59,10 +63,15 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [showCoverPhotoModal, setShowCoverPhotoModal] = useState(false);
   const [coverPhotoFile, setCoverPhotoFile] = useState<File | null>(null);
+  const [descExpanded, setDescExpanded] = useState(false);
+  const [checklistExpanded, setChecklistExpanded] = useState(false);
+  const [attachmentsExpanded, setAttachmentsExpanded] = useState(false);
+  const [loadingDetails, setLoadingDetails] = useState(true);
   const coverPhotoInputRef = React.useRef<HTMLInputElement>(null);
   // Fetch full project details (comments, attachments, activities) on modal open
   useEffect(() => {
     let cancelled = false;
+    setLoadingDetails(true);
     const fetchDetails = async () => {
       try {
         const result = await projectAPI.getById(project.id);
@@ -97,6 +106,8 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
         }
       } catch (error) {
         console.error('Error fetching project details:', error);
+      } finally {
+        if (!cancelled) setLoadingDetails(false);
       }
     };
     fetchDetails();
@@ -121,7 +132,6 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
         },
       });
 
-      // Update backend
       try {
         const token = localStorage.getItem('token');
         await fetch(`${API_BASE_URL}/projects/${project.id}`, {
@@ -151,7 +161,6 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
       },
     });
 
-    // Update backend
     try {
       const token = localStorage.getItem('token');
       await fetch(`${API_BASE_URL}/projects/${project.id}`, {
@@ -182,7 +191,6 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
       },
     });
 
-    // Update backend
     try {
       const token = localStorage.getItem('token');
       await fetch(`${API_BASE_URL}/projects/${project.id}`, {
@@ -273,7 +281,6 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
       },
     });
 
-    // Update backend
     try {
       const token = localStorage.getItem('token');
       const response = await fetch(`${API_BASE_URL}/projects/${project.id}`, {
@@ -305,7 +312,6 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
       },
     });
 
-    // Update backend
     try {
       const token = localStorage.getItem('token');
       const priorityMap: Record<string, string> = {
@@ -358,7 +364,6 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
     if (coverPhotoFile) {
       const loadingToast = toast.loading('Uploading cover photo...');
       try {
-        // Upload to R2 CDN
         const uploadResult = await uploadAPI.uploadFile(coverPhotoFile, 'covers');
         if (!uploadResult) {
           toast.dismiss(loadingToast);
@@ -368,7 +373,6 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
 
         const imageUrl = uploadResult.publicUrl;
 
-        // Update backend
         await fetch(`${API_BASE_URL}/projects/${project.id}`, {
           method: 'PUT',
           headers: {
@@ -417,38 +421,42 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
   const isCompleted = project.status.includes('completed') || project.status.includes('done');
   const isOverdue = project.dueDate && new Date(project.dueDate) < new Date() && !isCompleted;
 
+  const handleCopyLink = () => {
+    navigator.clipboard.writeText(window.location.href);
+    toast.success('Link copied');
+  };
+
   return (
     <>
-    <Dialog open={true} onOpenChange={onClose}>
-      <DialogContent className={`${isMobile ? 'h-[100dvh] w-full max-w-full rounded-none' : 'max-w-7xl h-[90vh] rounded-2xl'} overflow-hidden p-0 gap-0 flex flex-col backdrop-blur-md bg-white/80 dark:bg-zinc-900/80 border border-zinc-200/50 dark:border-white/10 ring-1 ring-[#e05c29]/10 shadow-2xl`}>
+    <Sheet open={true} onOpenChange={onClose}>
+      <SheetContent side="right" className={`${isMobile ? 'w-full !max-w-full h-full' : '!w-[80vw] !max-w-[1200px] !h-[calc(100vh-24px)] !top-3 !right-3 !bottom-3 rounded-xl'} overflow-hidden p-0 gap-0 flex flex-col bg-background border border-border shadow-[0_25px_60px_-12px_rgba(0,0,0,0.4)]`}>
         <DialogDescription className="sr-only">Project details and management</DialogDescription>
 
         {isMobile ? (
           <>
             {/* Mobile: Sticky Header */}
-            <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-200 dark:border-zinc-800 flex-shrink-0">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-border flex-shrink-0">
               <button onClick={onClose} className="p-1">
-                <X className="w-5 h-5 text-zinc-500" />
+                <X className="w-5 h-5 text-fg-3" />
               </button>
-              <h2 className="flex-1 text-sm font-semibold text-zinc-900 dark:text-zinc-100 truncate mx-3">
+              <h2 className="flex-1 text-sm font-semibold text-foreground truncate mx-3">
                 {project.name}
               </h2>
               {canDeleteProject && (
                 <button onClick={() => setShowDeleteConfirm(true)} className="p-1">
-                  <Trash2 className="w-5 h-5 text-zinc-400" />
+                  <Trash2 className="w-5 h-5 text-fg-4" />
                 </button>
               )}
             </div>
 
             {/* Mobile: Scrollable Content */}
             <div className="flex-1 overflow-y-auto">
-              {/* Cover Image */}
               {project.image && (
                 <img src={project.image} alt={project.name} className="w-full h-48 object-cover" />
               )}
 
               <div className="p-4 space-y-5">
-                {/* Title (tappable to edit) */}
+                {/* Title */}
                 {editingName ? (
                   <div className="space-y-2">
                     <Input value={editingTitle} onChange={(e) => setEditingTitle(e.target.value)} className="text-lg font-bold" autoFocus />
@@ -458,170 +466,148 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
                     </div>
                   </div>
                 ) : (
-                  <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-100" onClick={() => setEditingName(true)}>
+                  <h2 className="text-xl font-bold text-foreground" onClick={() => setEditingName(true)}>
                     {project.name}
                   </h2>
                 )}
 
-                {/* Status & Priority row */}
-                <div className="flex gap-3">
-                  <div className="flex-1">
-                    <Label className="text-xs font-medium uppercase tracking-wide text-zinc-400">Status</Label>
+                {/* Status & Priority */}
+                <div className="flex flex-wrap gap-2">
+                  <Select value={project.status} onValueChange={handleUpdateStatus}>
+                    <SelectTrigger className="w-auto h-7 text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {KANBAN_COLUMNS.map((col) => (
+                        <SelectItem key={col.status} value={col.status}>{col.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <span className="text-[11px] px-2 py-1 rounded bg-surface-2 text-fg-2 font-medium">
+                    {PRIORITY_STYLES[project.priority]?.label || project.priority}
+                  </span>
+                  {isOverdue && <span className="text-[11px] px-2 py-1 rounded bg-red-500/15 text-red-500 font-medium">Overdue</span>}
+                </div>
+
+                {/* Due Date */}
+                <div>
+                  <Label className="text-xs text-fg-3">Due Date</Label>
+                  <Input
+                    type="date"
+                    value={project.dueDate ? format(new Date(project.dueDate), 'yyyy-MM-dd') : ''}
+                    onChange={(e) => handleUpdateDueDate(e.target.value)}
+                    min={format(new Date(), 'yyyy-MM-dd')}
+                    className="mt-1"
+                  />
+                </div>
+
+                {/* Description */}
+                {editingDescription ? (
+                  <div className="space-y-2">
+                    <Textarea value={editingDesc} onChange={(e) => setEditingDesc(e.target.value)} className="min-h-24" autoFocus />
+                    <div className="flex gap-2">
+                      <Button size="sm" onClick={handleSaveDescription}>Save</Button>
+                      <Button size="sm" variant="outline" onClick={() => setEditingDescription(false)}>Cancel</Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div onClick={() => setEditingDescription(true)} className="p-3 border border-border rounded-lg bg-surface-2 min-h-16 whitespace-pre-wrap text-sm text-fg-2 cursor-pointer">
+                    {project.description || 'Tap to add description...'}
+                  </div>
+                )}
+
+                {/* Members */}
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <Label className="text-xs text-fg-3">Team</Label>
+                    {!isReadOnly && (
+                      <button onClick={() => setShowMemberModal(true)} className="text-[11px] text-accent font-medium">+ Add</button>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    {project.assignments.map((assignment: ProjectAssignment) => (
+                      <div key={assignment.id} className="flex items-center gap-2 px-2.5 py-2 rounded-lg border border-border bg-surface">
+                        <Avatar className="w-6 h-6">
+                          <AvatarImage src={assignment.user?.avatar || undefined} />
+                          <AvatarFallback className="text-[9px]">{assignment.user?.name?.[0]}</AvatarFallback>
+                        </Avatar>
+                        <span className="text-[12.5px] font-medium text-foreground flex-1">{assignment.user?.name}</span>
+                        <span className="text-[10px] text-fg-3">{assignment.role === 'PRIMARY' ? 'Lead' : 'Collab'}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <ChecklistSection project={project} />
+                <AttachmentsSection project={project} />
+                <CommentsSection project={project} />
+              </div>
+            </div>
+          </>
+        ) : (
+          /* === DESKTOP LAYOUT — matches design handoff === */
+          <div className="flex flex-col flex-1 min-h-0">
+            {/* Header strip */}
+            <div className="flex items-center gap-3 px-5 py-2.5 border-b border-border bg-surface flex-shrink-0">
+              <button onClick={onClose} className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-[12.5px] font-medium text-fg-3 hover:bg-surface-2 transition-colors">
+                <X className="w-3.5 h-3.5" /> Close
+              </button>
+              <div className="w-px h-4 bg-border" />
+              {/* Breadcrumb */}
+              <div className="flex items-center gap-1.5 text-[12.5px]">
+                {project.board && (
+                  <>
+                    <span className="text-fg-2 font-medium">{project.board.name}</span>
+                    <span className="text-fg-4">/</span>
+                  </>
+                )}
+                <span className="font-mono text-fg-3">{project.id.slice(0, 8)}</span>
+              </div>
+              <span className="flex-1" />
+              <button onClick={handleCopyLink} className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-[12.5px] font-medium text-fg-3 border border-border hover:bg-surface-2 transition-colors">
+                <Copy className="w-3.5 h-3.5" /> Copy link
+              </button>
+              {canDeleteProject && (
+                <button onClick={() => setShowDeleteConfirm(true)} className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-[12.5px] font-medium text-red-500 border border-border hover:bg-red-500/10 transition-colors">
+                  <Trash2 className="w-3.5 h-3.5" /> Delete
+                </button>
+              )}
+            </div>
+
+            {/* Body: 2-col — Main (left) + Side (right) */}
+            <div className="flex-1 overflow-auto p-6">
+              <div className="flex gap-6">
+                {/* MAIN CONTENT (left, wider) */}
+                <div className="flex-1 min-w-0 space-y-6">
+                  {/* Status row */}
+                  <div className="flex items-center gap-2 flex-wrap">
                     <Select value={project.status} onValueChange={handleUpdateStatus}>
-                      <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                      <SelectTrigger className="w-auto h-7 text-[12px] font-medium gap-1.5">
+                        <SelectValue />
+                      </SelectTrigger>
                       <SelectContent>
                         {KANBAN_COLUMNS.map((col) => (
                           <SelectItem key={col.status} value={col.status}>{col.label}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
-                  </div>
-                  <div className="flex-1">
-                    <Label className="text-xs font-medium uppercase tracking-wide text-zinc-400">Priority</Label>
-                    {canChangePriority ? (
-                      <Select value={project.priority} onValueChange={handleUpdatePriority}>
-                        <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          {Object.entries(PRIORITY_STYLES).map(([key, style]) => (
-                            <SelectItem key={key} value={key}>{style.label}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    ) : (
-                      <div className="mt-1 px-3 py-2 rounded-lg border border-zinc-200 dark:border-zinc-700 text-sm text-zinc-900 dark:text-zinc-100">
-                        {PRIORITY_STYLES[project.priority]?.label || project.priority}
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Members -- avatar row */}
-                <div>
-                  <Label className="text-xs font-medium uppercase tracking-wide text-zinc-400 mb-2 block">Members</Label>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    {project.assignments.map((assignment: ProjectAssignment) => (
-                      <div key={assignment.id} className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700">
-                        <Avatar className="w-6 h-6">
-                          <AvatarImage src={assignment.user?.avatar || undefined} />
-                          <AvatarFallback className="text-[10px] bg-orange-500 text-white">{assignment.user?.name?.[0]}</AvatarFallback>
-                        </Avatar>
-                        <span className="text-xs font-medium text-zinc-700 dark:text-zinc-300">{assignment.user?.name}</span>
-                        {assignment.status === 'DONE' && <Check className="w-3 h-3 text-green-500" />}
-                      </div>
-                    ))}
-                    {!isReadOnly && (
-                      <button
-                        onClick={() => setShowMemberModal(true)}
-                        className="flex items-center gap-1 px-3 py-1.5 rounded-full border border-dashed border-zinc-300 dark:border-zinc-600 text-xs text-zinc-500 hover:border-orange-500 hover:text-orange-500 transition-colors"
-                      >
-                        + Add
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-                {/* Due Date */}
-                <div>
-                  <Label className="text-xs font-medium uppercase tracking-wide text-zinc-400">Due Date</Label>
-                  <div className="flex items-center gap-2 mt-1">
-                    <Input
-                      type="date"
-                      value={project.dueDate ? format(new Date(project.dueDate), 'yyyy-MM-dd') : ''}
-                      onChange={(e) => handleUpdateDueDate(e.target.value)}
-                      min={format(new Date(), 'yyyy-MM-dd')}
-                      className="flex-1"
-                    />
+                    <span className="text-[11px] px-2 py-1 rounded bg-surface-2 text-fg-2 font-medium">
+                      {PRIORITY_STYLES[project.priority]?.label || project.priority}
+                    </span>
                     {isOverdue && (
-                      <span className="text-xs font-medium text-red-500 bg-red-500/10 px-2 py-1 rounded">Overdue</span>
+                      <span className="text-[11px] px-2 py-1 rounded bg-red-500/15 text-red-500 font-medium flex items-center gap-1">
+                        <AlertCircle className="w-3 h-3" /> Overdue
+                      </span>
                     )}
                   </div>
-                </div>
 
-                {/* Description */}
-                <div>
-                  <Label className="text-xs font-medium uppercase tracking-wide text-zinc-400">Description</Label>
-                  {editingDescription ? (
-                    <div className="space-y-2 mt-2">
-                      <Textarea value={editingDesc} onChange={(e) => setEditingDesc(e.target.value)} className="min-h-32" autoFocus />
-                      <div className="flex gap-2">
-                        <Button size="sm" onClick={handleSaveDescription}>Save</Button>
-                        <Button size="sm" variant="outline" onClick={() => setEditingDescription(false)}>Cancel</Button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div
-                      onClick={() => setEditingDescription(true)}
-                      className="mt-2 p-3 border border-zinc-200 dark:border-zinc-800 rounded-xl bg-zinc-50 dark:bg-zinc-900 min-h-16 whitespace-pre-wrap text-sm text-zinc-700 dark:text-zinc-300"
-                    >
-                      {project.description || 'Tap to add description...'}
-                    </div>
-                  )}
-                </div>
-
-                {/* Checklist */}
-                <ChecklistSection project={project} />
-
-                {/* Attachments */}
-                <AttachmentsSection project={project} />
-
-                {/* Activity & Comments (inline, not in tabs) */}
-                <ActivitySection project={project} />
-                <CommentsSection project={project} />
-              </div>
-            </div>
-          </>
-        ) : (
-          /* === DESKTOP LAYOUT (unchanged) === */
-          <div className="flex flex-1 min-h-0">
-
-            {/* Left Sidebar */}
-            <div className="w-96 border-r border-zinc-200 dark:border-zinc-800 flex flex-col min-h-0">
-              {/* Cover Photo Section */}
-              <div className="relative group flex-shrink-0">
-                {project.image ? (
-                  <>
-                    <img
-                      src={project.image}
-                      alt={project.name}
-                      className="w-full h-48 object-cover"
-                    />
-                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => setShowCoverPhotoModal(true)}
-                        className="bg-white/90 hover:bg-white"
-                      >
-                        <ImageIcon className="w-4 h-4 mr-2" />
-                        Change Cover
-                      </Button>
-                    </div>
-                  </>
-                ) : (
-                  <div className="w-full h-32 bg-gradient-to-br from-[#e05c29]/20 via-orange-400/10 to-amber-400/5 flex items-center justify-center">
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => setShowCoverPhotoModal(true)}
-                      className="bg-white/90 hover:bg-white"
-                    >
-                      <ImageIcon className="w-4 h-4 mr-2" />
-                      Add Cover
-                    </Button>
-                  </div>
-                )}
-              </div>
-
-              {/* Sidebar Content */}
-              <div className="flex-1 overflow-y-auto p-6 space-y-6">
-                {/* Project Title */}
-                <div>
+                  {/* Title */}
                   {editingName ? (
                     <div className="space-y-2">
                       <Input
                         value={editingTitle}
                         onChange={(e) => setEditingTitle(e.target.value)}
-                        className="font-bold"
+                        className="text-2xl font-semibold border-none px-0 focus-visible:ring-0"
                         autoFocus
                       />
                       <div className="flex gap-2">
@@ -631,241 +617,230 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
                     </div>
                   ) : (
                     <h2
-                      className="text-xl font-semibold cursor-pointer hover:text-[#e05c29] text-zinc-900 dark:text-zinc-100"
-                      onClick={() => setEditingName(true)}
+                      className="text-[24px] font-semibold text-foreground tracking-[-0.02em] leading-tight cursor-pointer hover:text-accent transition-colors"
+                      onClick={() => !isReadOnly && setEditingName(true)}
                     >
                       {project.name}
                     </h2>
                   )}
-                </div>
 
-                {/* Status */}
-                <div>
-                  <Label className="text-xs font-medium uppercase tracking-wide text-zinc-400">Status</Label>
-                  <Select value={project.status} onValueChange={handleUpdateStatus}>
-                    <SelectTrigger className="mt-1">
-                      <SelectValue placeholder="Select status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {KANBAN_COLUMNS.map((col) => (
-                        <SelectItem key={col.status} value={col.status}>
-                          {col.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Priority */}
-                <div>
-                  <Label className="text-xs font-medium uppercase tracking-wide text-zinc-400">Priority</Label>
-                  {canChangePriority ? (
-                    <Select value={project.priority} onValueChange={handleUpdatePriority}>
-                      <SelectTrigger className="mt-1">
-                        <SelectValue placeholder="Select priority" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {Object.entries(PRIORITY_STYLES).map(([key, style]) => (
-                          <SelectItem key={key} value={key}>
-                            {style.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  ) : (
-                    <div className="mt-1 px-3 py-2 rounded-lg border border-zinc-200 dark:border-zinc-700 text-sm text-zinc-900 dark:text-zinc-100">
-                      {PRIORITY_STYLES[project.priority]?.label || project.priority}
+                  {/* Description */}
+                  {editingDescription ? (
+                    <div className="space-y-2">
+                      <Textarea
+                        value={editingDesc}
+                        onChange={(e) => setEditingDesc(e.target.value)}
+                        className="min-h-32"
+                        autoFocus
+                      />
+                      <div className="flex gap-2">
+                        <Button size="sm" onClick={handleSaveDescription}>Save</Button>
+                        <Button size="sm" variant="outline" onClick={() => setEditingDescription(false)}>Cancel</Button>
+                      </div>
                     </div>
+                  ) : (
+                    <div>
+                      <p
+                        onClick={() => !isReadOnly && setEditingDescription(true)}
+                        className={`text-[14px] text-fg-2 leading-relaxed cursor-pointer whitespace-pre-wrap ${!descExpanded ? 'line-clamp-4' : ''}`}
+                      >
+                        {project.description ? linkifyText(project.description) : 'Click to add description...'}
+                      </p>
+                      {project.description && (project.description.length > 200 || project.description.split('\n').length > 4) && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setDescExpanded(!descExpanded); }}
+                          className="text-[12px] text-accent hover:underline mt-1.5 font-medium"
+                        >
+                          {descExpanded ? 'Show less' : 'Show more'}
+                        </button>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Checklist / Attachments / Comments */}
+                  {loadingDetails ? (
+                    <div className="space-y-4 animate-pulse">
+                      <div className="space-y-2">
+                        <div className="h-4 w-24 bg-surface-3 rounded" />
+                        <div className="h-3 w-full bg-surface-3 rounded" />
+                        <div className="h-3 w-3/4 bg-surface-3 rounded" />
+                      </div>
+                      <div className="space-y-2">
+                        <div className="h-4 w-28 bg-surface-3 rounded" />
+                        <div className="h-16 w-full bg-surface-3 rounded-lg" />
+                      </div>
+                      <div className="space-y-2">
+                        <div className="h-4 w-24 bg-surface-3 rounded" />
+                        <div className="h-20 w-full bg-surface-3 rounded-lg" />
+                        <div className="h-20 w-full bg-surface-3 rounded-lg" />
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <div className={`relative ${!checklistExpanded ? 'max-h-[200px] overflow-hidden' : ''}`}>
+                        <ChecklistSection project={project} />
+                        {!checklistExpanded && project.checklist && project.checklist.length > 3 && (
+                          <div className="absolute bottom-0 left-0 right-0 pt-8 bg-gradient-to-t from-background to-transparent flex justify-center pb-1">
+                            <button onClick={() => setChecklistExpanded(true)} className="text-[12px] text-accent hover:underline font-medium">
+                              Show all ({project.checklist.length} items)
+                            </button>
+                          </div>
+                        )}
+                        {checklistExpanded && project.checklist && project.checklist.length > 3 && (
+                          <button onClick={() => setChecklistExpanded(false)} className="text-[12px] text-accent hover:underline font-medium mt-1">
+                            Show less
+                          </button>
+                        )}
+                      </div>
+                      <div className={`relative ${!attachmentsExpanded ? 'max-h-[200px] overflow-hidden' : ''}`}>
+                        <AttachmentsSection project={project} />
+                        {!attachmentsExpanded && project.attachments && project.attachments.length > 2 && (
+                          <div className="absolute bottom-0 left-0 right-0 pt-8 bg-gradient-to-t from-background to-transparent flex justify-center pb-1">
+                            <button onClick={() => setAttachmentsExpanded(true)} className="text-[12px] text-accent hover:underline font-medium">
+                              Show all ({project.attachments.length} files)
+                            </button>
+                          </div>
+                        )}
+                        {attachmentsExpanded && project.attachments && project.attachments.length > 2 && (
+                          <button onClick={() => setAttachmentsExpanded(false)} className="text-[12px] text-accent hover:underline font-medium mt-1">
+                            Show less
+                          </button>
+                        )}
+                      </div>
+                      <CommentsSection project={project} />
+                    </>
                   )}
                 </div>
 
-                {/* Due Date */}
-                <div>
-                  <Label className="text-xs font-medium uppercase tracking-wide text-zinc-400">Due Date</Label>
-                  <div className="flex items-center gap-2 mt-1">
-                    <Input
-                      type="date"
-                      value={project.dueDate ? format(new Date(project.dueDate), 'yyyy-MM-dd') : ''}
-                      onChange={(e) => handleUpdateDueDate(e.target.value)}
-                      min={format(new Date(), 'yyyy-MM-dd')}
-                      className="flex-1"
-                    />
-                    {isOverdue && (
-                      <AlertCircle className="w-4 h-4 text-red-600" />
-                    )}
-                  </div>
-                </div>
-
-                {/* Primary Member */}
-                <div>
-                  <Label className="text-xs font-medium uppercase tracking-wide text-zinc-400 mb-2 block">Primary Member</Label>
-                  {(() => {
-                    const primaryAssignment = project.assignments[0];
-                    return (
-                      <div className="flex items-center gap-2 p-3 bg-zinc-50 dark:bg-zinc-800 rounded-xl border border-zinc-200 dark:border-zinc-700">
-                        <Avatar className="w-8 h-8">
-                          <AvatarImage src={primaryAssignment?.user?.avatar || undefined} alt={primaryAssignment?.user?.name} />
-                          <AvatarFallback>{primaryAssignment?.user?.name?.[0]}</AvatarFallback>
-                        </Avatar>
-                        <span className="text-sm font-medium text-zinc-900 dark:text-zinc-100">{primaryAssignment?.user?.name || 'Unassigned'}</span>
+                {/* SIDEBAR (right, narrower) */}
+                <div className="w-[260px] xl:w-[300px] flex-shrink-0 space-y-3">
+                  {/* Properties card */}
+                  <div className="rounded-lg border border-border bg-surface p-3.5">
+                    <div className="text-kicker uppercase text-fg-4 tracking-widest mb-3">Properties</div>
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[12px] text-fg-3">Status</span>
+                        <Select value={project.status} onValueChange={handleUpdateStatus}>
+                          <SelectTrigger className="w-auto h-6 text-[11px] font-medium border-none bg-surface-2 px-2 gap-1">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {KANBAN_COLUMNS.map((col) => (
+                              <SelectItem key={col.status} value={col.status}>{col.label}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
-                    );
-                  })()}
-                </div>
-
-                {/* Members */}
-                <div>
-                  <Label className="text-xs font-medium uppercase tracking-wide text-zinc-400 mb-2 block">Members</Label>
-                  {/* Current assignments list */}
-                  <div className="space-y-0 mb-2 max-h-64 overflow-y-auto border border-zinc-200 dark:border-zinc-700 rounded-xl divide-y divide-zinc-100 dark:divide-zinc-800">
-                    {project.assignments.map((assignment: ProjectAssignment) => (
-                      <div key={assignment.id} className="flex items-center justify-between py-2 px-3 last:border-0">
-                        <div className="flex items-center gap-2">
-                          <Avatar className="w-8 h-8">
-                            <AvatarImage src={assignment.user?.avatar || undefined} />
-                            <AvatarFallback className="text-xs bg-orange-500 text-white">{assignment.user?.name?.[0]}</AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">{assignment.user?.name}</p>
-                            <div className="flex items-center gap-1.5">
-                              {assignment.user?.specialization && (
-                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
-                                  {assignment.user?.specialization?.replace(/_/g, ' ')}
-                                </span>
-                              )}
-                              <span className="text-[10px] px-1.5 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-500">
-                                {assignment.role === 'PRIMARY' ? 'Primary' : 'Collaborator'}
-                              </span>
-                            </div>
-                          </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-[12px] text-fg-3">Priority</span>
+                        {canChangePriority ? (
+                          <Select value={project.priority} onValueChange={handleUpdatePriority}>
+                            <SelectTrigger className="w-auto h-6 text-[11px] font-medium border-none bg-surface-2 px-2 gap-1">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {Object.entries(PRIORITY_STYLES).map(([key, style]) => (
+                                <SelectItem key={key} value={key}>{style.label}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        ) : (
+                          <span className="text-[12px] font-medium text-fg-2">
+                            {PRIORITY_STYLES[project.priority]?.label || project.priority}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-[12px] text-fg-3">Workspace</span>
+                        <span className="text-[12px] font-medium text-fg-2">
+                          {project.board?.name || '—'}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-[12px] text-fg-3">Due</span>
+                        <div className="flex items-center gap-1.5">
+                          {isReadOnly ? (
+                            <span className="text-[12px] font-mono font-medium text-fg-2">
+                              {project.dueDate ? format(new Date(project.dueDate), 'MMM d, yyyy') : '—'}
+                            </span>
+                          ) : (
+                            <input
+                              type="date"
+                              value={project.dueDate ? format(new Date(project.dueDate), 'yyyy-MM-dd') : ''}
+                              onChange={(e) => handleUpdateDueDate(e.target.value)}
+                              className="text-[12px] font-mono font-medium bg-surface-2 border border-border rounded px-1.5 py-0.5 text-foreground cursor-pointer outline-none focus:ring-1 focus:ring-accent"
+                            />
+                          )}
+                          {isOverdue && <AlertCircle className="w-3 h-3 text-red-500" />}
                         </div>
-                        <div className="flex items-center gap-1">
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Team card */}
+                  <div className="rounded-lg border border-border bg-surface p-3.5">
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="text-kicker uppercase text-fg-4 tracking-widest">Team</span>
+                      {!isReadOnly && (
+                        <button onClick={() => setShowMemberModal(true)} className="w-5 h-5 rounded flex items-center justify-center text-fg-3 hover:bg-surface-2">
+                          <span className="text-sm leading-none">+</span>
+                        </button>
+                      )}
+                    </div>
+                    <div className="space-y-1">
+                      {project.assignments.map((assignment: ProjectAssignment, i: number) => (
+                        <div key={assignment.id} className="flex items-center gap-2.5 py-1.5">
+                          <Avatar className="w-6 h-6">
+                            <AvatarImage src={assignment.user?.avatar || undefined} />
+                            <AvatarFallback className="text-[9px] bg-accent-soft text-accent">{assignment.user?.name?.[0]}</AvatarFallback>
+                          </Avatar>
+                          <div className="flex-1 min-w-0">
+                            <div className="text-[12.5px] font-medium text-foreground truncate">{assignment.user?.name}</div>
+                            <div className="text-[10.5px] text-fg-3">{i === 0 ? 'Lead' : 'Collaborator'}</div>
+                          </div>
                           <button
                             onClick={() => handleToggleStatus(assignment)}
-                            className={`px-2 py-1 rounded text-xs font-medium transition-all ${
+                            className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${
                               assignment.status === 'DONE'
-                                ? 'bg-green-500/15 text-green-600 dark:text-green-400'
-                                : 'bg-orange-500/15 text-orange-600 dark:text-orange-400'
+                                ? 'bg-green-500/15 text-green-600'
+                                : 'bg-accent-soft text-accent'
                             }`}
                           >
-                            {assignment.status === 'DONE' ? '✓ Done' : '● Active'}
+                            {assignment.status === 'DONE' ? 'done' : 'active'}
                           </button>
                           {!isReadOnly && (
-                            <button onClick={() => handleRemoveAssignment(assignment.id)} className="p-1 text-zinc-400 hover:text-red-500">
-                              <X className="w-3.5 h-3.5" />
+                            <button onClick={() => handleRemoveAssignment(assignment.id)} className="text-fg-4 hover:text-red-500 transition-colors">
+                              <X className="w-3 h-3" />
                             </button>
                           )}
                         </div>
-                      </div>
-                    ))}
-                    {project.assignments.length === 0 && (
-                      <p className="text-xs text-gray-500 dark:text-gray-400 py-3 px-3">No members assigned</p>
-                    )}
-                  </div>
-                  {/* Add member button */}
-                  {!isReadOnly && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full mt-1 text-xs"
-                      onClick={() => setShowMemberModal(true)}
-                    >
-                      + Add Member
-                    </Button>
-                  )}
-                </div>
-
-                {/* Delete Button */}
-                {canDeleteProject && (
-                  <Button
-                    variant="destructive"
-                    onClick={() => setShowDeleteConfirm(true)}
-                    className="w-full"
-                  >
-                    <Trash2 className="w-4 h-4 mr-2" />
-                    Delete Project
-                  </Button>
-                )}
-              </div>
-            </div>
-
-            {/* Right Content Area */}
-            <div className="flex-1 min-h-0 overflow-y-auto">
-              <div className="p-6">
-                <DialogHeader>
-                  <DialogTitle className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">Project Details</DialogTitle>
-                </DialogHeader>
-
-                <Tabs defaultValue="details" className="mt-6">
-                  <TabsList className="grid w-full grid-cols-4">
-                    <TabsTrigger value="details">Details</TabsTrigger>
-                    <TabsTrigger value="comments">
-                      <MessageSquare className="w-4 h-4 mr-2" />
-                      Comments ({project.comments.length})
-                    </TabsTrigger>
-                    <TabsTrigger value="attachments">
-                      <Paperclip className="w-4 h-4 mr-2" />
-                      Files ({project.attachments.length})
-                    </TabsTrigger>
-                    <TabsTrigger value="activity">
-                      <Activity className="w-4 h-4 mr-2" />
-                      Activity
-                    </TabsTrigger>
-                  </TabsList>
-
-                  {/* Details Tab */}
-                  <TabsContent value="details" className="space-y-6 mt-6">
-                    {/* Description */}
-                    <div>
-                      <Label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Description</Label>
-                      {editingDescription ? (
-                        <div className="space-y-2 mt-2">
-                          <Textarea
-                            value={editingDesc}
-                            onChange={(e) => setEditingDesc(e.target.value)}
-                            className="min-h-32"
-                            autoFocus
-                          />
-                          <div className="flex gap-2">
-                            <Button size="sm" onClick={handleSaveDescription}>Save</Button>
-                            <Button size="sm" variant="outline" onClick={() => setEditingDescription(false)}>Cancel</Button>
-                          </div>
-                        </div>
-                      ) : (
-                        <div
-                          onClick={() => setEditingDescription(true)}
-                          className="mt-2 p-4 border border-zinc-200 dark:border-zinc-800 rounded-xl bg-zinc-50 dark:bg-zinc-900 cursor-pointer hover:bg-zinc-100 dark:hover:bg-zinc-800 min-h-24 whitespace-pre-wrap text-sm text-zinc-700 dark:text-zinc-300 transition-all duration-200"
-                        >
-                          {project.description || 'Click to add description...'}
-                        </div>
+                      ))}
+                      {project.assignments.length === 0 && (
+                        <p className="text-[11px] text-fg-4 py-2">No members assigned</p>
                       )}
                     </div>
+                  </div>
 
-                    {/* Checklist */}
-                    <ChecklistSection project={project} />
-                  </TabsContent>
-
-                  {/* Comments Tab */}
-                  <TabsContent value="comments">
-                    <CommentsSection project={project} />
-                  </TabsContent>
-
-                  {/* Attachments Tab */}
-                  <TabsContent value="attachments">
-                    <AttachmentsSection project={project} />
-                  </TabsContent>
-
-                  {/* Activity Tab */}
-                  <TabsContent value="activity">
-                    <ActivitySection project={project} />
-                  </TabsContent>
-                </Tabs>
+                  {/* Activity card */}
+                  <div className="rounded-lg border border-border bg-surface p-3.5">
+                    <div className="text-kicker uppercase text-fg-4 tracking-widest mb-3">Activity</div>
+                    {loadingDetails ? (
+                      <div className="space-y-2 animate-pulse">
+                        <div className="h-3 w-full bg-surface-3 rounded" />
+                        <div className="h-3 w-2/3 bg-surface-3 rounded" />
+                        <div className="h-3 w-4/5 bg-surface-3 rounded" />
+                      </div>
+                    ) : (
+                      <ActivitySection project={project} compact />
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
           </div>
         )}
-      </DialogContent>
-    </Dialog>
+      </SheetContent>
+    </Sheet>
 
     {/* Cover Photo Modal */}
     {showCoverPhotoModal && (
@@ -877,69 +852,29 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
           <div className="space-y-4 pt-4">
             {project.image && (
               <div className="space-y-3">
-                <img
-                  src={project.image}
-                  alt="Current cover"
-                  className="w-full h-48 object-cover rounded-lg border"
-                />
-                <Button
-                  variant="destructive"
-                  onClick={handleRemoveCoverPhoto}
-                  className="w-full"
-                >
-                  <Trash2 className="w-4 h-4 mr-2" />
-                  Remove Cover Photo
+                <img src={project.image} alt="Current cover" className="w-full h-48 object-cover rounded-lg border" />
+                <Button variant="destructive" onClick={handleRemoveCoverPhoto} className="w-full">
+                  <Trash2 className="w-4 h-4 mr-2" /> Remove Cover Photo
                 </Button>
               </div>
             )}
-
             <div className="border-t pt-4 space-y-3">
-              <Label className="dark:text-orange-400">
-                {project.image ? 'Change Cover Photo' : 'Upload Cover Photo'}
-              </Label>
-              <input
-                ref={coverPhotoInputRef}
-                type="file"
-                onChange={handleCoverPhotoSelect}
-                className="hidden"
-                accept="image/*"
-              />
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => coverPhotoInputRef.current?.click()}
-                className="w-full"
-              >
+              <Label>{project.image ? 'Change Cover Photo' : 'Upload Cover Photo'}</Label>
+              <input ref={coverPhotoInputRef} type="file" onChange={handleCoverPhotoSelect} className="hidden" accept="image/*" />
+              <Button type="button" variant="outline" onClick={() => coverPhotoInputRef.current?.click()} className="w-full">
                 <Upload className="w-4 h-4 mr-2" />
                 {coverPhotoFile ? coverPhotoFile.name : 'Choose Image'}
               </Button>
-
               {coverPhotoFile && (
                 <div className="space-y-3">
                   <div className="relative w-full h-48 rounded-lg border overflow-hidden">
-                    <img
-                      src={URL.createObjectURL(coverPhotoFile)}
-                      alt="Preview"
-                      className="w-full h-full object-cover"
-                    />
+                    <img src={URL.createObjectURL(coverPhotoFile)} alt="Preview" className="w-full h-full object-cover" />
                   </div>
                   <div className="flex gap-2">
-                    <Button
-                      onClick={handleUpdateCoverPhoto}
-                      className="flex-1 rounded-lg bg-gradient-to-r from-[#e05c29] to-orange-400 hover:to-rose-500 text-white shadow-[0_4px_20px_rgba(224,92,41,0.35)]"
-                    >
-                      <Check className="w-4 h-4 mr-2" />
-                      Save Cover Photo
+                    <Button onClick={handleUpdateCoverPhoto} className="flex-1 bg-accent text-white hover:brightness-105">
+                      <Check className="w-4 h-4 mr-2" /> Save Cover Photo
                     </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() => {
-                        setCoverPhotoFile(null);
-                        if (coverPhotoInputRef.current) {
-                          coverPhotoInputRef.current.value = '';
-                        }
-                      }}
-                    >
+                    <Button variant="outline" onClick={() => { setCoverPhotoFile(null); if (coverPhotoInputRef.current) coverPhotoInputRef.current.value = ''; }}>
                       Cancel
                     </Button>
                   </div>
@@ -966,21 +901,19 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
               className="w-full"
               autoFocus
             />
-
-            {/* Current assignments */}
             {project.assignments.length > 0 && (
               <div>
-                <p className="text-xs text-gray-400 mb-2">Current Members ({project.assignments.length})</p>
+                <p className="text-xs text-fg-3 mb-2">Current Members ({project.assignments.length})</p>
                 <div className="flex flex-wrap gap-2">
                   {project.assignments.map((assignment: ProjectAssignment) => (
-                    <div key={assignment.id} className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-orange-500/15 border border-orange-500/30">
+                    <div key={assignment.id} className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-accent-soft border border-accent-line">
                       <Avatar className="w-5 h-5">
                         <AvatarImage src={assignment.user?.avatar || undefined} alt={assignment.user?.name} />
-                        <AvatarFallback className="text-[8px] bg-orange-500 text-white">{assignment.user?.name?.[0]}</AvatarFallback>
+                        <AvatarFallback className="text-[8px] bg-accent text-white">{assignment.user?.name?.[0]}</AvatarFallback>
                       </Avatar>
-                      <span className="text-xs text-orange-400 font-medium">{assignment.user?.name}</span>
-                      <span className="text-[10px] text-gray-400">({assignment.role === 'PRIMARY' ? 'Primary' : 'Collab'})</span>
-                      <button onClick={() => handleRemoveAssignment(assignment.id)} className="text-gray-400 hover:text-red-400">
+                      <span className="text-xs text-accent font-medium">{assignment.user?.name}</span>
+                      <span className="text-[10px] text-fg-3">({assignment.role === 'PRIMARY' ? 'Lead' : 'Collab'})</span>
+                      <button onClick={() => handleRemoveAssignment(assignment.id)} className="text-fg-4 hover:text-red-400">
                         <X className="w-3 h-3" />
                       </button>
                     </div>
@@ -988,7 +921,6 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
                 </div>
               </div>
             )}
-
             <div className="max-h-64 overflow-y-auto space-y-2">
               {filteredUsers.map((user: any) => {
                 const isAlreadyMember = project.assignments.some((a: ProjectAssignment) => a.userId === user.id);
@@ -998,7 +930,7 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
                     className={`w-full flex items-center gap-3 p-3 rounded-lg border transition-colors ${
                       isAlreadyMember
                         ? 'border-green-500/30 bg-green-500/5 opacity-60 cursor-default'
-                        : 'border-gray-300 dark:border-gray-600 hover:bg-orange-50 dark:hover:bg-orange-900/20 hover:border-orange-500'
+                        : 'border-border hover:bg-surface-2 hover:border-line-strong'
                     }`}
                   >
                     <Avatar className="w-8 h-8">
@@ -1007,18 +939,18 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
                     </Avatar>
                     <div className="flex-1 text-left">
                       <div className="flex items-center gap-2">
-                        <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">{user.name}</p>
+                        <p className="text-sm font-medium text-foreground">{user.name}</p>
                         {isAlreadyMember && (
-                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-green-500/20 text-green-400 font-medium">Added</span>
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-green-500/20 text-green-500 font-medium">Added</span>
                         )}
                       </div>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">{user.email}</p>
+                      <p className="text-xs text-fg-3">{user.email}</p>
                     </div>
                     {!isAlreadyMember && (
                       <div className="flex gap-1">
                         <button
                           onClick={() => handleAddMember(user.id, 'PRIMARY')}
-                          className="text-[10px] px-2 py-0.5 rounded bg-orange-500/20 text-orange-600 hover:bg-orange-500/30"
+                          className="text-[10px] px-2 py-0.5 rounded bg-accent-soft text-accent hover:bg-accent hover:text-white"
                         >
                           Primary
                         </button>
@@ -1034,7 +966,7 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
                 );
               })}
               {filteredUsers.length === 0 && (
-                <p className="text-center text-gray-500 dark:text-gray-400 py-4">No users found</p>
+                <p className="text-center text-fg-3 py-4">No users found</p>
               )}
             </div>
           </div>
@@ -1044,33 +976,22 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
 
     {/* Delete Confirmation */}
     {showDeleteConfirm && (
-      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-        <div className="bg-white dark:bg-[#1a1f2e] rounded-lg p-6 max-w-md mx-4 space-y-4">
-          <div className="flex items-center gap-3 text-red-600">
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100]">
+        <div className="bg-surface rounded-lg border border-border p-6 max-w-md mx-4 space-y-4 shadow-3">
+          <div className="flex items-center gap-3 text-red-500">
             <Trash2 className="w-6 h-6" />
-            <h3 className="text-lg font-bold dark:text-red-400">Delete Project</h3>
+            <h3 className="text-lg font-semibold text-foreground">Delete Project</h3>
           </div>
-          <p className="text-gray-600 dark:text-orange-400">
-            Are you sure you want to delete <strong>{project.name}</strong>? This action cannot be undone.
+          <p className="text-[13px] text-fg-2">
+            Are you sure you want to delete <strong className="text-foreground">{project.name}</strong>? This action cannot be undone.
           </p>
           <div className="flex gap-2 justify-end">
-            <Button
-              variant="outline"
-              onClick={() => setShowDeleteConfirm(false)}
-              disabled={deleting}
-            >
+            <Button variant="outline" onClick={() => setShowDeleteConfirm(false)} disabled={deleting}>
               Cancel
             </Button>
-            <Button
-              onClick={handleDeleteProject}
-              disabled={deleting}
-              className="bg-red-600 hover:bg-red-700"
-            >
+            <Button onClick={handleDeleteProject} disabled={deleting} className="bg-red-600 hover:bg-red-700 text-white">
               {deleting ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Deleting...
-                </>
+                <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Deleting...</>
               ) : (
                 'Delete Project'
               )}
