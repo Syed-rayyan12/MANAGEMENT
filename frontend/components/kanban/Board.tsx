@@ -104,16 +104,31 @@ export function Board({ searchQuery = '', filterPriority = 'all', filterAssignee
     };
 
     const handleProjectUpdated = (data: any) => {
-      const project = mapApiProject(data);
+      const incoming = mapApiProject(data);
       // Check if we have a pending save for this project
-      const pending = pendingSaves.current.get(project.id);
+      const pending = pendingSaves.current.get(incoming.id);
       if (pending) {
         // Another user moved this card while we had a pending save — cancel ours
         clearTimeout(pending.timerId);
-        pendingSaves.current.delete(project.id);
+        pendingSaves.current.delete(incoming.id);
         toast.warning(`Card was moved by another user — your change was overridden`);
       }
-      dispatch({ type: 'UPDATE_PROJECT', payload: project });
+      // Preserve detailed data (comments, attachments, activityLog) if the
+      // incoming socket payload only has card-level stubs (e.g. { id } only).
+      const existing = state.projects.find(p => p.id === incoming.id);
+      if (existing) {
+        const hasDetailedComments = incoming.comments.length > 0 && incoming.comments[0]?.content !== undefined;
+        const hasDetailedAttachments = incoming.attachments.length > 0 && incoming.attachments[0]?.filename !== undefined;
+        const merged = {
+          ...incoming,
+          comments: hasDetailedComments ? incoming.comments : existing.comments,
+          attachments: hasDetailedAttachments ? incoming.attachments : existing.attachments,
+          activityLog: incoming.activityLog.length > 0 ? incoming.activityLog : existing.activityLog,
+        };
+        dispatch({ type: 'UPDATE_PROJECT', payload: merged });
+      } else {
+        dispatch({ type: 'UPDATE_PROJECT', payload: incoming });
+      }
     };
 
     const handleProjectDeleted = (data: { projectId: string }) => {
