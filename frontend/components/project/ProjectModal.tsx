@@ -712,8 +712,8 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
             ) : null}
 
             {/* Body: 2-col — Main (left) + Side (right) */}
-            <div className="flex-1 overflow-auto p-6">
-              <div className="flex gap-6">
+            <div className="flex-1 overflow-y-auto p-6">
+              <div className="flex gap-6 items-start">
                 {/* MAIN CONTENT (left, wider) */}
                 <div className="flex-1 min-w-0 space-y-6">
                   {/* Status row */}
