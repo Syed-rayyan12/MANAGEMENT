@@ -198,6 +198,7 @@ model Project {
   dueDate     DateTime?
   image       String?
   position    Int             @default(0)
+  trelloCardId String?        @unique // Trello card ID for duplicate detection
 
   // Board relation (which service board: logo, web design, etc.)
   boardId     String
