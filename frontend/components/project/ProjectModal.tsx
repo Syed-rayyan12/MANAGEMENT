@@ -67,6 +67,9 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
   const [attachmentsExpanded, setAttachmentsExpanded] = useState(false);
   const [loadingDetails, setLoadingDetails] = useState(true);
   const [activityExpanded, setActivityExpanded] = useState(false);
+  const [isDraggingOver, setIsDraggingOver] = useState(false);
+  const [droppedUploading, setDroppedUploading] = useState(false);
+  const dragCounter = React.useRef(0);
   const coverPhotoInputRef = React.useRef<HTMLInputElement>(null);
   // Fetch full project details (comments, attachments, activities) on modal open
   useEffect(() => {
@@ -426,11 +429,123 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
     toast.success('Link copied');
   };
 
+  // Drag & drop file upload handlers
+  const handleDragEnter = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounter.current++;
+    if (e.dataTransfer.types.includes('Files')) {
+      setIsDraggingOver(true);
+    }
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounter.current--;
+    if (dragCounter.current === 0) {
+      setIsDraggingOver(false);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingOver(false);
+    dragCounter.current = 0;
+
+    const files = Array.from(e.dataTransfer.files);
+    if (files.length === 0 || isReadOnly) return;
+
+    setDroppedUploading(true);
+    let successCount = 0;
+    let failCount = 0;
+
+    for (const file of files) {
+      try {
+        const uploadResult = await uploadAPI.uploadFile(file, 'attachments');
+        if (!uploadResult) { failCount++; continue; }
+
+        const ext = file.name.split('.').pop()?.toLowerCase() || '';
+        let fileType = 'other';
+        if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp', 'ico'].includes(ext)) fileType = 'image';
+        else if (ext === 'pdf') fileType = 'pdf';
+        else if (['doc', 'docx', 'txt', 'rtf', 'odt', 'md'].includes(ext)) fileType = 'document';
+        else if (['xls', 'xlsx', 'csv', 'ods'].includes(ext)) fileType = 'spreadsheet';
+        else if (['ppt', 'pptx', 'odp'].includes(ext)) fileType = 'presentation';
+        else if (['zip', 'rar', '7z', 'tar', 'gz'].includes(ext)) fileType = 'archive';
+
+        const result = await projectAPI.addAttachment(project.id, {
+          filename: file.name,
+          url: uploadResult.publicUrl,
+          key: uploadResult.key,
+          type: fileType,
+          size: file.size,
+        });
+
+        if (result.success) {
+          const saved = result.data.attachment;
+          dispatch({
+            type: 'ADD_ATTACHMENT',
+            payload: {
+              projectId: project.id,
+              attachment: {
+                id: saved.id,
+                filename: saved.filename,
+                type: (saved.type || fileType) as any,
+                url: saved.url,
+                uploadedAt: new Date(saved.uploadedAt || saved.createdAt || Date.now()),
+              },
+              userId: state.currentUser?.id || '',
+            },
+          });
+          successCount++;
+        } else { failCount++; }
+      } catch { failCount++; }
+    }
+
+    if (successCount > 0) toast.success(`${successCount} file${successCount > 1 ? 's' : ''} uploaded`);
+    if (failCount > 0) toast.error(`${failCount} file${failCount > 1 ? 's' : ''} failed`);
+    setDroppedUploading(false);
+  };
+
   return (
     <>
     <Sheet open={true} onOpenChange={onClose}>
-      <SheetContent side="right" className={`${isMobile ? 'w-full !max-w-full h-full' : '!w-[80vw] !max-w-[1200px] !h-[calc(100vh-24px)] !top-3 !right-3 !bottom-3 rounded-xl'} overflow-hidden p-0 gap-0 flex flex-col bg-background border border-border shadow-[0_25px_60px_-12px_rgba(0,0,0,0.4)]`}>
+      <SheetContent
+        side="right"
+        className={`${isMobile ? 'w-full !max-w-full h-full' : '!w-[80vw] !max-w-[1200px] !h-[calc(100vh-24px)] !top-3 !right-3 !bottom-3 rounded-xl'} overflow-hidden p-0 gap-0 flex flex-col bg-background border border-border shadow-[0_25px_60px_-12px_rgba(0,0,0,0.4)]`}
+        onDragEnter={handleDragEnter}
+        onDragLeave={handleDragLeave}
+        onDragOver={handleDragOver}
+        onDrop={handleDrop}
+      >
         <DialogDescription className="sr-only">Project details and management</DialogDescription>
+
+        {/* Drag & drop overlay */}
+        {(isDraggingOver || droppedUploading) && (
+          <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm border-2 border-dashed border-accent rounded-xl">
+            <div className="text-center">
+              {droppedUploading ? (
+                <>
+                  <Loader2 className="w-10 h-10 text-accent mx-auto mb-3 animate-spin" />
+                  <p className="text-sm font-medium text-foreground">Uploading files...</p>
+                </>
+              ) : (
+                <>
+                  <Upload className="w-10 h-10 text-accent mx-auto mb-3" />
+                  <p className="text-sm font-medium text-foreground">Drop files to attach</p>
+                  <p className="text-xs text-fg-3 mt-1">Files will be added as attachments</p>
+                </>
+              )}
+            </div>
+          </div>
+        )}
 
         {isMobile ? (
           <>
