@@ -106,10 +106,10 @@ export const createBoard = async (req: Request, res: Response): Promise<void> =>
         organizationId: org.id,
         columns: {
           create: [
-            { name: 'To Do', key: 'todo', color: '#6B7280', position: 0 },
-            { name: 'In Progress', key: 'in-progress', color: '#3B82F6', position: 1 },
-            { name: 'Completed', key: 'completed', color: '#10B981', position: 2 },
-            { name: 'Revisions', key: 'revisions', color: '#F59E0B', position: 3 },
+            { name: 'To Do', key: 'todo', color: '#6B7280', position: 0, phase: 'NOT_STARTED' },
+            { name: 'In Progress', key: 'in-progress', color: '#3B82F6', position: 1, phase: 'IN_PROGRESS' },
+            { name: 'Completed', key: 'completed', color: '#10B981', position: 2, phase: 'DONE' },
+            { name: 'Revisions', key: 'revisions', color: '#F59E0B', position: 3, phase: 'IN_PROGRESS' },
           ],
         },
       },

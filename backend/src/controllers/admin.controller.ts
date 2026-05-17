@@ -479,8 +479,8 @@ export const createEmployee = async (req: Request, res: Response): Promise<void>
       },
     });
 
-    // Add to team if teamId is provided and role warrants it
-    if (teamId && (role === 'PM' || role === 'TL')) {
+    // Add to team if teamId is provided
+    if (teamId) {
       const team = await prisma.team.findUnique({ where: { id: teamId } });
       if (team) {
         await prisma.teamMember.create({

@@ -9,10 +9,28 @@ export function cn(...inputs: ClassValue[]) {
 const URL_REGEX = /(https?:\/\/[^\s<]+|(?:www\.)[^\s<]+|[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?\.(?:com|co\.uk|org|net|io|dev|app|xyz|me|info|biz|uk|us|ca|au|de|fr|in|ai)[^\s<]*)/gi;
 
 /**
+ * Strip markdown-style links from text (e.g. from Trello imports).
+ * [label](url "title") → label (url)
+ * [email](mailto:email "title") → email
+ */
+function stripMarkdownLinks(text: string): string {
+  // mailto links: [email](mailto:email "...") → just the email
+  text = text.replace(/\[([^\]]*)\]\(mailto:[^\s)]*(?:\s+"[^"]*")?\)/g, '$1');
+  // regular links: [label](url "...") → label (url)
+  text = text.replace(/\[([^\]]*)\]\((https?:\/\/[^\s)]+)(?:\s+"[^"]*")?\)/g, '$1 ( $2 )');
+  // any remaining markdown links without protocol: [label](url "...") → label
+  text = text.replace(/\[([^\]]*)\]\([^\s)]+(?:\s+"[^"]*")?\)/g, '$1');
+  return text;
+}
+
+/**
  * Converts URLs in text to clickable React anchor elements.
+ * Strips markdown link syntax first, then linkifies plain URLs.
  * Returns an array of React nodes (strings and <a> elements).
  */
 export function linkifyText(text: string): React.ReactNode[] {
+  text = stripMarkdownLinks(text);
+
   const parts: React.ReactNode[] = [];
   let lastIndex = 0;
   let match: RegExpExecArray | null;

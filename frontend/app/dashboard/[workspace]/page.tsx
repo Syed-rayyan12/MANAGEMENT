@@ -100,24 +100,26 @@ export default function WorkspacePage() {
   }, [boardSlug]);
 
   const handleAddColumn = async (columnName: string, columnColor: string, columnPhase: string) => {
-    const newColumn = {
-      status: columnName.toLowerCase().replace(/\s+/g, '-'),
-      label: columnName,
-      color: columnColor,
-      isCustom: true,
-      phase: columnPhase,
-    };
-
-    const updatedColumns = [...customColumns, newColumn];
-    setCustomColumns(updatedColumns);
-    setRefreshKey(prev => prev + 1);
-
-    if (boardId) {
-      try {
-        await boardAPI.addColumn(boardId, columnName, columnColor, columnPhase);
-      } catch (error) {
-        console.error('Error saving column:', error);
+    if (!boardId) return;
+    try {
+      await boardAPI.addColumn(boardId, columnName, columnColor, columnPhase);
+      // Re-fetch board to get the full column list from the server
+      const result = await boardAPI.getBySlug(boardSlug);
+      if (result.success && result.data.board.columns?.length > 0) {
+        const cols = result.data.board.columns
+          .sort((a: any, b: any) => a.position - b.position)
+          .map((c: any) => ({
+            status: c.key,
+            label: c.name,
+            color: c.color,
+            isCustom: false,
+            phase: c.phase || 'NOT_STARTED',
+          }));
+        setCustomColumns(cols);
       }
+      setRefreshKey(prev => prev + 1);
+    } catch (error) {
+      console.error('Error saving column:', error);
     }
   };
 

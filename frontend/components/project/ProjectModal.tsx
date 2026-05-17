@@ -627,7 +627,7 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
                   </div>
                 ) : (
                   <div onClick={() => setEditingDescription(true)} className="p-3 border border-border rounded-lg bg-surface-2 min-h-16 whitespace-pre-wrap text-sm text-fg-2 cursor-pointer">
-                    {project.description || 'Tap to add description...'}
+                    {project.description ? linkifyText(project.description) : 'Tap to add description...'}
                   </div>
                 )}
 
@@ -954,12 +954,11 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
                       </div>
                     ) : (
                       <>
-                        <div className={`${!activityExpanded ? 'max-h-[180px] overflow-hidden' : ''} relative`}>
-                          <ActivitySection project={project} compact />
-                          {!activityExpanded && project.activityLog && project.activityLog.length > 4 && (
-                            <div className="absolute bottom-0 left-0 right-0 pt-8 bg-gradient-to-t from-surface to-transparent" />
-                          )}
-                        </div>
+                        <ActivitySection
+                          project={project}
+                          compact
+                          maxItems={activityExpanded ? undefined : 4}
+                        />
                         {project.activityLog && project.activityLog.length > 4 && (
                           <button
                             onClick={() => setActivityExpanded(!activityExpanded)}

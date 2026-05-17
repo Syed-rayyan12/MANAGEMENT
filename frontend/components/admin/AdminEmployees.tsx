@@ -346,6 +346,7 @@ function CreateEmployeeForm({
     if (!username.trim()) errs.username = 'Username is required';
     if (!role) errs.role = 'Role is required';
     if (role === 'PRODUCTION' && !specialization) errs.specialization = 'Specialization required for Production';
+    if (!teamId) errs.teamId = 'Team is required';
     setErrors(errs);
     return Object.keys(errs).length === 0;
   };
@@ -364,7 +365,7 @@ function CreateEmployeeForm({
         teamId: teamId || undefined,
       });
       if (result.success) {
-        onCreated(result.data.user);
+        onCreated(result.data.employee);
       } else {
         toast.error(result.message || 'Failed to create employee');
       }
@@ -447,20 +448,19 @@ function CreateEmployeeForm({
           </div>
         )}
 
-        {/* Team — only for PM/TL */}
-        {(role === 'PM' || role === 'TL') && (
-          <div>
-            <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1">Team (optional)</label>
+        {/* Team */}
+        <div>
+            <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1">Team *</label>
             <select
               value={teamId}
               onChange={e => setTeamId(e.target.value)}
               className="w-full rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent-soft focus:border-accent-line"
             >
-              <option value="">No team</option>
+              <option value="">Select team...</option>
               {teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
             </select>
+            {errors.teamId && <p className="text-xs text-red-500 mt-1">{errors.teamId}</p>}
           </div>
-        )}
 
         {/* Actions — span full width */}
         <div className="sm:col-span-2 flex items-center justify-end gap-3 pt-2">

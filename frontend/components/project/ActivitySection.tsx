@@ -9,13 +9,15 @@ import { Activity } from 'lucide-react';
 interface ActivitySectionProps {
   project: Project;
   compact?: boolean;
+  maxItems?: number;
 }
 
-export function ActivitySection({ project, compact }: ActivitySectionProps) {
+export function ActivitySection({ project, compact, maxItems }: ActivitySectionProps) {
   const { getUserName, getUserAvatar } = useApp();
 
   const activities = [...(project.activityLog || [])].reverse();
-  const displayActivities = compact ? activities.slice(0, 6) : activities;
+  const limit = maxItems ?? (compact ? 4 : activities.length);
+  const displayActivities = activities.slice(0, limit);
 
   if (compact) {
     return (

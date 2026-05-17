@@ -99,22 +99,8 @@ async function main() {
 
   const userDefs: UserDef[] = [
     // TL
-    { username: 'tl.ali',              name: 'Ali',               role: 'TL',         inTeam: true  },
-    // PMs
-    { username: 'pm.rehan',            name: 'Rehan',             role: 'PM',         inTeam: true  },
-    { username: 'pm.mujtaba',          name: 'Mujtaba',           role: 'PM',         inTeam: true  },
-    { username: 'pm.anas',             name: 'Anas',              role: 'PM',         inTeam: true  },
-    { username: 'pm.aqsa',             name: 'Aqsa',              role: 'PM',         inTeam: true  },
+
     // Production
-    { username: 'prod.aqsa',           name: 'Aqsa',              role: 'PRODUCTION', specialization: 'LOGO_DESIGNER',   inTeam: true },
-    { username: 'prod.abubakr',        name: 'Abu Bakr',          role: 'PRODUCTION', specialization: 'LOGO_DESIGNER',   inTeam: true },
-    { username: 'prod.arshanhasan',    name: 'Arshan Hasan',      role: 'PRODUCTION', specialization: 'FIGMA_DESIGNER',  inTeam: true },
-    { username: 'prod.syedtaha',       name: 'Syed Taha',         role: 'PRODUCTION', specialization: 'FIGMA_DESIGNER',  inTeam: true },
-    { username: 'prod.syedrayyan',     name: 'Syed Rayyan',       role: 'PRODUCTION', specialization: 'DEVELOPER',       inTeam: true },
-    { username: 'prod.muslimraza',     name: 'Muslim Raza',       role: 'PRODUCTION', specialization: 'DEVELOPER',       inTeam: true },
-    { username: 'prod.qasimrizvi',     name: 'Qasim Rizvi',       role: 'PRODUCTION', specialization: 'DEVELOPER',       inTeam: true },
-    { username: 'prod.akbar',          name: 'Akbar',             role: 'PRODUCTION', specialization: 'DEVELOPER',       inTeam: true },
-    { username: 'prod.muhammadbinsaud',name: 'Muhammad Bin Saud', role: 'PRODUCTION', specialization: 'DEVELOPER',       inTeam: true },
     { username: 'prod.tahiranwar',     name: 'Tahir Anwar',       role: 'PRODUCTION', inTeam: true },
     // Executives
     { username: 'exec.maarijsaud',     name: 'Maarij Saud',       role: 'EXECUTIVE',  inTeam: true },
