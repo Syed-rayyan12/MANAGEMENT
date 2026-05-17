@@ -817,7 +817,7 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
                           </span>
                           <div className="flex-1 min-w-0">
                             <div className="text-[12.5px] font-medium text-foreground truncate">{assignment.user?.name}</div>
-                            <div className="text-[10.5px] text-fg-3">{i === 0 ? 'Lead' : 'Collaborator'}</div>
+                            <div className="text-[10.5px] text-fg-3">{assignment.role === 'PRIMARY' ? 'Lead' : 'Collaborator'}</div>
                           </div>
                           <button
                             onClick={() => handleToggleStatus(assignment)}
@@ -950,14 +950,12 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
               {filteredUsers.map((user: any) => {
                 const isAlreadyMember = project.assignments.some((a: ProjectAssignment) => a.userId === user.id);
                 return (
-                  <button
+                  <div
                     key={user.id}
-                    onClick={() => !isAlreadyMember && handleAddMember(user.id, 'PRIMARY')}
-                    disabled={isAlreadyMember}
-                    className={`w-full flex items-center gap-3 p-3 rounded-lg border transition-colors text-left ${
+                    className={`w-full flex items-center gap-3 p-3 rounded-lg border transition-colors ${
                       isAlreadyMember
-                        ? 'border-green-500/30 bg-green-500/5 opacity-60 cursor-default'
-                        : 'border-border hover:bg-surface-2 hover:border-line-strong cursor-pointer'
+                        ? 'border-green-500/30 bg-green-500/5 opacity-60'
+                        : 'border-border hover:bg-surface-2 hover:border-line-strong'
                     }`}
                   >
                     <span className="w-8 h-8 rounded-full bg-accent-soft text-accent text-[12px] font-bold flex items-center justify-center flex-shrink-0">
@@ -972,7 +970,23 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
                       </div>
                       <p className="text-xs text-fg-3">{user.email}</p>
                     </div>
-                  </button>
+                    {!isAlreadyMember && (
+                      <div className="flex gap-1 flex-shrink-0">
+                        <button
+                          onClick={() => handleAddMember(user.id, 'PRIMARY')}
+                          className="text-[10px] px-2 py-1 rounded bg-accent-soft text-accent hover:bg-accent hover:text-white transition-colors font-medium"
+                        >
+                          Lead
+                        </button>
+                        <button
+                          onClick={() => handleAddMember(user.id, 'COLLABORATOR')}
+                          className="text-[10px] px-2 py-1 rounded bg-blue-500/15 text-blue-600 hover:bg-blue-500/30 transition-colors font-medium"
+                        >
+                          Collab
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 );
               })}
               {filteredUsers.length === 0 && (

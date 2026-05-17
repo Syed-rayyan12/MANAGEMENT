@@ -556,6 +556,8 @@ export function mapApiProject(p: any): Project {
       id: ci.id,
       title: ci.title,
       completed: ci.completed,
+      createdBy: ci.createdBy || undefined,
+      createdAt: ci.createdAt ? new Date(ci.createdAt) : undefined,
     })),
     comments: (p.comments || []).map((c: any) => ({
       id: c.id,
