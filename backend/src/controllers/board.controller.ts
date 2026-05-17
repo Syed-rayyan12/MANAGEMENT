@@ -104,14 +104,6 @@ export const createBoard = async (req: Request, res: Response): Promise<void> =>
         name: name.trim(),
         slug,
         organizationId: org.id,
-        columns: {
-          create: [
-            { name: 'To Do', key: 'todo', color: '#6B7280', position: 0, phase: 'NOT_STARTED' },
-            { name: 'In Progress', key: 'in-progress', color: '#3B82F6', position: 1, phase: 'IN_PROGRESS' },
-            { name: 'Completed', key: 'completed', color: '#10B981', position: 2, phase: 'DONE' },
-            { name: 'Revisions', key: 'revisions', color: '#F59E0B', position: 3, phase: 'IN_PROGRESS' },
-          ],
-        },
       },
       include: {
         columns: { orderBy: { position: 'asc' } },
@@ -129,13 +121,42 @@ export const createBoard = async (req: Request, res: Response): Promise<void> =>
  * Get all board columns (with phase) for boards the user has projects on.
  * GET /api/boards/columns/all
  */
+// Infer correct phase from column key for columns that were created without phase
+const PHASE_BY_KEY: Record<string, string> = {
+  'todo': 'NOT_STARTED',
+  'to-do': 'NOT_STARTED',
+  'backlog': 'NOT_STARTED',
+  'in-progress': 'IN_PROGRESS',
+  'revisions': 'IN_PROGRESS',
+  'review': 'IN_PROGRESS',
+  'completed': 'DONE',
+  'done': 'DONE',
+  'live': 'DONE',
+  'on-hold': 'ON_HOLD',
+};
+
 export const getAllBoardColumns = async (_req: Request, res: Response): Promise<void> => {
   try {
     const columns = await prisma.boardColumn.findMany({
       where: { deletedAt: null },
       orderBy: { position: 'asc' },
-      select: { key: true, phase: true, boardId: true },
+      select: { id: true, key: true, phase: true, boardId: true },
     });
+
+    // Fix columns with wrong phases (created before phase was set on board creation)
+    const fixPromises: Promise<any>[] = [];
+    for (const c of columns) {
+      const correctPhase = PHASE_BY_KEY[c.key];
+      if (correctPhase && c.phase !== correctPhase) {
+        fixPromises.push(
+          prisma.boardColumn.update({ where: { id: c.id }, data: { phase: correctPhase as any } })
+        );
+        c.phase = correctPhase as any;
+      }
+    }
+    if (fixPromises.length > 0) {
+      await Promise.all(fixPromises);
+    }
 
     // Build a lookup: { "board-id::column-key": "IN_PROGRESS" }
     const phaseMap: Record<string, string> = {};

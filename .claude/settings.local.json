@@ -66,7 +66,8 @@
       "Bash(TOKEN=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjE1YmEwNDZkLTcwZmYtNDQ2ZS1hMTFlLTkzM2RjMzNjZjQ0YyIsImVtYWlsIjoicHJvZDZAY29tcGFueS5jb20iLCJyb2xlIjoiUFJPRFVDVElPTiIsInRlYW1JZHMiOltdLCJpYXQiOjE3NzkwMzEwNjMsImV4cCI6MTc3OTYzNTg2M30.p-i5sb9bsf1hjg28DuNVnaiq1KmExKXRR7z8sSQbnO8)",
       "Bash(node -e \"const d=[];process.stdin.on\\(''''data'''',c=>d.push\\(c\\)\\);process.stdin.on\\(''''end'''',\\(\\)=>{const j=JSON.parse\\(Buffer.concat\\(d\\)\\);console.log\\(''''Board ID:'''', j.data?.board?.id\\);console.log\\(''''Board slug:'''', j.data?.board?.slug\\)}\\)\")",
       "Bash(node -e \"const d=[];process.stdin.on\\(''''data'''',c=>d.push\\(c\\)\\);process.stdin.on\\(''''end'''',\\(\\)=>{const j=JSON.parse\\(Buffer.concat\\(d\\)\\);console.log\\(''''SEO Board ID:'''', j.data?.board?.id\\);console.log\\(''''SEO Board slug:'''', j.data?.board?.slug\\)}\\)\")",
-      "Bash(xxd)"
+      "Bash(xxd)",
+      "Bash(node -e \"const d=[];process.stdin.on\\(''''data'''',c=>d.push\\(c\\)\\);process.stdin.on\\(''''end'''',\\(\\)=>{const j=JSON.parse\\(Buffer.concat\\(d\\)\\);console.log\\(JSON.stringify\\(j.data?.phaseMap,null,2\\)\\)}\\)\")"
     ]
   }
 }
