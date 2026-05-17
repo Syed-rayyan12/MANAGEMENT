@@ -14,6 +14,7 @@ import {
   Shield,
   Search,
   User,
+  ArrowDownToLine,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { BOARD_METADATA, DEFAULT_BOARD_METADATA } from '@/lib/constants';
@@ -138,6 +139,13 @@ export function Sidebar({ isMobile = false, mobileOpen = false, onMobileClose }:
       icon: Trash2,
       href: '/dashboard/trash',
       match: (p: string) => p === '/dashboard/trash',
+    }] : []),
+    ...(state.currentUser?.username === 'prod.tahiranwar' ? [{
+      id: 'import',
+      label: 'Trello Import',
+      icon: ArrowDownToLine,
+      href: '/dashboard/import',
+      match: (p: string) => p === '/dashboard/import',
     }] : []),
   ];
 
