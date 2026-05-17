@@ -21,7 +21,6 @@ import {
 } from '@dnd-kit/core';
 import { sortableKeyboardCoordinates } from '@dnd-kit/sortable';
 import { Project } from '@/lib/types';
-import { DEFAULT_KANBAN_COLUMNS } from '@/lib/constants';
 import { useApp } from '@/contexts/useApp';
 import { useSocket } from '@/contexts/SocketContext';
 import { mapApiProject } from '@/contexts/AppContext';
@@ -172,7 +171,7 @@ export function Board({ searchQuery = '', filterPriority = 'all', filterAssignee
   );
 
   // Use custom columns if provided (from workspace API), otherwise use defaults
-  const allColumns = customColumns.length > 0 ? customColumns : DEFAULT_KANBAN_COLUMNS;
+  const allColumns = customColumns;
 
   // Filter projects by search, priority, assignee, and workspace
   const filteredProjects = useMemo(() => {
