@@ -64,7 +64,7 @@ export function DeleteConfirmation({ open, onClose, onConfirm, title, descriptio
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-md max-w-[calc(100vw-2rem)] bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
+      <DialogContent className="max-w-md w-[calc(100vw-2rem)] bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
         {step === 1 ? (
           <>
             <DialogHeader>

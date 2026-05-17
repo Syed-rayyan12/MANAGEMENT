@@ -1109,31 +1109,31 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
     )}
 
     {/* Delete Confirmation */}
-    {showDeleteConfirm && (
-      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100]">
-        <div className="bg-surface rounded-lg border border-border p-6 max-w-md mx-4 space-y-4 shadow-3">
-          <div className="flex items-center gap-3 text-red-500">
-            <Trash2 className="w-6 h-6" />
-            <h3 className="text-lg font-semibold text-foreground">Delete Project</h3>
-          </div>
-          <p className="text-[13px] text-fg-2">
-            Are you sure you want to delete <strong className="text-foreground">{project.name}</strong>? This action cannot be undone.
-          </p>
-          <div className="flex gap-2 justify-end">
-            <Button variant="outline" onClick={() => setShowDeleteConfirm(false)} disabled={deleting}>
-              Cancel
-            </Button>
-            <Button onClick={handleDeleteProject} disabled={deleting} className="bg-red-600 hover:bg-red-700 text-white">
-              {deleting ? (
-                <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Deleting...</>
-              ) : (
-                'Delete Project'
-              )}
-            </Button>
-          </div>
+    <Dialog open={showDeleteConfirm} onOpenChange={(open) => { if (!open && !deleting) setShowDeleteConfirm(false); }}>
+      <DialogContent className="max-w-md w-[calc(100vw-2rem)] bg-surface border border-border">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-3 text-red-500">
+            <Trash2 className="w-5 h-5" />
+            <span className="text-foreground">Delete Project</span>
+          </DialogTitle>
+        </DialogHeader>
+        <p className="text-[13px] text-fg-2">
+          Are you sure you want to delete <strong className="text-foreground">{project.name}</strong>? This action cannot be undone.
+        </p>
+        <div className="flex gap-2 justify-end">
+          <Button variant="outline" onClick={() => setShowDeleteConfirm(false)} disabled={deleting}>
+            Cancel
+          </Button>
+          <Button onClick={handleDeleteProject} disabled={deleting} className="bg-red-600 hover:bg-red-700 text-white">
+            {deleting ? (
+              <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Deleting...</>
+            ) : (
+              'Delete Project'
+            )}
+          </Button>
         </div>
-      </div>
-    )}
+      </DialogContent>
+    </Dialog>
     </>
   );
 }
