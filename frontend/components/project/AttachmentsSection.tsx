@@ -105,7 +105,7 @@ export function AttachmentsSection({ project }: AttachmentsSectionProps) {
                 filename: savedAttachment.filename,
                 type: (savedAttachment.type || fileType) as any,
                 url: savedAttachment.url,
-                uploadedAt: new Date(savedAttachment.createdAt),
+                uploadedAt: new Date(savedAttachment.uploadedAt || savedAttachment.createdAt || Date.now()),
               },
               userId: state.currentUser?.id || '',
             },
@@ -148,13 +148,22 @@ export function AttachmentsSection({ project }: AttachmentsSectionProps) {
     });
   };
 
-  const handleDownloadAttachment = (attachment: typeof project.attachments[0]) => {
-    const link = document.createElement('a');
-    link.href = attachment.url;
-    link.download = attachment.filename;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  const handleDownloadAttachment = async (attachment: typeof project.attachments[0]) => {
+    try {
+      const response = await fetch(attachment.url);
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = attachment.filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(blobUrl);
+    } catch {
+      // Fallback: open in new tab
+      window.open(attachment.url, '_blank');
+    }
   };
 
   return (

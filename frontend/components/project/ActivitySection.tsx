@@ -25,7 +25,7 @@ export function ActivitySection({ project, compact }: ActivitySectionProps) {
         ) : (
           displayActivities.map((log) => (
             <div key={log.id} className="flex items-start gap-2 py-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-fg-4 mt-1.5 flex-shrink-0" />
+              <span className="w-1.5 h-1.5 rounded-full bg-fg-4 mt-[7px] flex-shrink-0" />
               <div className="flex-1 min-w-0">
                 <span className="text-[11.5px] leading-snug">
                   <b className="font-medium text-foreground">{getUserName(log.userId)}</b>{' '}
