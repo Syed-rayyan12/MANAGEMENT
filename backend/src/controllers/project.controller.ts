@@ -410,7 +410,7 @@ export const updateProject = async (req: Request, res: Response): Promise<void> 
       }
     }
 
-    // ── Regression detection ─────────────────────────
+    // ── Regression detection + auto-complete assignments ─────────────────────────
     if (updateData.status && updateData.status !== existing.status && req.user) {
       const [oldCol, newCol] = await Promise.all([
         prisma.boardColumn.findFirst({ where: { boardId: existing.boardId, key: existing.status } }),
@@ -441,6 +441,22 @@ export const updateProject = async (req: Request, res: Response): Promise<void> 
             })),
           });
         }
+      }
+
+      // Auto-complete assignments when project moves to a DONE-phase column
+      if (newCol && newCol.phase === 'DONE') {
+        await prisma.projectAssignment.updateMany({
+          where: { projectId: id, status: 'ACTIVE' },
+          data: { status: 'DONE', completedAt: new Date() },
+        });
+      }
+
+      // Re-activate assignments if project moves OUT of DONE phase back to active
+      if (oldCol && oldCol.phase === 'DONE' && newCol && newCol.phase !== 'DONE') {
+        await prisma.projectAssignment.updateMany({
+          where: { projectId: id, status: 'DONE' },
+          data: { status: 'ACTIVE', completedAt: null },
+        });
       }
     }
 

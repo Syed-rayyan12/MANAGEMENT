@@ -255,6 +255,13 @@ async function main() {
       const board = boards[proj.boardSlug === 'web-development' ? 'webDev' : proj.boardSlug === 'web-design' ? 'webDesign' : proj.boardSlug === 'logo-design' ? 'logo' : 'content'];
       if (!board) continue;
 
+      // Set a due date a few days in the future for active projects, or a few days ago for completed ones
+      const isCompleted = proj.status === 'completed' || proj.status === 'live';
+      const dueDaysOffset = isCompleted
+        ? Math.floor(Math.random() * 5) - 2  // -2 to +2 days from now (some late, some on time)
+        : Math.floor(Math.random() * 14) + 3; // 3-16 days in the future
+      const dueDate = new Date(Date.now() + dueDaysOffset * 24 * 60 * 60 * 1000);
+
       const project = await prisma.project.create({
         data: {
           name: proj.name,
@@ -262,17 +269,27 @@ async function main() {
           teamId: teams[proj.teamSlug].id,
           status: proj.status,
           priority: proj.priority,
+          dueDate,
         },
       });
 
       for (const a of proj.assignments) {
+        // Simulate realistic turnaround: assigned 3-21 days ago, completed 1-3 days ago
+        const daysAgo = Math.floor(Math.random() * 19) + 3; // 3-21 days ago
+        const completedDaysAgo = Math.floor(Math.random() * 3) + 1; // 1-3 days ago
+        const assignedAt = new Date(Date.now() - daysAgo * 24 * 60 * 60 * 1000);
+        const completedAt = a.status === 'DONE'
+          ? new Date(Date.now() - completedDaysAgo * 24 * 60 * 60 * 1000)
+          : null;
+
         await prisma.projectAssignment.create({
           data: {
             projectId: project.id,
             userId: a.userId,
             role: a.role,
             status: a.status,
-            completedAt: a.status === 'DONE' ? new Date() : null,
+            assignedAt,
+            completedAt,
           },
         });
       }
