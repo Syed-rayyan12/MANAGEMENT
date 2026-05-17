@@ -367,9 +367,16 @@ function MyWorkCard({ project, boardName, onClick }: { project: Project; boardNa
   return (
     <div
       onClick={onClick}
-      className="bg-white dark:bg-zinc-900/90 shadow-sm hover:shadow-md cursor-pointer transition-all duration-200 rounded-lg p-3 space-y-2"
+      className="bg-white dark:bg-zinc-900/90 shadow-sm hover:shadow-md cursor-pointer transition-all duration-200 rounded-lg overflow-hidden space-y-2"
     >
+      {/* Cover image */}
+      {project.image && (
+        <div className="w-full h-[80px] overflow-hidden">
+          <img src={project.image} alt="" className="w-full h-full object-cover" />
+        </div>
+      )}
       {/* Board badge + title */}
+      <div className={`${project.image ? 'px-3 pb-3' : 'p-3'} space-y-2`}>
       {boardName && (
         <span className="inline-block text-[10px] font-medium px-1.5 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400">
           {boardName}
@@ -407,6 +414,7 @@ function MyWorkCard({ project, boardName, onClick }: { project: Project; boardNa
             <MessageSquare className="w-3 h-3" /> {project.comments.length}
           </span>
         )}
+      </div>
       </div>
     </div>
   );
