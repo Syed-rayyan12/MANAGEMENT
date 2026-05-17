@@ -458,7 +458,7 @@ export function Board({ searchQuery = '', filterPriority = 'all', filterAssignee
             <span className="font-semibold text-zinc-700 dark:text-zinc-200">{totalProjectCount}</span> projects
           </span>
           {filteredProjects.length === 0 && (
-            <span className="text-amber-600 dark:text-amber-400">— No projects match your filters</span>
+            <span className="text-amber-600 dark:text-amber-400">— No projects match your filters. Try adjusting or clearing them.</span>
           )}
         </div>
       )}

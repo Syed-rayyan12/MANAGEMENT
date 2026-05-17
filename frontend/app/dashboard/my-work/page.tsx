@@ -250,7 +250,8 @@ export default function MyWorkPage() {
               Board: {boardOptions.find(b => b.id === filterBoard)?.name || filterBoard} <X className="w-3 h-3" />
             </button>
           )}
-          <button onClick={() => { setFilterPriority('all'); setFilterBoard('all'); }} className="text-xs text-zinc-500 hover:text-orange-400 transition-colors underline">
+          <button onClick={() => { setFilterPriority('all'); setFilterBoard('all'); }} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-500/20 hover:bg-red-100 dark:hover:bg-red-500/20 transition-colors">
+            <X className="w-3 h-3" />
             Clear all
           </button>
         </div>
@@ -308,7 +309,11 @@ export default function MyWorkPage() {
                   <div className="flex-1 overflow-y-auto pr-1 space-y-2">
                     {projects.length === 0 ? (
                       <div className="flex flex-col items-center justify-center py-12 text-zinc-400 dark:text-zinc-500">
-                        <p className="text-sm">No projects</p>
+                        <div className="w-9 h-9 rounded-lg bg-surface-3 flex items-center justify-center mb-2">
+                          <Briefcase className="w-4 h-4 text-fg-4" />
+                        </div>
+                        <p className="text-[12px] font-medium">No projects here</p>
+                        <p className="text-[11px] mt-0.5 text-fg-4">Projects will appear once assigned to you</p>
                       </div>
                     ) : (
                       projects.map((project) => (

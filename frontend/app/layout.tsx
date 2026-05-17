@@ -33,7 +33,7 @@ export default function RootLayout({
           <AppProvider>
             <SocketProvider>
               {children}
-              <Toaster position="bottom-right" richColors closeButton />
+              <Toaster position="bottom-right" richColors closeButton duration={4000} />
             </SocketProvider>
           </AppProvider>
         </ThemeProvider>

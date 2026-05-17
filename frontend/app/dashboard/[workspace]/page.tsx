@@ -307,8 +307,9 @@ export default function WorkspacePage() {
           )}
           <button
             onClick={() => { setFilterPriority('all'); setFilterAssignee('all'); }}
-            className="text-xs text-gray-500 hover:text-orange-400 transition-colors underline"
+            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-500/20 hover:bg-red-100 dark:hover:bg-red-500/20 transition-colors"
           >
+            <X className="w-3 h-3" />
             Clear all
           </button>
         </div>
@@ -319,7 +320,7 @@ export default function WorkspacePage() {
         {isLoading || boardLoading ? (
           <BoardSkeleton />
         ) : (
-          <ErrorBoundary>
+          <ErrorBoundary context="board projects">
             <Board
               key={`${boardSlug}-${refreshKey}`}
               searchQuery={searchQuery}

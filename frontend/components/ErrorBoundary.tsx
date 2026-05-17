@@ -5,6 +5,7 @@ import React from 'react';
 interface ErrorBoundaryProps {
   children: React.ReactNode;
   fallback?: React.ReactNode;
+  context?: string;
 }
 
 interface ErrorBoundaryState {
@@ -38,6 +39,10 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
         return this.props.fallback;
       }
 
+      const contextMessage = this.props.context
+        ? `Failed to load ${this.props.context}. Please try again.`
+        : 'An unexpected error occurred. Please try again.';
+
       return (
         <div className="flex flex-col items-center justify-center min-h-[300px] p-8">
           <div className="text-center space-y-4">
@@ -45,7 +50,7 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
               Something went wrong
             </h2>
             <p className="text-gray-600 dark:text-gray-400 max-w-md">
-              An unexpected error occurred. Please try again.
+              {contextMessage}
             </p>
             <button
               onClick={this.handleReset}

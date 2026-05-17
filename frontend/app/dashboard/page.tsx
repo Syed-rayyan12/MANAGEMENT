@@ -111,7 +111,7 @@ export default function DashboardPage() {
   const totalProjects = boards.reduce((sum, b) => sum + b.projectCount, 0);
 
   return (
-    <ErrorBoundary>
+    <ErrorBoundary context="dashboard">
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-start justify-between">

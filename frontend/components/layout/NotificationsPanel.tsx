@@ -126,7 +126,7 @@ export function NotificationsPanel() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <button className="relative w-7 h-7 flex items-center justify-center rounded-md text-fg-3 hover:bg-surface-2 hover:text-foreground transition-colors duration-[120ms]">
+        <button aria-label="Open notifications" className="relative w-7 h-7 flex items-center justify-center rounded-md text-fg-3 hover:bg-surface-2 hover:text-foreground transition-colors duration-[120ms]">
           <Bell className="w-[15px] h-[15px]" />
           {unreadNotifications.length > 0 && (
             <span className="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-[9px] font-bold rounded-full min-w-[15px] h-[15px] flex items-center justify-center px-0.5 leading-none">

@@ -97,7 +97,7 @@ export default function DashboardLayout({
       <div className="min-h-screen bg-background">
         <Topbar onMenuToggle={isMobile ? () => setMobileMenuOpen(prev => !prev) : undefined} />
         <main className="px-6 py-5 max-[980px]:px-4 max-[980px]:py-4 max-[600px]:px-3 max-[600px]:py-3">
-          <ErrorBoundary>
+          <ErrorBoundary context="page content">
             {children}
           </ErrorBoundary>
         </main>

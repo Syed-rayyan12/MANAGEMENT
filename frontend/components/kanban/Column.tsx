@@ -85,7 +85,7 @@ export function Column({ status, label, color, projects, onCardClick, onAddCard,
           {canSoftDelete && onDeleteColumn && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="w-7 h-7 rounded-md flex items-center justify-center text-fg-3 hover:text-foreground hover:bg-surface-3 transition-colors duration-[120ms]">
+                <button aria-label="Column options" className="w-7 h-7 rounded-md flex items-center justify-center text-fg-3 hover:text-foreground hover:bg-surface-3 transition-colors duration-[120ms]">
                   <MoreVertical className="w-[15px] h-[15px]" />
                 </button>
               </DropdownMenuTrigger>
@@ -104,6 +104,7 @@ export function Column({ status, label, color, projects, onCardClick, onAddCard,
             <button
               onClick={() => setShowForm(true)}
               className="w-7 h-7 rounded-md flex items-center justify-center text-fg-3 hover:text-foreground hover:bg-surface-3 transition-colors duration-[120ms]"
+              aria-label="Add a card"
               title="Add a card"
             >
               <Plus className="w-[15px] h-[15px]" />
@@ -118,10 +119,19 @@ export function Column({ status, label, color, projects, onCardClick, onAddCard,
           <div className="space-y-1.5 min-h-[60px]">
             {projects.length === 0 && !showForm ? (
               <div className={`flex flex-col items-center justify-center py-10 rounded-md text-center ${
-                isOver ? 'text-accent' : 'text-fg-4'
+                isOver ? 'text-accent bg-accent-soft/50' : 'text-fg-4'
               }`}>
-                <p className="text-[12px] font-medium">{isOver ? 'Drop here' : 'No projects'}</p>
-                {!isOver && <p className="text-[11px] mt-0.5">Drag a card or use +</p>}
+                {isOver ? (
+                  <p className="text-[12px] font-medium">Drop here</p>
+                ) : (
+                  <>
+                    <div className="w-9 h-9 rounded-lg bg-surface-3 flex items-center justify-center mb-2">
+                      <Plus className="w-4 h-4 text-fg-4" />
+                    </div>
+                    <p className="text-[12px] font-medium">No projects yet</p>
+                    <p className="text-[11px] mt-0.5">Drag a card here or click + to add one</p>
+                  </>
+                )}
               </div>
             ) : (
               projects.map((project) => (
@@ -160,6 +170,7 @@ export function Column({ status, label, color, projects, onCardClick, onAddCard,
                 </button>
                 <button
                   onClick={() => { setCardName(''); setShowForm(false); }}
+                  aria-label="Cancel adding card"
                   className="w-7 h-7 flex items-center justify-center rounded-md text-fg-3 hover:text-foreground hover:bg-surface-3 transition-colors duration-[120ms]"
                 >
                   <X className="w-4 h-4" />

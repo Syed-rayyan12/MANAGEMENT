@@ -76,6 +76,7 @@ export function Topbar({ onMenuToggle }: TopbarProps) {
         {onMenuToggle && (
           <button
             onClick={onMenuToggle}
+            aria-label="Toggle navigation menu"
             className="w-7 h-7 flex items-center justify-center rounded-md text-fg-2 hover:bg-surface-2 transition-colors duration-[120ms]"
           >
             <Menu className="w-[18px] h-[18px]" />
@@ -107,6 +108,7 @@ export function Topbar({ onMenuToggle }: TopbarProps) {
         {/* Theme toggle */}
         <button
           onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+          aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
           className="w-7 h-7 flex items-center justify-center rounded-md text-fg-3 hover:bg-surface-2 hover:text-foreground transition-colors duration-[120ms]"
         >
           {theme === 'dark' ? (
@@ -122,7 +124,7 @@ export function Topbar({ onMenuToggle }: TopbarProps) {
         {/* Profile Dropdown */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button className="ml-1 rounded-full focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-background">
+            <button aria-label="Open profile menu" className="ml-1 rounded-full focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-background">
               <Avatar className="w-7 h-7">
                 <AvatarImage src={state.currentUser.avatar} alt={state.currentUser.name} />
                 <AvatarFallback className="text-[11px] bg-accent-soft text-accent font-medium">
