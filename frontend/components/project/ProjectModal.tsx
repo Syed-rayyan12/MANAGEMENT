@@ -64,7 +64,6 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
   const [showCoverPhotoModal, setShowCoverPhotoModal] = useState(false);
   const [coverPhotoFile, setCoverPhotoFile] = useState<File | null>(null);
   const [descExpanded, setDescExpanded] = useState(false);
-  const [checklistExpanded, setChecklistExpanded] = useState(false);
   const [attachmentsExpanded, setAttachmentsExpanded] = useState(false);
   const [loadingDetails, setLoadingDetails] = useState(true);
   const coverPhotoInputRef = React.useRef<HTMLInputElement>(null);
@@ -699,31 +698,17 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
                     </div>
                   ) : (
                     <>
-                      <div className={`relative ${!checklistExpanded ? 'max-h-[200px] overflow-hidden' : ''}`}>
-                        <ChecklistSection project={project} />
-                        {!checklistExpanded && project.checklist && project.checklist.length > 3 && (
-                          <div className="absolute bottom-0 left-0 right-0 pt-8 bg-gradient-to-t from-background to-transparent flex justify-center pb-1">
-                            <button onClick={() => setChecklistExpanded(true)} className="text-[12px] text-accent hover:underline font-medium">
-                              Show all ({project.checklist.length} items)
-                            </button>
-                          </div>
-                        )}
-                        {checklistExpanded && project.checklist && project.checklist.length > 3 && (
-                          <button onClick={() => setChecklistExpanded(false)} className="text-[12px] text-accent hover:underline font-medium mt-1">
-                            Show less
-                          </button>
-                        )}
-                      </div>
-                      <div className={`relative ${!attachmentsExpanded ? 'max-h-[200px] overflow-hidden' : ''}`}>
+                      <ChecklistSection project={project} />
+                      <div className={`relative ${!attachmentsExpanded && project.attachments?.length > 3 ? 'max-h-[180px] overflow-hidden' : ''}`}>
                         <AttachmentsSection project={project} />
-                        {!attachmentsExpanded && project.attachments && project.attachments.length > 2 && (
+                        {!attachmentsExpanded && project.attachments && project.attachments.length > 3 && (
                           <div className="absolute bottom-0 left-0 right-0 pt-8 bg-gradient-to-t from-background to-transparent flex justify-center pb-1">
                             <button onClick={() => setAttachmentsExpanded(true)} className="text-[12px] text-accent hover:underline font-medium">
                               Show all ({project.attachments.length} files)
                             </button>
                           </div>
                         )}
-                        {attachmentsExpanded && project.attachments && project.attachments.length > 2 && (
+                        {attachmentsExpanded && project.attachments && project.attachments.length > 3 && (
                           <button onClick={() => setAttachmentsExpanded(false)} className="text-[12px] text-accent hover:underline font-medium mt-1">
                             Show less
                           </button>
