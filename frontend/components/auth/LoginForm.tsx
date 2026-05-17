@@ -48,6 +48,7 @@ export function LoginForm() {
         type: 'SET_USER',
         payload: {
           id: data.data.user.id,
+          username: data.data.user.username,
           name: data.data.user.name,
           email: data.data.user.email,
           role: data.data.user.role,

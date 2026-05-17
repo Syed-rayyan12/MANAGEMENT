@@ -127,6 +127,14 @@ async function main() {
   for (const u of userDefs) {
     const email = `${u.username}@company.com`;
 
+    // Delete any old user that holds this email under a different username
+    const emailConflict = await prisma.user.findUnique({ where: { email } });
+    if (emailConflict && emailConflict.username !== u.username) {
+      await prisma.teamMember.deleteMany({ where: { userId: emailConflict.id } });
+      await prisma.projectAssignment.deleteMany({ where: { userId: emailConflict.id } });
+      await prisma.user.delete({ where: { id: emailConflict.id } });
+    }
+
     const user = await prisma.user.upsert({
       where: { username: u.username },
       update: {
