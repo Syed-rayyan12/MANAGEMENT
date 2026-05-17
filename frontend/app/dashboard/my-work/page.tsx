@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useApp } from '@/contexts/useApp';
 import { useSearch } from '../layout';
 import { boardAPI } from '@/lib/api-service';
@@ -37,16 +38,23 @@ interface BoardOption {
 export default function MyWorkPage() {
   const { state, isLoading, getUserAvatar } = useApp();
   const { searchQuery } = useSearch();
+  const searchParams = useSearchParams();
+  const projectIdFromUrl = searchParams.get('project');
   const [filterPriority, setFilterPriority] = useState<string>('all');
   const [filterBoard, setFilterBoard] = useState<string>('all');
   const [sortBy, setSortBy] = useState<string>('date');
   const [boardOptions, setBoardOptions] = useState<BoardOption[]>([]);
   const [phaseMap, setPhaseMap] = useState<Record<string, string>>({});
   const [phaseMapLoading, setPhaseMapLoading] = useState(true);
-  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(projectIdFromUrl);
 
   const isMobile = useIsMobile();
   const currentUserId = state.currentUser?.id;
+
+  // Sync project from URL
+  useEffect(() => {
+    setSelectedProjectId(projectIdFromUrl);
+  }, [projectIdFromUrl]);
 
   // Fetch boards and phase map
   useEffect(() => {

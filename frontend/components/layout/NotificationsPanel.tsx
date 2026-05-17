@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { useRouter } from 'next/navigation';
 import { useApp } from '@/contexts/useApp';
 import { notificationAPI } from '@/lib/api-service';
 import {
@@ -94,6 +95,7 @@ const NOTIF_PAGE_SIZE = 15;
 
 export function NotificationsPanel() {
   const { state, dispatch } = useApp();
+  const router = useRouter();
   const [visibleCount, setVisibleCount] = React.useState(NOTIF_PAGE_SIZE);
 
   const unreadNotifications = state.notifications.filter((n) => !n.read);
@@ -109,6 +111,23 @@ export function NotificationsPanel() {
       await notificationAPI.markAsRead(notificationId);
     } catch (error) {
       console.error('Error marking notification as read:', error);
+    }
+  };
+
+  const handleNotificationClick = (notification: typeof sortedNotifications[0]) => {
+    if (!notification.read) {
+      handleMarkAsRead(notification.id);
+    }
+    if (notification.projectId) {
+      // Find the project in state to get its board slug
+      const project = state.projects.find(p => p.id === notification.projectId);
+      const boardSlug = project?.board?.slug;
+      if (boardSlug) {
+        router.push(`/dashboard/${boardSlug}?project=${notification.projectId}`);
+      } else {
+        // Fallback: open project via my-work
+        router.push(`/dashboard/my-work?project=${notification.projectId}`);
+      }
     }
   };
 
@@ -182,7 +201,7 @@ export function NotificationsPanel() {
                       ? 'bg-blue-50/60 dark:bg-blue-500/5'
                       : 'bg-white dark:bg-transparent'
                   }`}
-                  onClick={() => !notification.read && handleMarkAsRead(notification.id)}
+                  onClick={() => handleNotificationClick(notification)}
                 >
                   {/* Type icon pill */}
                   <div className={`mt-0.5 flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center ${cfg.bg} ${cfg.text}`}>
