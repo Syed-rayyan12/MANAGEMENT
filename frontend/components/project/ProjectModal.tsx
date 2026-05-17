@@ -954,7 +954,7 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
                       </div>
                     ) : (
                       <>
-                        <div className={`${!activityExpanded ? 'max-h-[180px]' : ''} overflow-hidden relative`}>
+                        <div className={`${!activityExpanded ? 'max-h-[180px] overflow-hidden' : ''} relative`}>
                           <ActivitySection project={project} compact />
                           {!activityExpanded && project.activityLog && project.activityLog.length > 4 && (
                             <div className="absolute bottom-0 left-0 right-0 pt-8 bg-gradient-to-t from-surface to-transparent" />
