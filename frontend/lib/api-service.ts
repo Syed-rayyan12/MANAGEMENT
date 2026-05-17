@@ -534,3 +534,21 @@ export const performanceAPI = {
     return await response.json();
   },
 };
+
+// Trello Import APIs
+export const trelloAPI = {
+  getBoards: async (apiKey: string, token: string) => {
+    const response = await apiFetch(
+      `${API_BASE_URL}/trello/boards?apiKey=${encodeURIComponent(apiKey)}&token=${encodeURIComponent(token)}`
+    );
+    return await response.json();
+  },
+
+  import: async (apiKey: string, token: string, trelloBoardId: string) => {
+    const response = await apiFetch(`${API_BASE_URL}/trello/import`, {
+      method: 'POST',
+      body: JSON.stringify({ apiKey, token, trelloBoardId }),
+    });
+    return await response.json();
+  },
+};
