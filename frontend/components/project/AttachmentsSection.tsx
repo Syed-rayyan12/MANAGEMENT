@@ -133,19 +133,18 @@ export function AttachmentsSection({ project }: AttachmentsSectionProps) {
     try {
       await projectAPI.removeAttachment(project.id, attachmentId);
       toast.success('Attachment removed');
+      dispatch({
+        type: 'REMOVE_ATTACHMENT',
+        payload: {
+          projectId: project.id,
+          attachmentId,
+          userId: state.currentUser?.id || '',
+        },
+      });
     } catch (error) {
       console.error('Error removing attachment:', error);
       toast.error('Failed to remove attachment');
     }
-
-    dispatch({
-      type: 'REMOVE_ATTACHMENT',
-      payload: {
-        projectId: project.id,
-        attachmentId,
-        userId: state.currentUser?.id || '',
-      },
-    });
   };
 
   const handleDownloadAttachment = async (attachment: typeof project.attachments[0]) => {

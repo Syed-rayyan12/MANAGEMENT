@@ -83,23 +83,21 @@ export function CommentsSection({ project }: CommentsSectionProps) {
       try {
         await projectAPI.updateComment(project.id, commentId, editCommentContent);
         toast.success('Comment updated');
+        dispatch({
+          type: 'UPDATE_COMMENT',
+          payload: {
+            projectId: project.id,
+            commentId,
+            content: editCommentContent,
+            userId: state.currentUser.id,
+          },
+        });
+        setEditingCommentId(null);
+        setEditCommentContent('');
       } catch (error) {
         console.error('Error updating comment:', error);
         toast.error('Failed to update comment');
       }
-
-      dispatch({
-        type: 'UPDATE_COMMENT',
-        payload: {
-          projectId: project.id,
-          commentId,
-          content: editCommentContent,
-          userId: state.currentUser.id,
-        },
-      });
-
-      setEditingCommentId(null);
-      setEditCommentContent('');
     }
   };
 

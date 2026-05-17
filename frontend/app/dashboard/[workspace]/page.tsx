@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter, useParams, useSearchParams } from 'next/navigation';
+import { toast } from 'sonner';
 import { Board } from '@/components/kanban/Board';
 import { CreateProjectModal } from '@/components/project/CreateProjectModal';
 import { Button } from '@/components/ui/button';
@@ -384,7 +385,7 @@ function AddColumnModal({ onClose, onAdd }: { onClose: () => void; onAdd: (name:
 
   const handleAddColumn = () => {
     if (!columnName.trim()) {
-      alert('Column name is required');
+      toast.error('Column name is required');
       return;
     }
     onAdd(columnName.trim(), columnColor, columnPhase);

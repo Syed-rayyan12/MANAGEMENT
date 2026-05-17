@@ -35,18 +35,18 @@ export async function createManyNotifications(items: {
   actorId?: string;
 }[]) {
   if (items.length === 0) return;
-  await prisma.notification.createMany({ data: items });
 
-  // Push each notification to the recipient via WebSocket
+  // Create individually so we get real IDs for socket push
   for (const item of items) {
+    const notification = await prisma.notification.create({ data: item });
     emitToUser(item.userId, 'notification:new', {
-      id: `temp-${Date.now()}-${Math.random()}`,
+      id: notification.id,
       userId: item.userId,
       type: item.type,
       message: item.message,
       projectId: item.projectId || '',
       read: false,
-      timestamp: new Date().toISOString(),
+      timestamp: notification.createdAt.toISOString(),
     });
   }
 }

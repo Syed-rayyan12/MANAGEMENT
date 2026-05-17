@@ -1,8 +1,10 @@
 'use client';
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useApp } from '@/contexts/useApp';
+import { useSocket } from '@/contexts/SocketContext';
+import { mapApiProject } from '@/contexts/AppContext';
 import { useSearch } from '../layout';
 import { boardAPI } from '@/lib/api-service';
 import { BoardSkeleton } from '@/components/ui/skeletons';
@@ -36,7 +38,8 @@ interface BoardOption {
 }
 
 export default function MyWorkPage() {
-  const { state, isLoading, getUserAvatar } = useApp();
+  const { state, dispatch, isLoading, getUserAvatar } = useApp();
+  const { socket } = useSocket();
   const { searchQuery } = useSearch();
   const searchParams = useSearchParams();
   const projectIdFromUrl = searchParams.get('project');
@@ -48,6 +51,7 @@ export default function MyWorkPage() {
   const [phaseMap, setPhaseMap] = useState<Record<string, string>>({});
   const [phaseMapLoading, setPhaseMapLoading] = useState(true);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(projectIdFromUrl);
+  const boardSlugsRef = useRef<string[]>([]);
 
   const isMobile = useIsMobile();
   const currentUserId = state.currentUser?.id;
@@ -66,12 +70,14 @@ export default function MyWorkPage() {
           boardAPI.getAllColumns(),
         ]);
         if (boardsResult.success) {
-          setBoardOptions(boardsResult.data.boards.map((b: any) => ({ id: b.id, name: b.name })));
+          const boards = boardsResult.data.boards;
+          setBoardOptions(boards.map((b: any) => ({ id: b.id, name: b.name })));
+          boardSlugsRef.current = boards.map((b: any) => b.slug);
           const colsMap: Record<string, { status: string; label: string; color: string; phase?: string }[]> = {};
-          for (const b of boardsResult.data.boards) {
+          for (const b of boards) {
             if (b.columns) {
               colsMap[b.id] = b.columns
-                .sort((a: any, b: any) => a.position - b.position)
+                .sort((a: any, bb: any) => a.position - bb.position)
                 .map((c: any) => ({ status: c.key, label: c.name, color: c.color, phase: c.phase || 'NOT_STARTED' }));
             }
           }
@@ -88,6 +94,61 @@ export default function MyWorkPage() {
     };
     fetchData();
   }, []);
+
+  // Join all board rooms for real-time updates
+  useEffect(() => {
+    if (!socket || boardSlugsRef.current.length === 0) return;
+    const slugs = boardSlugsRef.current;
+    slugs.forEach(slug => socket.emit('join:board', slug));
+    return () => {
+      slugs.forEach(slug => socket.emit('leave:board', slug));
+    };
+  }, [socket, boardOptions]); // boardOptions changes when boards are fetched
+
+  // Real-time socket listeners
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleProjectCreated = (data: any) => {
+      const project = mapApiProject(data);
+      const exists = state.projects.some(p => p.id === project.id);
+      if (!exists) {
+        dispatch({ type: 'CREATE_PROJECT', payload: { project, userId: '' } });
+      }
+    };
+
+    const handleProjectUpdated = (data: any) => {
+      const incoming = mapApiProject(data);
+      const existing = state.projects.find(p => p.id === incoming.id);
+      if (existing) {
+        const hasDetailedComments = incoming.comments.length > 0 && incoming.comments[0]?.content !== undefined;
+        const hasDetailedAttachments = incoming.attachments.length > 0 && incoming.attachments[0]?.filename !== undefined;
+        const merged = {
+          ...incoming,
+          comments: hasDetailedComments ? incoming.comments : existing.comments,
+          attachments: hasDetailedAttachments ? incoming.attachments : existing.attachments,
+          activityLog: incoming.activityLog.length > 0 ? incoming.activityLog : existing.activityLog,
+        };
+        dispatch({ type: 'UPDATE_PROJECT', payload: merged });
+      } else {
+        dispatch({ type: 'UPDATE_PROJECT', payload: incoming });
+      }
+    };
+
+    const handleProjectDeleted = (data: { projectId: string }) => {
+      dispatch({ type: 'DELETE_PROJECT', payload: { projectId: data.projectId, userId: '' } });
+    };
+
+    socket.on('project:created', handleProjectCreated);
+    socket.on('project:updated', handleProjectUpdated);
+    socket.on('project:deleted', handleProjectDeleted);
+
+    return () => {
+      socket.off('project:created', handleProjectCreated);
+      socket.off('project:updated', handleProjectUpdated);
+      socket.off('project:deleted', handleProjectDeleted);
+    };
+  }, [socket, state.projects, dispatch]);
 
   // Get projects assigned to me
   const myProjects = useMemo(() => {

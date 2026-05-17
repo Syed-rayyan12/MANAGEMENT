@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, createContext, useContext } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { useApp } from '@/contexts/useApp';
 import { Topbar } from '@/components/layout/Topbar';
 import { Sidebar } from '@/components/layout/Sidebar';
@@ -27,6 +27,7 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
   const { state, dispatch } = useApp();
   const [searchQuery, setSearchQuery] = useState('');
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
@@ -36,7 +37,7 @@ export default function DashboardLayout({
   // Close mobile menu on route change
   useEffect(() => {
     setMobileMenuOpen(false);
-  }, []);
+  }, [pathname]);
 
   useEffect(() => {
     const checkAuth = async () => {

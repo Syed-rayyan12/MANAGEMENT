@@ -548,7 +548,7 @@ export const addComment = async (req: Request, res: Response): Promise<void> => 
     }
 
     const project = await prisma.project.findUnique({ where: { id } });
-    if (!project) { res.status(404).json({ success: false, message: 'Project not found' }); return; }
+    if (!project || project.deletedAt) { res.status(404).json({ success: false, message: 'Project not found' }); return; }
 
     const comment = await prisma.comment.create({
       data: { content, projectId: id, userId: req.user!.id },
@@ -626,6 +626,13 @@ export const updateComment = async (req: Request, res: Response): Promise<void> 
     const { commentId } = req.params;
     const { content } = req.body;
 
+    const existing = await prisma.comment.findUnique({ where: { id: commentId } });
+    if (!existing) { res.status(404).json({ success: false, message: 'Comment not found' }); return; }
+    if (existing.userId !== req.user?.id) {
+      res.status(403).json({ success: false, message: 'You can only edit your own comments' });
+      return;
+    }
+
     const comment = await prisma.comment.update({
       where: { id: commentId },
       data: { content },
@@ -642,6 +649,14 @@ export const updateComment = async (req: Request, res: Response): Promise<void> 
 export const deleteComment = async (req: Request, res: Response): Promise<void> => {
   try {
     const { commentId } = req.params;
+
+    const existing = await prisma.comment.findUnique({ where: { id: commentId } });
+    if (!existing) { res.status(404).json({ success: false, message: 'Comment not found' }); return; }
+    if (existing.userId !== req.user?.id) {
+      res.status(403).json({ success: false, message: 'You can only delete your own comments' });
+      return;
+    }
+
     await prisma.comment.delete({ where: { id: commentId } });
     res.status(200).json({ success: true, message: 'Comment deleted' });
   } catch (error) {
@@ -658,7 +673,7 @@ export const updateChecklist = async (req: Request, res: Response): Promise<void
     const { items } = req.body; // Array of { id?, title, completed, position }
 
     const project = await prisma.project.findUnique({ where: { id } });
-    if (!project) { res.status(404).json({ success: false, message: 'Project not found' }); return; }
+    if (!project || project.deletedAt) { res.status(404).json({ success: false, message: 'Project not found' }); return; }
 
     // Delete existing and recreate (simple upsert pattern)
     await prisma.checklistItem.deleteMany({ where: { projectId: id } });
@@ -787,6 +802,9 @@ export const addAttachment = async (req: Request, res: Response): Promise<void> 
       res.status(400).json({ success: false, message: 'filename and url are required' });
       return;
     }
+
+    const project = await prisma.project.findUnique({ where: { id } });
+    if (!project || project.deletedAt) { res.status(404).json({ success: false, message: 'Project not found' }); return; }
 
     const attachment = await prisma.attachment.create({
       data: { filename, url, key, type: type || 'image', size, projectId: id },

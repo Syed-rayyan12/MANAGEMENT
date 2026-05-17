@@ -51,6 +51,7 @@ export function CreateProjectModal({ onClose, initialStatus, initialBoard, board
   const [selectedClientId, setSelectedClientId] = useState<string>('');
   const [showNewClientInput, setShowNewClientInput] = useState(false);
   const [newClientName, setNewClientName] = useState('');
+  const [creating, setCreating] = useState(false);
 
   const isMobile = useIsMobile();
   const allUsers = getAllUsers();
@@ -63,11 +64,13 @@ export function CreateProjectModal({ onClose, initialStatus, initialBoard, board
 
   const handleCreate = async () => {
     if (!name.trim()) {
-      alert('Project name is required');
+      toast.error('Project name is required');
       return;
     }
 
     if (!state.currentUser || !initialBoard) return;
+    if (creating) return;
+    setCreating(true);
 
     try {
       const token = localStorage.getItem('token');
@@ -169,6 +172,8 @@ export function CreateProjectModal({ onClose, initialStatus, initialBoard, board
     } catch (error) {
       console.error('Error creating project:', error);
       toast.error('Failed to create project. Please try again.');
+    } finally {
+      setCreating(false);
     }
   };
 
@@ -392,8 +397,8 @@ export function CreateProjectModal({ onClose, initialStatus, initialBoard, board
 
           {/* Action Buttons */}
           <div className={`flex gap-2 pt-4 ${isMobile ? 'sticky bottom-0 bg-surface/80 backdrop-blur-md pb-4 -mx-6 px-6' : ''}`}>
-            <Button onClick={handleCreate} variant="accent" className="flex-1">
-              Create Project
+            <Button onClick={handleCreate} variant="accent" className="flex-1" disabled={creating}>
+              {creating ? 'Creating...' : 'Create Project'}
             </Button>
             <Button onClick={onClose} variant="outline" className="flex-1 rounded-lg text-fg-2 border-border hover:bg-surface-2">
               Cancel

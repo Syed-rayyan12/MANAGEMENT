@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { toast } from 'sonner';
 import { trashAPI } from '@/lib/api-service';
 import { TrashData } from '@/lib/types';
 import { Button } from '@/components/ui/button';
@@ -36,7 +37,7 @@ export default function TrashPage() {
       if (result.success) {
         await fetchTrash();
       } else {
-        alert(result.message || 'Failed to restore');
+        toast.error(result.message || 'Failed to restore');
       }
     } catch (error) {
       console.error('Restore error:', error);

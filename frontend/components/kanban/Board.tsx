@@ -307,6 +307,8 @@ export function Board({ searchQuery = '', filterPriority = 'all', filterAssignee
 
     const toastId = `move-${projectId}`;
     const targetLabel = allColumns.find(c => c.status === newStatus)?.label || newStatus;
+    // Capture updatedAt now, not in the timeout (avoids stale closure)
+    const lastUpdatedAt = project.updatedAt instanceof Date ? project.updatedAt.toISOString() : project.updatedAt;
     toast.dismiss(toastId);
     toast.info(`Moving card to "${targetLabel}" — saving in a moment...`, {
       id: toastId,
@@ -319,7 +321,6 @@ export function Board({ searchQuery = '', filterPriority = 'all', filterAssignee
 
       try {
         const token = localStorage.getItem('token');
-        const projectForSave = state.projects.find(p => p.id === projectId);
         const response = await fetch(`${API_BASE_URL}/projects/${projectId}`, {
           method: 'PUT',
           headers: {
@@ -329,7 +330,7 @@ export function Board({ searchQuery = '', filterPriority = 'all', filterAssignee
           },
           body: JSON.stringify({
             status: newStatus,
-            lastUpdatedAt: projectForSave?.updatedAt?.toISOString(),
+            lastUpdatedAt,
           }),
         });
 

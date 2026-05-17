@@ -225,3 +225,42 @@ export const addBoardColumn = async (req: Request, res: Response): Promise<void>
     res.status(500).json({ success: false, message: 'Internal server error' });
   }
 };
+
+/**
+ * Update a column (name, color, phase)
+ * PUT /api/boards/:boardId/columns/:columnId
+ */
+export const updateBoardColumn = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { boardId, columnId } = req.params;
+    const { name, color, phase } = req.body;
+
+    const column = await prisma.boardColumn.findFirst({
+      where: { id: columnId, boardId, deletedAt: null },
+    });
+    if (!column) {
+      res.status(404).json({ success: false, message: 'Column not found' });
+      return;
+    }
+
+    const data: any = {};
+    if (name && name.trim()) {
+      data.name = name.trim();
+      data.key = name.trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+    }
+    if (color) data.color = color;
+    if (phase && ['NOT_STARTED', 'IN_PROGRESS', 'DONE', 'ON_HOLD'].includes(phase)) {
+      data.phase = phase;
+    }
+
+    const updated = await prisma.boardColumn.update({
+      where: { id: columnId },
+      data,
+    });
+
+    res.status(200).json({ success: true, message: 'Column updated', data: { column: updated } });
+  } catch (error) {
+    console.error('Update board column error:', error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+};

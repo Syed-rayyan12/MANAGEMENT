@@ -44,7 +44,7 @@ export async function getPresignedUrl(req: Request, res: Response): Promise<void
     }
 
     if (fileSize > MAX_FILE_SIZE) {
-      res.status(400).json({ success: false, message: 'File too large. Max size is 10 MB' });
+      res.status(400).json({ success: false, message: 'File too large. Max size is 25 MB' });
       return;
     }
 
@@ -78,6 +78,13 @@ export async function deleteUpload(req: Request, res: Response): Promise<void> {
 
     if (!key) {
       res.status(400).json({ success: false, message: 'key is required' });
+      return;
+    }
+
+    // Verify the caller has access — the key must belong to an attachment on a project they're assigned to,
+    // or be a project cover image. Allow PM/TL/PRODUCTION roles to delete any file.
+    if (req.user && !['PM', 'TL', 'PRODUCTION'].includes(req.user.role)) {
+      res.status(403).json({ success: false, message: 'Insufficient permissions to delete files' });
       return;
     }
 

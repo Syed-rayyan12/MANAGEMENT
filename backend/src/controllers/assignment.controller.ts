@@ -8,9 +8,9 @@ export const addAssignment = async (req: Request, res: Response): Promise<void> 
     const projectId = req.params.id || req.params.projectId;
     const { userId, role } = req.body;
 
-    // Verify project exists
+    // Verify project exists and isn't deleted
     const project = await prisma.project.findUnique({ where: { id: projectId } });
-    if (!project) {
+    if (!project || project.deletedAt) {
       res.status(404).json({ success: false, message: 'Project not found' });
       return;
     }

@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getAllBoards, getBoardBySlug, getBoardColumns, createBoard, addBoardColumn, getAllBoardColumns } from '../controllers/board.controller';
+import { getAllBoards, getBoardBySlug, getBoardColumns, createBoard, addBoardColumn, updateBoardColumn, getAllBoardColumns } from '../controllers/board.controller';
 import { authenticate, authorizeRoles } from '../middlewares/auth.middleware';
 import { softDeleteBoard, softDeleteColumn } from '../controllers/trash.controller';
 
@@ -21,6 +21,9 @@ router.get('/:boardId/columns', getBoardColumns);
 
 // Add a column to a board
 router.post('/:boardId/columns', addBoardColumn);
+
+// Update a column
+router.put('/:boardId/columns/:columnId', updateBoardColumn);
 
 // Soft-delete a board
 router.post('/:boardId/soft-delete', authorizeRoles('PM', 'PRODUCTION'), softDeleteBoard);
