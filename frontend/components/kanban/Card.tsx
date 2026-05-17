@@ -207,6 +207,13 @@ export function ProjectCard({ project, onCardClick }: ProjectCardProps) {
         isOverdue ? 'border-status-red/40' : ''
       }`}
     >
+      {/* Cover image */}
+      {project.image && (
+        <div onClick={handleClick} className="w-full h-[100px] overflow-hidden">
+          <img src={project.image} alt="" className="w-full h-full object-cover" />
+        </div>
+      )}
+
       {/* Clickable Content */}
       <div onClick={handleClick} className="p-[10px] space-y-2">
         {/* Top row: ID + Priority bars */}

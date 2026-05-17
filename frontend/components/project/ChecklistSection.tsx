@@ -11,13 +11,14 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Progress } from '@/components/ui/progress';
 import { Plus, X, CheckSquare } from 'lucide-react';
+import { format } from 'date-fns';
 
 interface ChecklistSectionProps {
   project: Project;
 }
 
 export function ChecklistSection({ project }: ChecklistSectionProps) {
-  const { state, dispatch } = useApp();
+  const { state, dispatch, getUserName } = useApp();
   const [newCheckItemTitle, setNewCheckItemTitle] = useState('');
   const [showAddCheckItem, setShowAddCheckItem] = useState(false);
 
@@ -33,6 +34,8 @@ export function ChecklistSection({ project }: ChecklistSectionProps) {
           title: item.title,
           completed: item.completed,
           position: idx,
+          createdBy: item.createdBy || undefined,
+          createdAt: item.createdAt || undefined,
         }))
       );
     } catch (error) {
@@ -47,6 +50,8 @@ export function ChecklistSection({ project }: ChecklistSectionProps) {
       id: `temp_${Date.now()}`,
       title: newCheckItemTitle.trim(),
       completed: false,
+      createdBy: state.currentUser?.id || '',
+      createdAt: new Date(),
     };
     const updatedChecklist = [...project.checklist, newItem];
 
@@ -100,11 +105,11 @@ export function ChecklistSection({ project }: ChecklistSectionProps) {
   return (
     <div>
       <div className="flex items-center justify-between mb-2">
-        <Label className="text-sm font-semibold dark:text-orange-400 flex items-center gap-2">
+        <Label className="text-sm font-semibold text-foreground flex items-center gap-2">
           <CheckSquare className="w-4 h-4" />
           Checklist
           {project.checklist.length > 0 && (
-            <span className="text-xs text-gray-500 dark:text-gray-400">
+            <span className="text-xs text-fg-3">
               ({project.checklist.filter(i => i.completed).length}/{project.checklist.length})
             </span>
           )}
@@ -123,7 +128,7 @@ export function ChecklistSection({ project }: ChecklistSectionProps) {
         <div className="mb-3">
           <div className="flex items-center gap-2 mb-1">
             <Progress value={checklistProgress} className="flex-1 h-2" />
-            <span className="text-xs font-medium text-gray-500 dark:text-orange-400 min-w-[36px] text-right">
+            <span className="text-xs font-medium text-fg-3 min-w-[36px] text-right">
               {checklistProgress}%
             </span>
           </div>
@@ -134,16 +139,32 @@ export function ChecklistSection({ project }: ChecklistSectionProps) {
         {project.checklist.map((item) => (
           <div
             key={item.id}
-            className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-[#232938] group transition-colors"
+            className="flex items-center gap-2 p-2 rounded-lg hover:bg-surface-2 group transition-colors"
           >
             <Checkbox
               checked={item.completed}
               onCheckedChange={() => handleToggleCheckItem(item.id)}
               className="data-[state=checked]:bg-accent data-[state=checked]:border-accent"
             />
-            <span className={`flex-1 text-sm ${item.completed ? 'line-through text-gray-400 dark:text-gray-500' : 'text-gray-700 dark:text-gray-300'}`}>
-              {item.title}
-            </span>
+            <div className="flex-1 min-w-0">
+              <span className={`text-sm ${item.completed ? 'line-through text-fg-4' : 'text-foreground'}`}>
+                {item.title}
+              </span>
+              {(item.createdBy || item.createdAt) && (
+                <div className="flex items-center gap-1.5 mt-0.5">
+                  {item.createdBy && (
+                    <span className="w-4 h-4 rounded-full bg-accent-soft text-accent text-[8px] font-bold flex items-center justify-center flex-shrink-0">
+                      {getUserName(item.createdBy)[0]}
+                    </span>
+                  )}
+                  {item.createdAt && (
+                    <span className="text-[10px] text-fg-4">
+                      {format(new Date(item.createdAt), 'MMM d')}
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
             <Button
               variant="ghost"
               size="sm"
@@ -157,7 +178,7 @@ export function ChecklistSection({ project }: ChecklistSectionProps) {
       </div>
 
       {project.checklist.length === 0 && !showAddCheckItem && (
-        <div className="text-center py-6 text-gray-400 dark:text-gray-500">
+        <div className="text-center py-6 text-fg-4">
           <CheckSquare className="w-8 h-8 mx-auto mb-2 opacity-50" />
           <p className="text-sm">No checklist items</p>
           <p className="text-xs mt-1">Break down this project into smaller tasks</p>

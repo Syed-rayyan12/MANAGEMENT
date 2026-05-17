@@ -651,6 +651,8 @@ export const updateChecklist = async (req: Request, res: Response): Promise<void
           completed: item.completed || false,
           position: item.position ?? index,
           projectId: id,
+          createdBy: item.createdBy || req.user?.id || null,
+          createdAt: item.createdAt ? new Date(item.createdAt) : new Date(),
         })),
       });
     }

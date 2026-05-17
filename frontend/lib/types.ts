@@ -58,6 +58,8 @@ export interface ChecklistItem {
   id: string;
   title: string;
   completed: boolean;
+  createdBy?: string;
+  createdAt?: Date;
 }
 
 export interface Comment {

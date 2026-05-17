@@ -574,6 +574,28 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
               )}
             </div>
 
+            {/* Cover banner */}
+            {project.image ? (
+              <div className="relative w-full h-[160px] flex-shrink-0 group/banner">
+                <img src={project.image} alt="" className="w-full h-full object-cover" />
+                {!isReadOnly && (
+                  <button
+                    onClick={() => setShowCoverPhotoModal(true)}
+                    className="absolute bottom-3 right-3 px-2.5 py-1.5 rounded-md text-[11px] font-medium bg-black/60 text-white backdrop-blur-sm opacity-0 group-hover/banner:opacity-100 transition-opacity"
+                  >
+                    Change cover
+                  </button>
+                )}
+              </div>
+            ) : !isReadOnly ? (
+              <button
+                onClick={() => setShowCoverPhotoModal(true)}
+                className="w-full py-2 text-[12px] text-fg-4 hover:text-fg-2 hover:bg-surface-2 transition-colors flex-shrink-0 flex items-center justify-center gap-1.5 border-b border-border"
+              >
+                <ImageIcon className="w-3.5 h-3.5" /> Add cover
+              </button>
+            ) : null}
+
             {/* Body: 2-col — Main (left) + Side (right) */}
             <div className="flex-1 overflow-auto p-6">
               <div className="flex gap-6">
