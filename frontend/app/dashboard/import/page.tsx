@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { useApp } from '@/contexts/useApp';
-import { trelloAPI } from '@/lib/api-service';
+import { trelloAPI, projectAPI } from '@/lib/api-service';
+import { mapApiProject } from '@/contexts/AppContext';
 import { useRouter } from 'next/navigation';
 import {
   Upload,
@@ -32,7 +33,7 @@ interface ImportResult {
 }
 
 export default function TrelloImportPage() {
-  const { state } = useApp();
+  const { state, dispatch } = useApp();
   const router = useRouter();
 
   const [apiKey, setApiKey] = useState('');
@@ -98,6 +99,14 @@ export default function TrelloImportPage() {
         return;
       }
       setResult(res.data);
+
+      // Refresh projects in global state so workspaces show imported projects
+      if (res.data.imported > 0) {
+        const projectsRes = await projectAPI.getAll();
+        if (projectsRes.success) {
+          dispatch({ type: 'SET_PROJECTS', payload: projectsRes.data.projects.map(mapApiProject) });
+        }
+      }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Import failed.');
     } finally {
