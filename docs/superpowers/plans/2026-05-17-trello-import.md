@@ -1016,7 +1016,7 @@ Expected: Server starts on port 5000 without errors.
 - [ ] **Step 2: Test Trello boards endpoint**
 
 ```bash
-curl "http://localhost:5000/api/trello/boards?apiKey=c757e200e5358a6b5d6896866257b839&token=ATTA116f59e3afa76c26fb989716996797ee1360c8a3eb5745f4d03733e3451a88dc69706199" -H "Authorization: Bearer <token_for_prod.tahiranwar>"
+curl "http://localhost:5000/api/trello/boards?apiKey=<YOUR_TRELLO_API_KEY>&token=<YOUR_TRELLO_TOKEN>" -H "Authorization: Bearer <token_for_prod.tahiranwar>"
 ```
 
 Expected: Returns list of Trello boards.
@@ -1027,7 +1027,7 @@ Expected: Returns list of Trello boards.
 curl -X POST "http://localhost:5000/api/trello/import" \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer <token_for_prod.tahiranwar>" \
-  -d '{"apiKey":"c757e200e5358a6b5d6896866257b839","token":"ATTA116f59e3afa76c26fb989716996797ee1360c8a3eb5745f4d03733e3451a88dc69706199","trelloBoardId":"68b5c57d2b03da555a9762cf"}'
+  -d '{"apiKey":"<YOUR_TRELLO_API_KEY>","token":"<YOUR_TRELLO_TOKEN>","trelloBoardId":"<YOUR_TRELLO_BOARD_ID>"}'
 ```
 
 Expected: Returns import summary with imported/skipped/failed counts.
