@@ -146,7 +146,7 @@ export const importFromTrello = async (req: Request, res: Response): Promise<voi
       return;
     }
 
-    const boardData = await response.json();
+    const boardData: any = await response.json();
 
     // Build list ID → list name map
     const listMap = new Map<string, string>();

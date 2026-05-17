@@ -23,6 +23,7 @@ export interface AuthResponse {
   data?: {
     user: {
       id: string;
+      username: string;
       email: string;
       role: string;
       name: string;
