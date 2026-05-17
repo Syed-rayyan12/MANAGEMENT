@@ -158,7 +158,7 @@ export const importFromTrello = async (req: Request, res: Response): Promise<voi
     const commentsResponse = await fetch(
       `https://api.trello.com/1/boards/${trelloBoardId}/actions?filter=commentCard&limit=1000&key=${apiKey}&token=${token}`
     );
-    const trelloComments: any[] = commentsResponse.ok ? await commentsResponse.json() : [];
+    const trelloComments: any[] = commentsResponse.ok ? (await commentsResponse.json()) as any[] : [];
 
     // Group comments by card ID
     const commentsByCard = new Map<string, { text: string; memberName: string; date: string }[]>();
