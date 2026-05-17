@@ -52,7 +52,14 @@
       "Bash(cd:*)",
       "Bash(grep -o '\"\"cmdk\"\"[^,]*' package.json)",
       "Bash(taskkill //F //IM \"node.exe\")",
-      "Bash(pkill -f \"next dev\")"
+      "Bash(pkill -f \"next dev\")",
+      "Bash(python -m json.tool)",
+      "Bash(find ./backend/src -type f -name *.ts)",
+      "Bash(\"F:/downloads-new/MANAGEMENT-main/MANAGEMENT-main/backend/prisma/migrations/20260517060000_add_trello_card_id/migration.sql\":*)",
+      "Bash(sed -n '128,135p' frontend/lib/types.ts)",
+      "Bash(sed -n '211,217p' frontend/lib/types.ts)",
+      "Bash(sed -n '255,261p' frontend/lib/types.ts)",
+      "Bash(sed -n '277,283p' frontend/lib/types.ts)"
     ]
   }
 }
