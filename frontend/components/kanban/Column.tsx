@@ -26,9 +26,10 @@ interface ColumnProps {
   onCardClick: (projectId: string) => void;
   onAddCard?: (name: string, status: string) => Promise<void>;
   onDeleteColumn?: (status: string, label: string, projectCount: number) => void;
+  boardColumns?: { status: string; label: string; color: string; phase?: string }[];
 }
 
-export function Column({ status, label, color, projects, onCardClick, onAddCard, onDeleteColumn }: ColumnProps) {
+export function Column({ status, label, color, projects, onCardClick, onAddCard, onDeleteColumn, boardColumns }: ColumnProps) {
   const { setNodeRef, isOver } = useDroppable({ id: status });
   const { canCreateProject, canSoftDelete } = usePermissions();
   const isMobile = useIsMobile();
@@ -139,6 +140,7 @@ export function Column({ status, label, color, projects, onCardClick, onAddCard,
                   key={project.id}
                   project={project}
                   onCardClick={onCardClick}
+                  boardColumns={boardColumns}
                 />
               ))
             )}

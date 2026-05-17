@@ -8,7 +8,7 @@ import { Card } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useApp } from '@/contexts/useApp';
-import { PRIORITY_STYLES, DEFAULT_KANBAN_COLUMNS } from '@/lib/constants';
+import { PRIORITY_STYLES } from '@/lib/constants';
 import { API_BASE_URL, assignmentAPI } from '@/lib/api-service';
 import { toast } from 'sonner';
 import { Calendar, MessageSquare, Paperclip, X, Pencil } from 'lucide-react';
@@ -21,9 +21,10 @@ import { AvatarStack } from '@/components/shared/AvatarStack';
 interface ProjectCardProps {
   project: Project;
   onCardClick: (projectId: string) => void;
+  boardColumns?: { status: string; label: string; color: string; phase?: string }[];
 }
 
-export function ProjectCard({ project, onCardClick }: ProjectCardProps) {
+export function ProjectCard({ project, onCardClick, boardColumns = [] }: ProjectCardProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: project.id,
   });
@@ -42,7 +43,8 @@ export function ProjectCard({ project, onCardClick }: ProjectCardProps) {
     opacity: isDragging ? 0.4 : 1,
   };
 
-  const isOverdue = project.dueDate && new Date(project.dueDate) < new Date() && project.status !== 'completed';
+  const currentPhase = boardColumns.find(col => col.status === project.status)?.phase;
+  const isOverdue = project.dueDate && new Date(project.dueDate) < new Date() && currentPhase !== 'DONE';
   const checklistTotal = project.checklist.length;
   const checklistDone = project.checklist.filter(i => i.completed).length;
 
@@ -375,7 +377,7 @@ export function ProjectCard({ project, onCardClick }: ProjectCardProps) {
             <div>
               <label className="text-kicker uppercase text-fg-4">Move to</label>
               <div className="grid grid-cols-2 gap-1 mt-1">
-                {DEFAULT_KANBAN_COLUMNS.map((col) => (
+                {boardColumns.map((col) => (
                   <button
                     key={col.status}
                     onClick={() => handleQuickStatus(col.status)}

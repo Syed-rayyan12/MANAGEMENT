@@ -30,12 +30,13 @@ export const getKPIs = async (_req: Request, res: Response): Promise<void> => {
         _sum: { amount: true },
         where: { status: 'PAID', paidAt: { gte: startOfMonth } },
       }),
-      prisma.project.count(),
-      prisma.project.count({ where: { status: { notIn: ['completed', 'live'] } } }),
-      prisma.project.count({ where: { status: 'completed' } }),
-      prisma.project.count({ where: { status: 'live' } }),
+      prisma.project.count({ where: { deletedAt: null } }),
+      prisma.project.count({ where: { deletedAt: null, status: { notIn: ['completed', 'live'] } } }),
+      prisma.project.count({ where: { deletedAt: null, status: 'completed' } }),
+      prisma.project.count({ where: { deletedAt: null, status: 'live' } }),
       prisma.board.findMany({
-        include: { _count: { select: { projects: true } } },
+        where: { deletedAt: null },
+        include: { _count: { select: { projects: { where: { deletedAt: null } } } } },
       }),
       prisma.team.findMany({
         include: {

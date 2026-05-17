@@ -32,7 +32,7 @@ import {
 } from '@/components/ui/select';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { X, AlertCircle, MessageSquare, Paperclip, Check, Trash2, Upload, Image as ImageIcon, Activity, Loader2, Copy } from 'lucide-react';
-import { PRIORITY_STYLES, KANBAN_COLUMNS } from '@/lib/constants';
+import { PRIORITY_STYLES } from '@/lib/constants';
 import { format } from 'date-fns';
 import { linkifyText } from '@/lib/utils';
 
@@ -44,9 +44,10 @@ import { ActivitySection } from './ActivitySection';
 interface ProjectModalProps {
   project: Project;
   onClose: () => void;
+  boardColumns?: { status: string; label: string; color: string; phase?: string }[];
 }
 
-export function ProjectModal({ project, onClose }: ProjectModalProps) {
+export function ProjectModal({ project, onClose, boardColumns = [] }: ProjectModalProps) {
   const { state, dispatch, getUserName, getAllUsers } = useApp();
   const { canDeleteProject, canChangePriority, isReadOnly } = usePermissions();
   const isMobile = useIsMobile();
@@ -409,19 +410,35 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
     }
   };
 
-  const handleRemoveCoverPhoto = () => {
-    dispatch({
-      type: 'UPDATE_IMAGE',
-      payload: {
-        projectId: project.id,
-        image: null,
-        userId: state.currentUser?.id || '',
-      },
-    });
+  const handleRemoveCoverPhoto = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_BASE_URL}/projects/${project.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ image: null }),
+      });
+      const result = await response.json();
+      if (result.success) {
+        dispatch({
+          type: 'UPDATE_IMAGE',
+          payload: {
+            projectId: project.id,
+            image: null,
+            userId: state.currentUser?.id || '',
+          },
+        });
+      } else {
+        toast.error('Failed to remove cover photo');
+      }
+    } catch {
+      toast.error('Failed to remove cover photo');
+    }
     setShowCoverPhotoModal(false);
   };
 
-  const isCompleted = project.status.includes('completed') || project.status.includes('done');
+  const currentColumnPhase = boardColumns.find(col => col.status === project.status)?.phase;
+  const isCompleted = currentColumnPhase === 'DONE';
   const isOverdue = project.dueDate && new Date(project.dueDate) < new Date() && !isCompleted;
 
   const handleCopyLink = () => {
@@ -593,7 +610,7 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {KANBAN_COLUMNS.map((col) => (
+                      {boardColumns.map((col) => (
                         <SelectItem key={col.status} value={col.status}>{col.label}</SelectItem>
                       ))}
                     </SelectContent>
@@ -723,7 +740,7 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {KANBAN_COLUMNS.map((col) => (
+                        {boardColumns.map((col) => (
                           <SelectItem key={col.status} value={col.status}>{col.label}</SelectItem>
                         ))}
                       </SelectContent>
@@ -848,7 +865,7 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            {KANBAN_COLUMNS.map((col) => (
+                            {boardColumns.map((col) => (
                               <SelectItem key={col.status} value={col.status}>{col.label}</SelectItem>
                             ))}
                           </SelectContent>

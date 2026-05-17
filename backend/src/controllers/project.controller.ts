@@ -383,7 +383,8 @@ export const updateProject = async (req: Request, res: Response): Promise<void> 
 
         // Status change notification
         if (updateData.status && updateData.status !== existing.status) {
-          const isCompleted = updateData.status === 'completed';
+          const newCol = await prisma.boardColumn.findFirst({ where: { boardId: existing.boardId, key: updateData.status, deletedAt: null } });
+          const isCompleted = newCol?.phase === 'DONE';
           const statusItems = recipients.map((uid) => ({
             type: isCompleted ? 'completed' : 'status',
             message: isCompleted
@@ -489,6 +490,12 @@ export const deleteProject = async (req: Request, res: Response): Promise<void> 
       return;
     }
 
+    // Query assignments BEFORE delete (cascade will remove them)
+    const assignedUserIds = await prisma.projectAssignment.findMany({
+      where: { projectId: id },
+      select: { userId: true },
+    });
+
     await prisma.project.delete({ where: { id } });
 
     if (req.user) {
@@ -497,10 +504,6 @@ export const deleteProject = async (req: Request, res: Response): Promise<void> 
       });
 
       const actorName = (await prisma.user.findUnique({ where: { id: req.user.id }, select: { name: true } }))?.name || 'Someone';
-      const assignedUserIds = await prisma.projectAssignment.findMany({
-        where: { projectId: id },
-        select: { userId: true },
-      });
       const recipients = assignedUserIds.map(a => a.userId).filter(uid => uid !== req.user!.id);
       const deleteItems = recipients.map((uid) => ({
         type: 'deleted',
@@ -868,7 +871,6 @@ export const reorderProjects = async (req: Request, res: Response): Promise<void
       orderedIds.map((item: { id: string; position: number; status?: string }) => {
         const data: any = { position: item.position };
         if (item.status) {
-          // Status is now a string matching board column keys — pass through directly
           data.status = item.status;
         }
         return prisma.project.update({
@@ -877,6 +879,27 @@ export const reorderProjects = async (req: Request, res: Response): Promise<void
         });
       })
     );
+
+    // Handle assignment auto-complete/reactivation for status changes
+    const statusChanges = orderedIds.filter((item: any) => item.status && item.previousStatus && item.status !== item.previousStatus);
+    for (const item of statusChanges) {
+      const [oldCol, newCol] = await Promise.all([
+        prisma.boardColumn.findFirst({ where: { key: item.previousStatus, deletedAt: null } }),
+        prisma.boardColumn.findFirst({ where: { key: item.status, deletedAt: null } }),
+      ]);
+
+      if (newCol && newCol.phase === 'DONE') {
+        await prisma.projectAssignment.updateMany({
+          where: { projectId: item.id, status: 'ACTIVE' },
+          data: { status: 'DONE', completedAt: new Date() },
+        });
+      } else if (oldCol && oldCol.phase === 'DONE' && newCol && newCol.phase !== 'DONE') {
+        await prisma.projectAssignment.updateMany({
+          where: { projectId: item.id, status: 'DONE' },
+          data: { status: 'ACTIVE', completedAt: null },
+        });
+      }
+    }
 
     res.status(200).json({ success: true, message: 'Projects reordered' });
   } catch (error) {

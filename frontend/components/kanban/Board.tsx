@@ -177,7 +177,7 @@ export function Board({ searchQuery = '', filterPriority = 'all', filterAssignee
   const filteredProjects = useMemo(() => {
     return state.projects.filter((p) => {
       const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                           p.description.toLowerCase().includes(searchQuery.toLowerCase());
+                           (p.description || '').toLowerCase().includes(searchQuery.toLowerCase());
       const matchesPriority = filterPriority === 'all' || p.priority === filterPriority;
       const matchesAssignee = filterAssignee === 'all' || p.assignments.some(a => a.userId === filterAssignee);
       const matchesBoard = !boardId || p.boardId === boardId;
@@ -504,6 +504,7 @@ export function Board({ searchQuery = '', filterPriority = 'all', filterAssignee
                 onCardClick={handleCardClick}
                 onAddCard={handleAddCard}
                 onDeleteColumn={onDeleteColumn}
+                boardColumns={allColumns}
               />
             ))}
           </div>
@@ -525,6 +526,7 @@ export function Board({ searchQuery = '', filterPriority = 'all', filterAssignee
         <ProjectModal
           project={selectedProject}
           onClose={handleCloseProject}
+          boardColumns={allColumns}
         />
 
       )}

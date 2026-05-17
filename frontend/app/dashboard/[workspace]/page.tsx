@@ -368,8 +368,8 @@ export default function WorkspacePage() {
           description={`This will delete "${deleteTarget.name}" and move it to trash.`}
           impactSummary={
             deleteTarget.type === 'board'
-              ? `This will delete <strong>${deleteTarget.name}</strong> along with <strong>${deleteTarget.columnCount || 0} columns</strong> and <strong>${deleteTarget.projectCount} projects</strong>.`
-              : `This will delete column <strong>${deleteTarget.name}</strong> and <strong>${deleteTarget.projectCount} projects</strong> in it.`
+              ? <>This will delete <strong>{deleteTarget.name}</strong> along with <strong>{deleteTarget.columnCount || 0} columns</strong> and <strong>{deleteTarget.projectCount} projects</strong>.</>
+              : <>This will delete column <strong>{deleteTarget.name}</strong> and <strong>{deleteTarget.projectCount} projects</strong> in it.</>
           }
         />
       )}

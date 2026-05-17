@@ -7,7 +7,7 @@ import prisma from '../lib/prisma';
  */
 function buildWhereClause(user: Request['user']): Record<string, unknown> {
   if (!user) return { id: 'none' };
-  return {};
+  return { deletedAt: null };
 }
 
 /**

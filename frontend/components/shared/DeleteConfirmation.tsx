@@ -14,7 +14,7 @@ interface DeleteConfirmationProps {
   onConfirm: () => Promise<void>;
   title: string;
   description: string;
-  impactSummary?: string;
+  impactSummary?: React.ReactNode;
 }
 
 export function DeleteConfirmation({ open, onClose, onConfirm, title, description, impactSummary }: DeleteConfirmationProps) {
@@ -79,7 +79,7 @@ export function DeleteConfirmation({ open, onClose, onConfirm, title, descriptio
 
               {impactSummary && (
                 <div className="rounded-lg bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-800/30 p-3">
-                  <p className="text-sm text-red-700 dark:text-red-400" dangerouslySetInnerHTML={{ __html: impactSummary }} />
+                  <p className="text-sm text-red-700 dark:text-red-400">{impactSummary}</p>
                 </div>
               )}
 

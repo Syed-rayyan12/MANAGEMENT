@@ -267,12 +267,19 @@ export const importFromTrello = async (req: Request, res: Response): Promise<voi
         );
         const priority = hasUrgent ? 'HIGH' : 'MEDIUM';
 
+        // Get the first column of this board for default status
+        const firstColumn = await prisma.boardColumn.findFirst({
+          where: { boardId, deletedAt: null },
+          orderBy: { position: 'asc' },
+          select: { key: true },
+        });
+
         // Create the project
         const newProject = await prisma.project.create({
           data: {
             name: cardName,
             description: card.desc || null,
-            status: 'todo',
+            status: firstColumn?.key || 'todo',
             priority,
             dueDate: card.due ? new Date(card.due) : null,
             boardId,

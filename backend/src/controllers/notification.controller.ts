@@ -72,10 +72,18 @@ export const getMyNotifications = async (req: Request, res: Response): Promise<v
     });
     const assignedProjectIds = userAssignments.map(a => a.projectId);
 
+    // Get DONE-phase column keys to exclude completed projects
+    const doneColumns = await prisma.boardColumn.findMany({
+      where: { phase: 'DONE', deletedAt: null },
+      select: { key: true },
+    });
+    const doneKeys = doneColumns.map(c => c.key);
+
     // Find overdue or due-soon projects where user is assigned
     const dueSoonProjects = await prisma.project.findMany({
       where: {
-        status: { notIn: ['completed', 'revisions'] },
+        deletedAt: null,
+        status: { notIn: doneKeys },
         dueDate: { lte: threeDaysFromNow },
         id: { in: assignedProjectIds },
       },

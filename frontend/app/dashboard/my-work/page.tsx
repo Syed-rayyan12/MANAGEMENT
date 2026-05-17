@@ -44,6 +44,7 @@ export default function MyWorkPage() {
   const [filterBoard, setFilterBoard] = useState<string>('all');
   const [sortBy, setSortBy] = useState<string>('date');
   const [boardOptions, setBoardOptions] = useState<BoardOption[]>([]);
+  const [boardColumnsMap, setBoardColumnsMap] = useState<Record<string, { status: string; label: string; color: string; phase?: string }[]>>({});
   const [phaseMap, setPhaseMap] = useState<Record<string, string>>({});
   const [phaseMapLoading, setPhaseMapLoading] = useState(true);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(projectIdFromUrl);
@@ -66,6 +67,15 @@ export default function MyWorkPage() {
         ]);
         if (boardsResult.success) {
           setBoardOptions(boardsResult.data.boards.map((b: any) => ({ id: b.id, name: b.name })));
+          const colsMap: Record<string, { status: string; label: string; color: string; phase?: string }[]> = {};
+          for (const b of boardsResult.data.boards) {
+            if (b.columns) {
+              colsMap[b.id] = b.columns
+                .sort((a: any, b: any) => a.position - b.position)
+                .map((c: any) => ({ status: c.key, label: c.name, color: c.color, phase: c.phase || 'NOT_STARTED' }));
+            }
+          }
+          setBoardColumnsMap(colsMap);
         }
         if (columnsResult.success) {
           setPhaseMap(columnsResult.data.phaseMap);
@@ -330,6 +340,7 @@ export default function MyWorkPage() {
                           project={project}
                           boardName={boardOptions.find(b => b.id === project.boardId)?.name}
                           onClick={() => setSelectedProjectId(project.id)}
+                          phase={getPhase(project)}
                         />
                       ))
                     )}
@@ -346,16 +357,17 @@ export default function MyWorkPage() {
         <ProjectModal
           project={selectedProject}
           onClose={() => setSelectedProjectId(null)}
+          boardColumns={boardColumnsMap[selectedProject.boardId] || []}
         />
       )}
     </div>
   );
 }
 
-function MyWorkCard({ project, boardName, onClick }: { project: Project; boardName?: string; onClick: () => void }) {
+function MyWorkCard({ project, boardName, onClick, phase }: { project: Project; boardName?: string; onClick: () => void; phase?: string }) {
   const isMobile = useIsMobile();
   const priorityStyle = PRIORITY_STYLES[project.priority];
-  const isOverdue = project.dueDate && new Date(project.dueDate) < new Date() && project.status !== 'completed';
+  const isOverdue = project.dueDate && new Date(project.dueDate) < new Date() && phase !== 'DONE';
 
   const priorityDotColor: Record<string, string> = {
     low: 'bg-zinc-400',
