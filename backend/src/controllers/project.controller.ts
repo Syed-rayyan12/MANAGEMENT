@@ -816,7 +816,6 @@ export const addAttachment = async (req: Request, res: Response): Promise<void> 
 
     // Notify assigned users about new file
     const uploaderName = (await prisma.user.findUnique({ where: { id: req.user!.id }, select: { name: true } }))?.name || 'Someone';
-    const project = await prisma.project.findUnique({ where: { id }, select: { name: true, boardId: true } });
     if (project) {
       const assignedForAttachment = await prisma.projectAssignment.findMany({
         where: { projectId: id },
