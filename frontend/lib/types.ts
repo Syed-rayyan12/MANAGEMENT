@@ -152,13 +152,13 @@ export interface Invoice {
   squarePaymentLinkId: string | null;
   paymentLink: string | null;
   paidAt: string | null;
-  createdById: string;
+  createdById: string | null;
   createdBy: {
     id: string;
     name: string;
     email: string;
     role: string;
-  };
+  } | null;
   teamId: string;
   team: {
     id: string;

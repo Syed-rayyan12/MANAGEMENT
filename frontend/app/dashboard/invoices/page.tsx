@@ -239,7 +239,7 @@ export default function InvoicesPage() {
       !searchQuery ||
       inv.clientName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       inv.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      inv.createdBy.name.toLowerCase().includes(searchQuery.toLowerCase());
+      (inv.createdBy?.name || '').toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = statusFilter === 'ALL' || inv.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
@@ -736,11 +736,11 @@ export default function InvoicesPage() {
                       <div className="flex items-center gap-2">
                         <div className="w-6 h-6 rounded-full bg-accent-soft flex items-center justify-center flex-shrink-0">
                           <span className="text-[10px] font-semibold text-accent">
-                            {invoice.createdBy.name.charAt(0).toUpperCase()}
+                            {(invoice.createdBy?.name || '?').charAt(0).toUpperCase()}
                           </span>
                         </div>
                         <span className="text-xs text-zinc-700 dark:text-zinc-300 whitespace-nowrap">
-                          {invoice.createdBy.name}
+                          {invoice.createdBy?.name || 'Deleted user'}
                         </span>
                       </div>
                     </td>
