@@ -67,7 +67,8 @@
       "Bash(node -e \"const d=[];process.stdin.on\\(''''data'''',c=>d.push\\(c\\)\\);process.stdin.on\\(''''end'''',\\(\\)=>{const j=JSON.parse\\(Buffer.concat\\(d\\)\\);console.log\\(''''Board ID:'''', j.data?.board?.id\\);console.log\\(''''Board slug:'''', j.data?.board?.slug\\)}\\)\")",
       "Bash(node -e \"const d=[];process.stdin.on\\(''''data'''',c=>d.push\\(c\\)\\);process.stdin.on\\(''''end'''',\\(\\)=>{const j=JSON.parse\\(Buffer.concat\\(d\\)\\);console.log\\(''''SEO Board ID:'''', j.data?.board?.id\\);console.log\\(''''SEO Board slug:'''', j.data?.board?.slug\\)}\\)\")",
       "Bash(xxd)",
-      "Bash(node -e \"const d=[];process.stdin.on\\(''''data'''',c=>d.push\\(c\\)\\);process.stdin.on\\(''''end'''',\\(\\)=>{const j=JSON.parse\\(Buffer.concat\\(d\\)\\);console.log\\(JSON.stringify\\(j.data?.phaseMap,null,2\\)\\)}\\)\")"
+      "Bash(node -e \"const d=[];process.stdin.on\\(''''data'''',c=>d.push\\(c\\)\\);process.stdin.on\\(''''end'''',\\(\\)=>{const j=JSON.parse\\(Buffer.concat\\(d\\)\\);console.log\\(JSON.stringify\\(j.data?.phaseMap,null,2\\)\\)}\\)\")",
+      "Bash(npx ts-node:*)"
     ]
   }
 }

@@ -129,7 +129,7 @@ export default function WorkspacePage() {
     try {
       if (deleteTarget.type === 'board') {
         await trashAPI.softDeleteBoard(boardId);
-        window.dispatchEvent(new Event('boards-changed'));
+        window.dispatchEvent(new CustomEvent('boards-changed', { detail: { removed: boardSlug } }));
         router.push('/dashboard');
       } else {
         await trashAPI.softDeleteColumn(boardId, deleteTarget.id);

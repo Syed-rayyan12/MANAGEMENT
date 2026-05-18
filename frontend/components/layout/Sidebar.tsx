@@ -63,7 +63,20 @@ export function Sidebar({ isMobile = false, mobileOpen = false, onMobileClose }:
 
   // Re-fetch boards when a workspace is created or deleted
   useEffect(() => {
-    const handler = () => fetchBoards();
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (detail?.added) {
+        // Optimistically add the new board without waiting for API
+        setBoards(prev => {
+          if (prev.some(b => b.slug === detail.added.slug)) return prev;
+          return [...prev, { slug: detail.added.slug, name: detail.added.name }];
+        });
+      } else if (detail?.removed) {
+        setBoards(prev => prev.filter(b => b.slug !== detail.removed));
+      } else {
+        fetchBoards();
+      }
+    };
     window.addEventListener('boards-changed', handler);
     return () => window.removeEventListener('boards-changed', handler);
   }, [fetchBoards]);

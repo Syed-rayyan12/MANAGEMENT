@@ -86,7 +86,7 @@ export default function DashboardPage() {
       if (result.success) {
         const board = result.data.board;
         setBoards(prev => [...prev, { slug: board.slug, name: board.name, projectCount: 0 }]);
-        window.dispatchEvent(new Event('boards-changed'));
+        window.dispatchEvent(new CustomEvent('boards-changed', { detail: { added: { slug: board.slug, name: board.name } } }));
         toast.success('Workspace created');
         setShowCreateWorkspace(false);
         setNewWorkspaceName('');
