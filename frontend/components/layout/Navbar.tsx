@@ -67,10 +67,8 @@ export function Navbar({ searchQuery, onSearchChange, onMenuToggle }: NavbarProp
               <Menu className="w-5 h-5 text-zinc-600 dark:text-zinc-400" />
             </Button>
           )}
-          <div className="w-8 h-8 bg-gradient-to-br from-[#e05c29] to-orange-400 rounded-lg flex items-center justify-center text-white font-bold text-sm shadow-[0_4px_20px_rgba(224,92,41,0.35)]">
-            X
-          </div>
-          <h1 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100 hidden sm:block">XRM</h1>
+          <img src="/logo-dark.png" alt="Xpert Web Studio" className="h-8 object-contain dark:hidden" />
+          <img src="/logo-light.png" alt="Xpert Web Studio" className="h-8 object-contain hidden dark:block" />
         </div>
 
         {/* Search Bar */}

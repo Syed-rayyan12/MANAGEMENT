@@ -211,16 +211,9 @@ export function Sidebar({ isMobile = false, mobileOpen = false, onMobileClose }:
         )}
       >
         {/* Brand block */}
-        <div className="px-4 pt-4 pb-2">
-          <div className="flex items-center gap-2.5">
-            <div className="w-[26px] h-[26px] rounded-md bg-foreground flex items-center justify-center ring-1 ring-accent/30">
-              <span className="text-background text-xs font-bold">X</span>
-            </div>
-            <div className="flex flex-col">
-              <span className="text-[13px] font-semibold text-foreground leading-tight">Xpert Studio</span>
-              <span className="text-kicker uppercase text-fg-3 tracking-widest">workspace</span>
-            </div>
-          </div>
+        <div className="px-4 pt-4 pb-2 flex justify-center">
+          <img src="/logo-dark.png" alt="Xpert Web Studio" className="h-10 object-contain dark:hidden" />
+          <img src="/logo-light.png" alt="Xpert Web Studio" className="h-10 object-contain hidden dark:block" />
         </div>
 
         {/* Search / Command Palette trigger */}

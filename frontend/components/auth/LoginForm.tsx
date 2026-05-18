@@ -68,10 +68,10 @@ export function LoginForm() {
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <div className="mx-auto mb-2 w-10 h-10 rounded-lg bg-foreground flex items-center justify-center ring-1 ring-accent/30">
-            <span className="text-background font-bold text-lg">X</span>
+          <div className="mx-auto mb-2">
+            <img src="/logo-dark.png" alt="Xpert Web Studio" className="h-12 object-contain dark:hidden" />
+            <img src="/logo-light.png" alt="Xpert Web Studio" className="h-12 object-contain hidden dark:block" />
           </div>
-          <CardTitle className="text-[24px] tracking-[-0.02em]">XRM</CardTitle>
           <CardDescription>Enterprise Project Management System</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
