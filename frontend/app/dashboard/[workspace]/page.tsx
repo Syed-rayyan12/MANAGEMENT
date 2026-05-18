@@ -29,15 +29,15 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { useSearch } from '../layout';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { WorkspaceSearch } from '@/components/kanban/WorkspaceSearch';
 
 export default function WorkspacePage() {
   const router = useRouter();
   const params = useParams();
   const searchParams = useSearchParams();
-  const { searchQuery } = useSearch();
   const { isLoading, getAllUsers, getUserName } = useApp();
+  const [workspaceSearch, setWorkspaceSearch] = useState('');
   const { canCreateProject, canAddColumn, canSoftDelete } = usePermissions();
   const { socket } = useSocket();
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -216,6 +216,7 @@ export default function WorkspacePage() {
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2 md:gap-5 w-full md:w-auto">
+          <WorkspaceSearch value={workspaceSearch} onChange={setWorkspaceSearch} />
           <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -323,13 +324,17 @@ export default function WorkspacePage() {
       </div>
 
       {/* Active Filters */}
-      {(filterPriority !== 'all' || filterAssignee !== 'all' || searchQuery) && (
+      {(filterPriority !== 'all' || filterAssignee !== 'all' || workspaceSearch) && (
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-sm text-gray-400">Active filters:</span>
-          {searchQuery && (
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-accent-soft text-accent border border-accent-line">
-              Search: &quot;{searchQuery}&quot;
-            </span>
+          {workspaceSearch && (
+            <button
+              onClick={() => setWorkspaceSearch('')}
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-accent-soft text-accent border border-accent-line hover:bg-accent-soft/80 transition-colors"
+            >
+              Search: &quot;{workspaceSearch}&quot;
+              <X className="w-3 h-3" />
+            </button>
           )}
           {filterPriority !== 'all' && (
             <button
@@ -367,7 +372,7 @@ export default function WorkspacePage() {
           <ErrorBoundary context="board projects">
             <Board
               key={`${boardSlug}-${refreshKey}`}
-              searchQuery={searchQuery}
+              searchQuery={workspaceSearch}
               filterPriority={filterPriority}
               filterAssignee={filterAssignee}
               sortBy={sortBy}
