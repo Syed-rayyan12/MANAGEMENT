@@ -275,7 +275,7 @@ export const importFromTrello = async (req: Request, res: Response): Promise<voi
               `https://api.trello.com/1/cards/${trelloCardId}/actions?filter=commentCard&limit=1000&key=${apiKey}&token=${token}`
             );
             if (cardCommentsRes.ok) {
-              const cardActions: any[] = await cardCommentsRes.json();
+              const cardActions = (await cardCommentsRes.json()) as any[];
               // Sort oldest first so they appear in chronological order
               cardActions.sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime());
               for (const action of cardActions) {
