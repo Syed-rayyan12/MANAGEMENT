@@ -481,19 +481,21 @@ export const createEmployee = async (req: Request, res: Response): Promise<void>
     });
 
     // Add to team if teamId is provided
+    let teams: { id: string; name: string; slug: string }[] = [];
     if (teamId) {
-      const team = await prisma.team.findUnique({ where: { id: teamId } });
+      const team = await prisma.team.findUnique({ where: { id: teamId }, select: { id: true, name: true, slug: true } });
       if (team) {
         await prisma.teamMember.create({
           data: { userId: newUser.id, teamId },
         });
+        teams = [team];
       }
     }
 
     res.status(201).json({
       success: true,
       message: 'Employee created successfully',
-      data: { employee: newUser },
+      data: { employee: { ...newUser, teams, stats: { activeProjects: 0, completedProjects: 0 } } },
     });
   } catch (error) {
     console.error('Create employee error:', error);
