@@ -106,7 +106,7 @@ export const createEmployeeSchema = z.object({
   username: z.string().min(1, 'Username is required').max(100).transform(v => v.toLowerCase().trim()),
   role: z.enum(['PM', 'TL', 'PRODUCTION', 'EXECUTIVE']),
   specialization: z.enum(['LOGO_DESIGNER', 'FIGMA_DESIGNER', 'DEVELOPER', 'CONTENT_WRITER', 'QA']).optional(),
-  teamId: z.string().uuid().optional(),
+  teamId: z.string().min(1).optional(),
 });
 
 // ─── Clients ───────────────────────────────────────
