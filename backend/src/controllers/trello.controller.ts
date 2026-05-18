@@ -154,26 +154,6 @@ export const importFromTrello = async (req: Request, res: Response): Promise<voi
       listMap.set(list.id, list.name);
     }
 
-    // Fetch all comments from the board (paginated, up to 1000)
-    const commentsResponse = await fetch(
-      `https://api.trello.com/1/boards/${trelloBoardId}/actions?filter=commentCard&limit=1000&key=${apiKey}&token=${token}`
-    );
-    const trelloComments: any[] = commentsResponse.ok ? (await commentsResponse.json()) as any[] : [];
-
-    // Group comments by card ID
-    const commentsByCard = new Map<string, { text: string; memberName: string; date: string }[]>();
-    for (const action of trelloComments) {
-      const cardId = action.data?.card?.id;
-      if (!cardId) continue;
-      const list = commentsByCard.get(cardId) || [];
-      list.push({
-        text: action.data?.text || '',
-        memberName: action.memberCreator?.fullName || action.memberCreator?.username || 'Unknown',
-        date: action.date,
-      });
-      commentsByCard.set(cardId, list);
-    }
-
     // Filter out closed cards
     const openCards = (boardData.cards || []).filter((card: any) => !card.closed);
 
@@ -288,21 +268,32 @@ export const importFromTrello = async (req: Request, res: Response): Promise<voi
           },
         });
 
-        // Import comments for this card
-        const cardComments = commentsByCard.get(trelloCardId) || [];
-        if (cardComments.length > 0 && importingUserId) {
-          // Sort oldest first so they appear in chronological order
-          cardComments.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-          for (const c of cardComments) {
-            const commentContent = `**${c.memberName}** (from Trello):\n${c.text}`;
-            await prisma.comment.create({
-              data: {
-                content: commentContent,
-                projectId: newProject.id,
-                userId: importingUserId,
-                createdAt: new Date(c.date),
-              },
-            });
+        // Fetch comments for this specific card from Trello
+        if (importingUserId) {
+          try {
+            const cardCommentsRes = await fetch(
+              `https://api.trello.com/1/cards/${trelloCardId}/actions?filter=commentCard&limit=1000&key=${apiKey}&token=${token}`
+            );
+            if (cardCommentsRes.ok) {
+              const cardActions: any[] = await cardCommentsRes.json();
+              // Sort oldest first so they appear in chronological order
+              cardActions.sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime());
+              for (const action of cardActions) {
+                const text = action.data?.text || '';
+                const memberName = action.memberCreator?.fullName || action.memberCreator?.username || 'Unknown';
+                const commentContent = `**${memberName}** (from Trello):\n${text}`;
+                await prisma.comment.create({
+                  data: {
+                    content: commentContent,
+                    projectId: newProject.id,
+                    userId: importingUserId,
+                    createdAt: new Date(action.date),
+                  },
+                });
+              }
+            }
+          } catch (commentError) {
+            console.error(`Error fetching comments for card "${cardName}":`, commentError);
           }
         }
 
