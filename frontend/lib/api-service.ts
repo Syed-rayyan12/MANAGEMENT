@@ -398,6 +398,15 @@ export const boardAPI = {
     return await response.json();
   },
 
+  updateColumn: async (boardId: string, columnId: string, data: { name?: string; color?: string; phase?: string }) => {
+    const response = await apiFetch(`${API_BASE_URL}/boards/${boardId}/columns/${columnId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    return await response.json();
+  },
+
   getAllColumns: async () => {
     const response = await apiFetch(`${API_BASE_URL}/boards/columns/all`);
     return await response.json();

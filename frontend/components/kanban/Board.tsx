@@ -38,9 +38,10 @@ interface BoardProps {
   boardId?: string | null;
   customColumns?: any[];
   onDeleteColumn?: (status: string, label: string, projectCount: number) => void;
+  onEditColumn?: (status: string, label: string, color: string, phase: string) => void;
 }
 
-export function Board({ searchQuery = '', filterPriority = 'all', filterAssignee = 'all', sortBy = 'date', boardId = null, customColumns = [], onDeleteColumn }: BoardProps) {
+export function Board({ searchQuery = '', filterPriority = 'all', filterAssignee = 'all', sortBy = 'date', boardId = null, customColumns = [], onDeleteColumn, onEditColumn }: BoardProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const projectIdFromUrl = searchParams.get('project');
@@ -505,6 +506,7 @@ export function Board({ searchQuery = '', filterPriority = 'all', filterAssignee
                 onCardClick={handleCardClick}
                 onAddCard={handleAddCard}
                 onDeleteColumn={onDeleteColumn}
+                onEditColumn={onEditColumn}
                 boardColumns={allColumns}
               />
             ))}

@@ -246,7 +246,8 @@ export const updateBoardColumn = async (req: Request, res: Response): Promise<vo
     const data: any = {};
     if (name && name.trim()) {
       data.name = name.trim();
-      data.key = name.trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+      // Do NOT update the key — projects reference column keys as their status,
+      // so changing the key would orphan all existing projects in this column.
     }
     if (color) data.color = color;
     if (phase && ['NOT_STARTED', 'IN_PROGRESS', 'DONE', 'ON_HOLD'].includes(phase)) {

@@ -51,6 +51,7 @@ export default function WorkspacePage() {
   const [boardId, setBoardId] = useState<string | null>(null);
   const [boardData, setBoardData] = useState<any>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ type: 'board' | 'column'; id: string; name: string; projectCount: number; columnCount?: number } | null>(null);
+  const [editColumnTarget, setEditColumnTarget] = useState<{ columnId: string; name: string; color: string; phase: string } | null>(null);
 
   const boardSlug = params.workspace as string;
   const projectId = searchParams.get('project');
@@ -154,6 +155,44 @@ export default function WorkspacePage() {
       console.error('Delete error:', error);
     } finally {
       setDeleteTarget(null);
+    }
+  };
+
+  const handleEditColumn = (status: string, label: string, color: string, phase: string) => {
+    const col = boardData?.columns?.find((c: any) => c.key === status);
+    if (col) {
+      setEditColumnTarget({ columnId: col.id, name: label, color, phase });
+    }
+  };
+
+  const handleUpdateColumn = async (name: string, color: string, phase: string) => {
+    if (!boardId || !editColumnTarget) return;
+    try {
+      const result = await boardAPI.updateColumn(boardId, editColumnTarget.columnId, { name, color, phase });
+      if (result.success) {
+        // Re-fetch board to get updated columns
+        const boardResult = await boardAPI.getBySlug(boardSlug);
+        if (boardResult.success && boardResult.data.board.columns?.length > 0) {
+          const board = boardResult.data.board;
+          setBoardData(board);
+          const cols = board.columns
+            .sort((a: any, b: any) => a.position - b.position)
+            .map((c: any) => ({
+              status: c.key,
+              label: c.name,
+              color: c.color,
+              isCustom: false,
+              phase: c.phase || 'NOT_STARTED',
+            }));
+          setCustomColumns(cols);
+          setRefreshKey(prev => prev + 1);
+        }
+        toast.success('Column updated');
+      } else {
+        toast.error(result.message || 'Failed to update column');
+      }
+    } catch (error) {
+      toast.error('Failed to update column');
     }
   };
 
@@ -334,6 +373,7 @@ export default function WorkspacePage() {
               boardId={boardId}
               customColumns={customColumns}
               onDeleteColumn={canSoftDelete ? handleDeleteColumn : undefined}
+              onEditColumn={canAddColumn ? handleEditColumn : undefined}
             />
           </ErrorBoundary>
         )}
@@ -356,6 +396,17 @@ export default function WorkspacePage() {
         <AddColumnModal
           onClose={() => setShowAddColumnModal(false)}
           onAdd={handleAddColumn}
+        />
+      )}
+
+      {/* Edit Column Modal */}
+      {editColumnTarget && (
+        <EditColumnModal
+          initialName={editColumnTarget.name}
+          initialColor={editColumnTarget.color}
+          initialPhase={editColumnTarget.phase}
+          onClose={() => setEditColumnTarget(null)}
+          onSave={handleUpdateColumn}
         />
       )}
 
@@ -458,6 +509,103 @@ function AddColumnModal({ onClose, onAdd }: { onClose: () => void; onAdd: (name:
           <div className="flex gap-2 pt-4">
             <Button onClick={handleAddColumn} variant="accent" className="flex-1">
               Add Column
+            </Button>
+            <Button onClick={onClose} variant="ghost" className="flex-1">
+              Cancel
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function EditColumnModal({ initialName, initialColor, initialPhase, onClose, onSave }: {
+  initialName: string;
+  initialColor: string;
+  initialPhase: string;
+  onClose: () => void;
+  onSave: (name: string, color: string, phase: string) => void;
+}) {
+  const [columnName, setColumnName] = useState(initialName);
+  const [columnColor, setColumnColor] = useState(initialColor);
+  const [columnPhase, setColumnPhase] = useState(initialPhase);
+
+  const handleSave = () => {
+    if (!columnName.trim()) {
+      toast.error('Column name is required');
+      return;
+    }
+    onSave(columnName.trim(), columnColor, columnPhase);
+    onClose();
+  };
+
+  const phases = [
+    { value: 'NOT_STARTED', label: 'Not Started', description: 'Work hasn\'t begun yet', color: 'text-zinc-500' },
+    { value: 'IN_PROGRESS', label: 'In Progress', description: 'Actively being worked on', color: 'text-blue-500' },
+    { value: 'DONE', label: 'Done', description: 'Work is complete', color: 'text-emerald-500' },
+    { value: 'ON_HOLD', label: 'On Hold', description: 'Paused or blocked', color: 'text-amber-500' },
+  ];
+
+  return (
+    <Dialog open={true} onOpenChange={onClose}>
+      <DialogContent className="max-w-md bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
+        <DialogHeader>
+          <DialogTitle className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">Edit Column</DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-4 mt-4">
+          <div>
+            <Label htmlFor="editColumnName" className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Column Name *</Label>
+            <Input
+              id="editColumnName"
+              placeholder="Enter column name"
+              value={columnName}
+              onChange={(e) => setColumnName(e.target.value)}
+              className="mt-1 placeholder:text-gray-400"
+            />
+          </div>
+
+          <div>
+            <Label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Phase *</Label>
+            <p className="text-xs text-zinc-400 mt-0.5 mb-2">How this column appears in the cross-board &quot;My Work&quot; view</p>
+            <div className="grid grid-cols-2 gap-2">
+              {phases.map((p) => (
+                <button
+                  key={p.value}
+                  onClick={() => setColumnPhase(p.value)}
+                  className={`text-left px-3 py-2 rounded-lg border transition-colors ${
+                    columnPhase === p.value
+                      ? 'border-accent bg-accent-soft'
+                      : 'border-zinc-200 dark:border-zinc-700 hover:border-zinc-300 dark:hover:border-zinc-600'
+                  }`}
+                >
+                  <span className={`text-sm font-medium ${p.color}`}>{p.label}</span>
+                  <p className="text-[11px] text-zinc-400 mt-0.5">{p.description}</p>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <Label htmlFor="editColumnColor" className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Column Color</Label>
+            <div className="mt-2 flex gap-2">
+              {['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#6B7280'].map((color) => (
+                <button
+                  key={color}
+                  onClick={() => setColumnColor(color)}
+                  className={`w-8 h-8 rounded-full border-2 ${
+                    columnColor === color ? 'border-accent scale-110' : 'border-gray-300'
+                  } transition-all`}
+                  style={{ backgroundColor: color }}
+                />
+              ))}
+            </div>
+          </div>
+
+          <div className="flex gap-2 pt-4">
+            <Button onClick={handleSave} variant="accent" className="flex-1">
+              Save Changes
             </Button>
             <Button onClick={onClose} variant="ghost" className="flex-1">
               Cancel

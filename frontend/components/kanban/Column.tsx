@@ -8,7 +8,7 @@ import {
 } from '@dnd-kit/sortable';
 import { Project, ProjectStatus } from '@/lib/types';
 import { ProjectCard } from './Card';
-import { Plus, X, MoreVertical, Trash2 } from 'lucide-react';
+import { Plus, X, MoreVertical, Trash2, Pencil } from 'lucide-react';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useIsMobile } from '@/hooks/use-mobile';
 import {
@@ -26,10 +26,11 @@ interface ColumnProps {
   onCardClick: (projectId: string) => void;
   onAddCard?: (name: string, status: string) => Promise<void>;
   onDeleteColumn?: (status: string, label: string, projectCount: number) => void;
+  onEditColumn?: (status: string, label: string, color: string, phase: string) => void;
   boardColumns?: { status: string; label: string; color: string; phase?: string }[];
 }
 
-export function Column({ status, label, color, projects, onCardClick, onAddCard, onDeleteColumn, boardColumns }: ColumnProps) {
+export function Column({ status, label, color, projects, onCardClick, onAddCard, onDeleteColumn, onEditColumn, boardColumns }: ColumnProps) {
   const { setNodeRef, isOver } = useDroppable({ id: status });
   const { canCreateProject, canSoftDelete } = usePermissions();
   const isMobile = useIsMobile();
@@ -83,7 +84,7 @@ export function Column({ status, label, color, projects, onCardClick, onAddCard,
           </span>
         </div>
         <div className="flex items-center gap-0.5">
-          {canSoftDelete && onDeleteColumn && (
+          {(onEditColumn || (canSoftDelete && onDeleteColumn)) && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button aria-label="Column options" className="w-7 h-7 rounded-md flex items-center justify-center text-fg-3 hover:text-foreground hover:bg-surface-3 transition-colors duration-[120ms]">
@@ -91,13 +92,26 @@ export function Column({ status, label, color, projects, onCardClick, onAddCard,
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem
-                  onClick={() => onDeleteColumn(status as string, label, projects.length)}
-                  className="text-destructive focus:text-destructive"
-                >
-                  <Trash2 className="w-4 h-4 mr-2" />
-                  Delete Column
-                </DropdownMenuItem>
+                {onEditColumn && (
+                  <DropdownMenuItem
+                    onClick={() => {
+                      const col = boardColumns?.find(c => c.status === status);
+                      onEditColumn(status as string, label, color, col?.phase || 'NOT_STARTED');
+                    }}
+                  >
+                    <Pencil className="w-4 h-4 mr-2" />
+                    Edit Column
+                  </DropdownMenuItem>
+                )}
+                {canSoftDelete && onDeleteColumn && (
+                  <DropdownMenuItem
+                    onClick={() => onDeleteColumn(status as string, label, projects.length)}
+                    className="text-destructive focus:text-destructive"
+                  >
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Delete Column
+                  </DropdownMenuItem>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
           )}
