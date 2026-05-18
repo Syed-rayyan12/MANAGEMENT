@@ -44,7 +44,7 @@ export default function WorkspacePage() {
   const [showAddColumnModal, setShowAddColumnModal] = useState(false);
   const [filterPriority, setFilterPriority] = useState<string>('all');
   const [filterAssignee, setFilterAssignee] = useState<string>('all');
-  const [sortBy, setSortBy] = useState<string>('date');
+  const [sortBy, setSortBy] = useState<string>('position');
   const [refreshKey, setRefreshKey] = useState(0);
   const [customColumns, setCustomColumns] = useState<any[]>([]);
   const [boardName, setBoardName] = useState<string>('');
@@ -242,13 +242,14 @@ export default function WorkspacePage() {
                 <Button variant="outline" size="sm">
                   <SortAsc className="w-4 h-4 mr-2 text-zinc-600 dark:text-zinc-400" />
                   <span className="text-zinc-700 dark:text-zinc-300">
-                    Sort: {sortBy === 'date' ? 'Date' : sortBy === 'name' ? 'Name' : 'Priority'}
+                    Sort: {sortBy === 'position' ? 'Manual' : sortBy === 'date' ? 'Date' : sortBy === 'name' ? 'Name' : 'Priority'}
                   </span>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent>
                 <DropdownMenuLabel>Sort Projects</DropdownMenuLabel>
                 <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => setSortBy('position')}>Manual (Drag to reorder)</DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setSortBy('date')}>Due Date</DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setSortBy('name')}>Name</DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setSortBy('priority')}>Priority</DropdownMenuItem>

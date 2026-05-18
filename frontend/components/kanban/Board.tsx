@@ -19,7 +19,7 @@ import {
   DragStartEvent,
   DragOverlay,
 } from '@dnd-kit/core';
-import { sortableKeyboardCoordinates } from '@dnd-kit/sortable';
+import { sortableKeyboardCoordinates, arrayMove } from '@dnd-kit/sortable';
 import { Project } from '@/lib/types';
 import { useApp } from '@/contexts/useApp';
 import { useSocket } from '@/contexts/SocketContext';
@@ -41,7 +41,7 @@ interface BoardProps {
   onEditColumn?: (status: string, label: string, color: string, phase: string) => void;
 }
 
-export function Board({ searchQuery = '', filterPriority = 'all', filterAssignee = 'all', sortBy = 'date', boardId = null, customColumns = [], onDeleteColumn, onEditColumn }: BoardProps) {
+export function Board({ searchQuery = '', filterPriority = 'all', filterAssignee = 'all', sortBy = 'position', boardId = null, customColumns = [], onDeleteColumn, onEditColumn }: BoardProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const projectIdFromUrl = searchParams.get('project');
@@ -282,8 +282,42 @@ export function Board({ searchQuery = '', filterPriority = 'all', filterAssignee
       ? overId
       : (state.projects.find(p => p.id === overId)?.status || project.status);
 
-    // No actual column change — nothing to do
-    if (newStatus === dragOriginalStatus) return;
+    // Same column — handle vertical reorder
+    if (newStatus === dragOriginalStatus) {
+      const columnProjects = projectsByStatus[newStatus] || [];
+      const oldIndex = columnProjects.findIndex(p => p.id === projectId);
+      const overProject = columnProjects.find(p => p.id === overId);
+      const newIndex = overProject ? columnProjects.findIndex(p => p.id === overId) : -1;
+
+      if (oldIndex !== -1 && newIndex !== -1 && oldIndex !== newIndex) {
+        const reordered = arrayMove(columnProjects, oldIndex, newIndex);
+        const orderedIds = reordered.map((p, i) => ({ id: p.id, position: i, status: newStatus }));
+
+        // Update positions in local state
+        const positionMap = new Map(orderedIds.map(item => [item.id, item.position]));
+        dispatch({
+          type: 'SET_PROJECTS',
+          payload: state.projects.map(p =>
+            positionMap.has(p.id) ? { ...p, position: positionMap.get(p.id)! } : p
+          ),
+        });
+
+        // Persist to backend
+        const token = localStorage.getItem('token');
+        fetch(`${API_BASE_URL}/projects/reorder/batch`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          body: JSON.stringify({ orderedIds }),
+        }).catch((err) => {
+          console.error('Failed to save reorder:', err);
+          toast.error('Failed to save card order');
+        });
+      }
+      return;
+    }
 
     // Ensure local state reflects new column immediately
     if (project.status !== newStatus) {
