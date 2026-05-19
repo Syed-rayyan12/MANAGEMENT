@@ -11,8 +11,6 @@ import {
   FileText,
   TrendingUp,
   Trash2,
-  Shield,
-  Search,
   User,
   ArrowDownToLine,
 } from 'lucide-react';
@@ -214,22 +212,6 @@ export function Sidebar({ isMobile = false, mobileOpen = false, onMobileClose }:
         <div className="px-4 pt-4 pb-2 flex justify-center">
           <img src="/logo-dark.png" alt="Xpert Web Studio" className="h-10 object-contain dark:hidden" />
           <img src="/logo-light.png" alt="Xpert Web Studio" className="h-10 object-contain hidden dark:block" />
-        </div>
-
-        {/* Search / Command Palette trigger */}
-        <div className="px-3 py-2">
-          <button
-            aria-label="Open search (Cmd+K)"
-            className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md border border-border bg-surface text-fg-3 text-[12.5px] hover:bg-surface-2 transition-colors duration-[120ms]"
-            onClick={() => {
-              // Will wire to Command Palette in Phase 2
-              document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true }));
-            }}
-          >
-            <Search className="w-3.5 h-3.5" />
-            <span className="flex-1 text-left">Search...</span>
-            <kbd className="text-[10px] text-fg-4 font-mono bg-surface-2 px-1 py-0.5 rounded">⌘K</kbd>
-          </button>
         </div>
 
         {/* Navigation */}

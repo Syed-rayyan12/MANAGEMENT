@@ -68,14 +68,15 @@ export function Board({ searchQuery = '', filterPriority = 'all', filterAssignee
       pendingSaves.current.forEach((pending, projectId) => {
         clearTimeout(pending.timerId);
         const token = localStorage.getItem('token');
-        const blob = new Blob(
-          [JSON.stringify({ status: pending.newStatus })],
-          { type: 'application/json' }
-        );
-        navigator.sendBeacon(
-          `${API_BASE_URL}/projects/${projectId}`,
-          blob
-        );
+        fetch(`${API_BASE_URL}/projects/${projectId}`, {
+          method: 'PUT',
+          keepalive: true,
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify({ status: pending.newStatus }),
+        }).catch(() => {});
       });
       pendingSaves.current.clear();
     };

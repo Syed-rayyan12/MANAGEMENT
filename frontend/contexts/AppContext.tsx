@@ -87,9 +87,13 @@ function appReducer(state: AppState, action: AppAction): AppState {
 
     case 'CREATE_PROJECT': {
       const { project, userId } = action.payload;
+      const existingProject = state.projects.find((p) => p.id === project.id);
+
       return {
         ...state,
-        projects: [...state.projects, project],
+        projects: existingProject
+          ? state.projects.map((p) => (p.id === project.id ? { ...p, ...project } : p))
+          : [...state.projects, project],
         activityLog: [
           ...state.activityLog,
           {
@@ -459,6 +463,10 @@ function appReducer(state: AppState, action: AppAction): AppState {
     }
 
     case 'ADD_NOTIFICATION': {
+      if (state.notifications.some((n) => n.id === action.payload.id)) {
+        return state;
+      }
+
       return {
         ...state,
         notifications: [...state.notifications, action.payload],

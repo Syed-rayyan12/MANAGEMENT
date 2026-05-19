@@ -161,12 +161,22 @@ export const getUnreadCount = async (req: Request, res: Response): Promise<void>
 
 export const markAsRead = async (req: Request, res: Response): Promise<void> => {
   try {
+    if (!req.user) {
+      res.status(401).json({ success: false, message: 'Unauthorized' });
+      return;
+    }
+
     const { id } = req.params;
 
-    await prisma.notification.update({
-      where: { id },
+    const result = await prisma.notification.updateMany({
+      where: { id, userId: req.user.id },
       data: { read: true },
     });
+
+    if (result.count === 0) {
+      res.status(404).json({ success: false, message: 'Notification not found' });
+      return;
+    }
 
     res.status(200).json({ success: true, message: 'Notification marked as read' });
   } catch (error) {

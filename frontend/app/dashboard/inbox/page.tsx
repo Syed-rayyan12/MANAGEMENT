@@ -43,8 +43,7 @@ export default function InboxPage() {
               {/* Content */}
               <div className="flex-1 min-w-0">
                 <p className="text-[13px] text-foreground leading-snug">
-                  <span className="font-medium">{notif.actorName || 'Someone'}</span>{' '}
-                  <span className="text-fg-2">{notif.message || notif.action || 'did something'}</span>
+                  <span className="text-fg-2">{notif.message || notif.action || 'Something happened'}</span>
                 </p>
                 {notif.projectName && (
                   <p className="text-[11px] text-fg-3 mt-0.5 truncate">{notif.projectName}</p>
