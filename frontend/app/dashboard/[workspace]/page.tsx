@@ -38,6 +38,7 @@ export default function WorkspacePage() {
   const searchParams = useSearchParams();
   const { isLoading, getAllUsers, getUserName } = useApp();
   const [workspaceSearch, setWorkspaceSearch] = useState('');
+  const [debouncedWorkspaceSearch, setDebouncedWorkspaceSearch] = useState('');
   const { canCreateProject, canAddColumn, canSoftDelete } = usePermissions();
   const { socket } = useSocket();
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -56,6 +57,14 @@ export default function WorkspacePage() {
   const boardSlug = params.workspace as string;
   const projectId = searchParams.get('project');
   const [boardLoading, setBoardLoading] = useState(true);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setDebouncedWorkspaceSearch(workspaceSearch.trim());
+    }, 220);
+
+    return () => window.clearTimeout(timer);
+  }, [workspaceSearch]);
 
   // Join/leave board room for real-time events
   useEffect(() => {
@@ -324,18 +333,9 @@ export default function WorkspacePage() {
       </div>
 
       {/* Active Filters */}
-      {(filterPriority !== 'all' || filterAssignee !== 'all' || workspaceSearch) && (
+      {(filterPriority !== 'all' || filterAssignee !== 'all') && (
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-sm text-gray-400">Active filters:</span>
-          {workspaceSearch && (
-            <button
-              onClick={() => setWorkspaceSearch('')}
-              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-accent-soft text-accent border border-accent-line hover:bg-accent-soft/80 transition-colors"
-            >
-              Search: &quot;{workspaceSearch}&quot;
-              <X className="w-3 h-3" />
-            </button>
-          )}
           {filterPriority !== 'all' && (
             <button
               onClick={() => setFilterPriority('all')}
@@ -372,7 +372,7 @@ export default function WorkspacePage() {
           <ErrorBoundary context="board projects">
             <Board
               key={`${boardSlug}-${refreshKey}`}
-              searchQuery={workspaceSearch}
+              searchQuery={debouncedWorkspaceSearch}
               filterPriority={filterPriority}
               filterAssignee={filterAssignee}
               sortBy={sortBy}

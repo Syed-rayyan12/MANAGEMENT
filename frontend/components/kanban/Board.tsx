@@ -482,7 +482,7 @@ export function Board({ searchQuery = '', filterPriority = 'all', filterAssignee
   const selectedProject = state.projects.find((p) => p.id === selectedProjectId);
 
   const totalProjectCount = state.projects.filter((p) => !boardId || p.boardId === boardId).length;
-  const isFiltered = searchQuery || filterPriority !== 'all' || filterAssignee !== 'all';
+  const isFiltered = filterPriority !== 'all' || filterAssignee !== 'all';
 
   return (
     <>
