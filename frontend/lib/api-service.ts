@@ -583,6 +583,11 @@ export const attendanceAPI = {
     });
     return await response.json();
   },
+
+  exportMonthly: async (month: string) => {
+    const response = await apiFetch(`${API_BASE_URL}/attendance/export?month=${month}`);
+    return await response.json();
+  },
 };
 
 // Trello Import APIs

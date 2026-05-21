@@ -17,6 +17,7 @@ import {
   X,
   Loader2,
   User,
+  Download,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -581,6 +582,135 @@ function DateNav({
   );
 }
 
+// ─── Export Month Picker ─────────────────────────
+
+function ExportButton() {
+  const [open, setOpen] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const now = new Date();
+  const [selectedMonth, setSelectedMonth] = useState(
+    `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+  );
+
+  const monthLabel = (val: string) => {
+    const [y, m] = val.split('-').map(Number);
+    return new Date(y, m - 1).toLocaleDateString([], { month: 'long', year: 'numeric' });
+  };
+
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      const res = await attendanceAPI.exportMonthly(selectedMonth);
+      if (!res.success) {
+        toast.error(res.message || 'Export failed');
+        return;
+      }
+
+      const { employees, month } = res.data as {
+        month: string;
+        employees: {
+          user: { name: string; username: string; role: string };
+          records: {
+            date: string;
+            checkIn: string;
+            checkOut: string | null;
+            hoursWorked: string | null;
+            isWeekend: boolean;
+          }[];
+        }[];
+      };
+
+      // Build CSV rows
+      const rows: string[][] = [
+        ['Employee', 'Username', 'Role', 'Date', 'Day', 'Check In', 'Check Out', 'Hours Worked', 'Weekend', 'Status'],
+      ];
+
+      for (const emp of employees) {
+        if (emp.records.length === 0) {
+          rows.push([emp.user.name, emp.user.username, emp.user.role, '', '', '', '', '', '', 'No Records']);
+        } else {
+          for (const r of emp.records) {
+            const d = new Date(r.date);
+            const dayName = d.toLocaleDateString([], { weekday: 'short' });
+            const hours = r.hoursWorked ? parseFloat(r.hoursWorked) : null;
+            rows.push([
+              emp.user.name,
+              emp.user.username,
+              emp.user.role,
+              formatDate(r.date),
+              dayName,
+              formatTime(r.checkIn),
+              r.checkOut ? formatTime(r.checkOut) : '',
+              hours !== null ? hours.toFixed(2) : '',
+              r.isWeekend ? 'Yes' : 'No',
+              r.checkOut ? 'Complete' : 'Open',
+            ]);
+          }
+        }
+      }
+
+      // Generate CSV string
+      const csv = rows
+        .map((row) => row.map((cell) => `"${cell.replace(/"/g, '""')}"`).join(','))
+        .join('\n');
+
+      // Trigger download
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `attendance-${month}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+
+      toast.success(`Exported attendance for ${monthLabel(month)}`);
+      setOpen(false);
+    } catch {
+      toast.error('Failed to export attendance');
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setOpen(!open)}
+        className="inline-flex items-center gap-2 rounded-[7px] px-3 py-1.5 text-[12.5px] font-medium bg-surface-2 text-fg-2 hover:bg-surface-3 transition-colors duration-[120ms]"
+      >
+        <Download className="w-3.5 h-3.5" />
+        Export
+      </button>
+
+      {open && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+          <div className="absolute right-0 top-full mt-2 z-50 w-64 rounded-lg border border-border bg-surface shadow-[var(--shadow-3)] p-4 space-y-3">
+            <p className="text-[13px] font-medium text-foreground">Export Monthly Report</p>
+            <div>
+              <label className="block text-xs font-medium text-fg-3 mb-1.5">Month</label>
+              <input
+                type="month"
+                value={selectedMonth}
+                onChange={(e) => setSelectedMonth(e.target.value)}
+                className="w-full rounded-lg px-3 py-2 text-sm border border-border bg-surface text-foreground focus:outline-none focus:ring-2 focus:ring-accent-soft focus:border-accent-line transition-all duration-200 ease-out"
+              />
+            </div>
+            <button
+              onClick={handleExport}
+              disabled={exporting}
+              className="w-full inline-flex items-center justify-center gap-2 rounded-[7px] px-4 py-2 text-[12.5px] font-medium bg-accent text-accent-fg hover:brightness-105 transition-colors duration-[120ms] disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {exporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
+              {exporting ? 'Exporting...' : `Download CSV`}
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 // ─── Main Page ──────────────────────────────────
 
 export default function AttendancePage() {
@@ -740,7 +870,10 @@ export default function AttendancePage() {
         <div>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-[13px] font-semibold text-foreground">All Employees</h2>
-            <DateNav date={selectedDate} onChange={setSelectedDate} />
+            <div className="flex items-center gap-3">
+              <DateNav date={selectedDate} onChange={setSelectedDate} />
+              <ExportButton />
+            </div>
           </div>
 
           <TeamAttendanceTable

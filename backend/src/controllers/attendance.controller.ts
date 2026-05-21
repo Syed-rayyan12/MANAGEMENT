@@ -221,6 +221,70 @@ export const getTeamAttendance = async (req: Request, res: Response): Promise<vo
 };
 
 /**
+ * Export monthly attendance for all employees (EXECUTIVE only)
+ * GET /api/attendance/export?month=2025-05
+ */
+export const exportMonthly = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { month } = req.query;
+
+    if (!month || !/^\d{4}-\d{2}$/.test(month as string)) {
+      res.status(400).json({ success: false, message: 'month query param required in YYYY-MM format' });
+      return;
+    }
+
+    const [year, mon] = (month as string).split('-').map(Number);
+    const startDate = new Date(Date.UTC(year, mon - 1, 1));
+    const endDate = new Date(Date.UTC(year, mon, 0)); // last day of the month
+
+    // Get all non-EXECUTIVE users
+    const users = await prisma.user.findMany({
+      where: { role: { not: 'EXECUTIVE' } },
+      select: { id: true, name: true, username: true, role: true },
+      orderBy: { name: 'asc' },
+    });
+
+    const userIds = users.map((u) => u.id);
+
+    // Get all attendance records for these users in the month
+    const records = await prisma.attendance.findMany({
+      where: {
+        userId: { in: userIds },
+        date: { gte: startDate, lte: endDate },
+      },
+      orderBy: [{ date: 'asc' }],
+    });
+
+    // Build lookup: userId -> records[]
+    const recordMap = new Map<string, typeof records>();
+    for (const r of records) {
+      const arr = recordMap.get(r.userId) || [];
+      arr.push(r);
+      recordMap.set(r.userId, arr);
+    }
+
+    const data = users.map((user) => ({
+      user,
+      records: recordMap.get(user.id) || [],
+    }));
+
+    res.json({
+      success: true,
+      message: 'Monthly attendance exported',
+      data: {
+        month: month as string,
+        startDate: startDate.toISOString(),
+        endDate: endDate.toISOString(),
+        employees: data,
+      },
+    });
+  } catch (error) {
+    console.error('Export monthly error:', error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+};
+
+/**
  * Manual edit of an attendance record (EXECUTIVE only)
  * PUT /api/attendance/:id
  */

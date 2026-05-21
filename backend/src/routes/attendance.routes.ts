@@ -7,6 +7,7 @@ import {
   getToday,
   getMyHistory,
   getTeamAttendance,
+  exportMonthly,
   editAttendance,
 } from '../controllers/attendance.controller';
 
@@ -22,6 +23,7 @@ router.get('/my-history', authorizeRoles('TL', 'PM', 'PRODUCTION'), getMyHistory
 
 // Executive-only views and edits
 router.get('/team', authorizeRoles('EXECUTIVE'), getTeamAttendance);
+router.get('/export', authorizeRoles('EXECUTIVE'), exportMonthly);
 router.put('/:id', authorizeRoles('EXECUTIVE'), validate(editAttendanceSchema), editAttendance);
 
 export default router;
