@@ -183,6 +183,8 @@ model User {
   deletedProjects  Project[]           @relation("deletedProjects")
   regressionsReceived Regression[]     @relation("regressionTarget")
   regressionsCaused   Regression[]     @relation("regressionCauser")
+  attendanceRecords   Attendance[]
+  attendanceEdits     Attendance[]     @relation("attendanceEdits")
 
   @@map("users")
 }
@@ -402,4 +404,27 @@ model Invoice {
   @@index([teamId])
   @@index([status])
   @@map("invoices")
+}
+
+// ─── ATTENDANCE ──────────────────────────────────
+
+model Attendance {
+  id          String    @id @default(uuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date        DateTime  @db.Date
+  checkIn     DateTime
+  checkOut    DateTime?
+  hoursWorked Decimal?  @db.Decimal(5, 2)
+  isWeekend   Boolean   @default(false)
+  editedById  String?
+  editedBy    User?     @relation("attendanceEdits", fields: [editedById], references: [id], onDelete: SetNull)
+  editedAt    DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([userId, date])
+  @@index([userId])
+  @@index([date])
+  @@map("attendance")
 }

@@ -20,6 +20,7 @@ import clientRoutes from './routes/client.routes';
 import trashRoutes from './routes/trash.routes';
 import performanceRoutes from './routes/performance.routes';
 import trelloRoutes from './routes/trello.routes';
+import attendanceRoutes from './routes/attendance.routes';
 
 import { purgeExpiredTrash } from './controllers/trash.controller';
 
@@ -154,6 +155,7 @@ app.use('/api/clients', apiLimiter, clientRoutes);
 app.use('/api/trash', apiLimiter, trashRoutes);
 app.use('/api/performance', apiLimiter, performanceRoutes);
 app.use('/api/trello', apiLimiter, trelloRoutes);
+app.use('/api/attendance', apiLimiter, attendanceRoutes);
 
 // ───────────────────────────────────────────────────
 // Auto purge expired trash

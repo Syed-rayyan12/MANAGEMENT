@@ -335,6 +335,33 @@ export interface EmployeePerformance {
   }[];
 }
 
+// ─── Attendance ──────────────────────────────────
+
+export interface AttendanceRecord {
+  id: string;
+  userId: string;
+  date: string;
+  checkIn: string;
+  checkOut: string | null;
+  hoursWorked: string | null;
+  isWeekend: boolean;
+  editedById: string | null;
+  editedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TeamAttendanceEntry {
+  user: {
+    id: string;
+    name: string;
+    username: string;
+    role: string;
+    avatar: string | null;
+  };
+  attendance: AttendanceRecord | null;
+}
+
 export interface AppState {
   projects: Project[];
   currentUser: CurrentUser | null;

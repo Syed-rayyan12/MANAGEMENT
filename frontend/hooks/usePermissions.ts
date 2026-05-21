@@ -53,6 +53,11 @@ export function usePermissions() {
     // Performance
     canAccessPerformance: isProd,
 
+    // Attendance
+    canCheckIn: isPM || isTL || isProd,
+    canViewTeamAttendance: isExec,
+    canEditAttendance: isExec,
+
     // General
     isReadOnly: isExec,
     canAccessAdmin: isExec,

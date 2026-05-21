@@ -128,6 +128,13 @@ export const updateAssignmentSchema = z.object({
   status: z.enum(['ACTIVE', 'DONE']).optional(),
 });
 
+// ─── Attendance ───────────────────────────────────
+
+export const editAttendanceSchema = z.object({
+  checkIn: z.string().datetime({ message: 'checkIn must be a valid ISO datetime' }),
+  checkOut: z.string().datetime({ message: 'checkOut must be a valid ISO datetime' }).optional().nullable(),
+});
+
 // ─── Middleware factory ────────────────────────────
 
 export function validate(schema: z.ZodSchema) {

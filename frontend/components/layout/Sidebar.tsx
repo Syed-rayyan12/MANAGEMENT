@@ -13,6 +13,7 @@ import {
   Trash2,
   User,
   ArrowDownToLine,
+  Clock,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { BOARD_METADATA, DEFAULT_BOARD_METADATA } from '@/lib/constants';
@@ -137,6 +138,13 @@ export function Sidebar({ isMobile = false, mobileOpen = false, onMobileClose }:
       icon: Inbox,
       href: '/dashboard/inbox',
       match: (p: string) => p === '/dashboard/inbox',
+    },
+    {
+      id: 'attendance',
+      label: 'Attendance',
+      icon: Clock,
+      href: '/dashboard/attendance',
+      match: (p: string) => p === '/dashboard/attendance',
     },
     ...(canAccessInvoices ? [{
       id: 'invoices',

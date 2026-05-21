@@ -544,6 +544,47 @@ export const performanceAPI = {
   },
 };
 
+// Attendance APIs
+export const attendanceAPI = {
+  checkIn: async () => {
+    const response = await apiFetch(`${API_BASE_URL}/attendance/check-in`, { method: 'POST' });
+    return await response.json();
+  },
+
+  checkOut: async () => {
+    const response = await apiFetch(`${API_BASE_URL}/attendance/check-out`, { method: 'POST' });
+    return await response.json();
+  },
+
+  getToday: async () => {
+    const response = await apiFetch(`${API_BASE_URL}/attendance/today`);
+    return await response.json();
+  },
+
+  getMyHistory: async (from?: string, to?: string) => {
+    const params = new URLSearchParams();
+    if (from) params.set('from', from);
+    if (to) params.set('to', to);
+    const qs = params.toString();
+    const response = await apiFetch(`${API_BASE_URL}/attendance/my-history${qs ? '?' + qs : ''}`);
+    return await response.json();
+  },
+
+  getTeamAttendance: async (date?: string) => {
+    const qs = date ? `?date=${date}` : '';
+    const response = await apiFetch(`${API_BASE_URL}/attendance/team${qs}`);
+    return await response.json();
+  },
+
+  editRecord: async (id: string, data: { checkIn: string; checkOut?: string | null }) => {
+    const response = await apiFetch(`${API_BASE_URL}/attendance/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+    return await response.json();
+  },
+};
+
 // Trello Import APIs
 export const trelloAPI = {
   getBoards: async (apiKey: string, token: string) => {
