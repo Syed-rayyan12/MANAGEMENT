@@ -617,19 +617,25 @@ function ExportButton() {
             hoursWorked: string | null;
             isWeekend: boolean;
           }[];
+          totalLate: number;
+          totalAbsent: number;
+          totalWorkingDays: number;
         }[];
       };
 
       // Build CSV rows
       const rows: string[][] = [
-        ['Employee', 'Username', 'Role', 'Date', 'Day', 'Check In', 'Check Out', 'Hours Worked', 'Weekend', 'Status'],
+        ['Employee', 'Username', 'Role', 'Date', 'Day', 'Check In', 'Check Out', 'Hours Worked', 'Weekend', 'Status', 'Total Late', 'Total Absent'],
       ];
 
       for (const emp of employees) {
+        const lateStr = String(emp.totalLate);
+        const absentStr = String(emp.totalAbsent);
+
         if (emp.records.length === 0) {
-          rows.push([emp.user.name, emp.user.username, emp.user.role, '', '', '', '', '', '', 'No Records']);
+          rows.push([emp.user.name, emp.user.username, emp.user.role, '', '', '', '', '', '', 'No Records', lateStr, absentStr]);
         } else {
-          for (const r of emp.records) {
+          emp.records.forEach((r, idx) => {
             const d = new Date(r.date);
             const dayName = d.toLocaleDateString([], { weekday: 'short' });
             const hours = r.hoursWorked ? parseFloat(r.hoursWorked) : null;
@@ -644,8 +650,10 @@ function ExportButton() {
               hours !== null ? hours.toFixed(2) : '',
               r.isWeekend ? 'Yes' : 'No',
               r.checkOut ? 'Complete' : 'Open',
+              idx === 0 ? lateStr : '',
+              idx === 0 ? absentStr : '',
             ]);
-          }
+          });
         }
       }
 

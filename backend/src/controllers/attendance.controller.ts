@@ -263,10 +263,49 @@ export const exportMonthly = async (req: Request, res: Response): Promise<void> 
       recordMap.set(r.userId, arr);
     }
 
-    const data = users.map((user) => ({
-      user,
-      records: recordMap.get(user.id) || [],
-    }));
+    // Count working days (Mon-Fri) in the month, capped to today if current month
+    const now = new Date();
+    const today = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
+    const capDate = endDate > today ? today : endDate;
+
+    let totalWorkingDays = 0;
+    for (let d = new Date(startDate); d <= capDate; d.setUTCDate(d.getUTCDate() + 1)) {
+      const day = d.getUTCDay();
+      if (day !== 0 && day !== 6) totalWorkingDays++;
+    }
+
+    const SHIFT_HOURS = 9;
+
+    const data = users.map((user) => {
+      const userRecords = recordMap.get(user.id) || [];
+
+      // Late = completed record (has checkOut) but hoursWorked < 9
+      const totalLate = userRecords.filter(
+        (r) => r.checkOut && r.hoursWorked !== null && parseFloat(String(r.hoursWorked)) < SHIFT_HOURS
+      ).length;
+
+      // Days with a record (regardless of weekend)
+      const daysWithRecord = new Set(
+        userRecords.map((r) => r.date.toISOString().split('T')[0])
+      );
+
+      // Absent = working days with no attendance record
+      let totalAbsent = 0;
+      for (let d = new Date(startDate); d <= capDate; d.setUTCDate(d.getUTCDate() + 1)) {
+        const day = d.getUTCDay();
+        if (day !== 0 && day !== 6 && !daysWithRecord.has(d.toISOString().split('T')[0])) {
+          totalAbsent++;
+        }
+      }
+
+      return {
+        user,
+        records: userRecords,
+        totalLate,
+        totalAbsent,
+        totalWorkingDays,
+      };
+    });
 
     res.json({
       success: true,
