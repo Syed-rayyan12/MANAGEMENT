@@ -33,6 +33,23 @@ export async function generatePresignedUploadUrl(
 }
 
 /**
+ * Upload a file directly to R2 from the server (no presigned URL needed).
+ */
+export async function uploadToR2(
+  key: string,
+  body: Buffer,
+  contentType: string,
+): Promise<void> {
+  const command = new PutObjectCommand({
+    Bucket: R2_BUCKET_NAME,
+    Key: key,
+    Body: body,
+    ContentType: contentType,
+  });
+  await r2Client.send(command);
+}
+
+/**
  * Delete an object from R2 by its key.
  */
 export async function deleteFromR2(key: string): Promise<void> {

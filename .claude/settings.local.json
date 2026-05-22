@@ -70,7 +70,9 @@
       "Bash(node -e \"const d=[];process.stdin.on\\(''''data'''',c=>d.push\\(c\\)\\);process.stdin.on\\(''''end'''',\\(\\)=>{const j=JSON.parse\\(Buffer.concat\\(d\\)\\);console.log\\(JSON.stringify\\(j.data?.phaseMap,null,2\\)\\)}\\)\")",
       "Bash(npx ts-node:*)",
       "Bash(cp \"C:\\\\Users\\\\Tayyab Anwar\\\\Downloads\\\\final-logo \\(2\\).png\" \"F:\\\\downloads-new\\\\MANAGEMENT-main\\\\MANAGEMENT-main\\\\frontend\\\\public\\\\logo-dark.png\")",
-      "Bash(cp \"C:\\\\Users\\\\Tayyab Anwar\\\\Downloads\\\\final-logo-\\(in-white\\) \\(1\\).png\" \"F:\\\\downloads-new\\\\MANAGEMENT-main\\\\MANAGEMENT-main\\\\frontend\\\\public\\\\logo-light.png\")"
+      "Bash(cp \"C:\\\\Users\\\\Tayyab Anwar\\\\Downloads\\\\final-logo-\\(in-white\\) \\(1\\).png\" \"F:\\\\downloads-new\\\\MANAGEMENT-main\\\\MANAGEMENT-main\\\\frontend\\\\public\\\\logo-light.png\")",
+      "Bash(find F:/downloads-new/MANAGEMENT-main/MANAGEMENT-main/frontend -name *trello* -type f)",
+      "Bash(grep -r \"trelloCardId\\\\|trello\" ./backend/src/controllers/*.ts)"
     ]
   }
 }

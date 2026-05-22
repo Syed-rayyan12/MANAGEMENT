@@ -11,6 +11,10 @@ import {
   CheckCircle2,
   XCircle,
   SkipForward,
+  RefreshCw,
+  MessageSquare,
+  Paperclip,
+  AlertTriangle,
 } from 'lucide-react';
 
 interface TrelloBoard {
@@ -20,14 +24,19 @@ interface TrelloBoard {
 
 interface ImportDetail {
   cardName: string;
-  status: 'imported' | 'skipped' | 'failed';
+  status: 'imported' | 'updated' | 'skipped' | 'failed';
   reason?: string;
 }
 
 interface ImportResult {
   imported: number;
+  updated: number;
   skipped: number;
   failed: number;
+  commentsImported: number;
+  commentsFailed: number;
+  attachmentsImported: number;
+  attachmentsFailed: number;
   details: ImportDetail[];
   newBoards?: string[];
 }
@@ -100,8 +109,8 @@ export default function TrelloImportPage() {
       }
       setResult(res.data);
 
-      // Refresh projects in global state so workspaces show imported projects
-      if (res.data.imported > 0) {
+      // Refresh projects in global state so workspaces show imported/updated projects
+      if (res.data.imported > 0 || res.data.updated > 0) {
         const projectsRes = await projectAPI.getAll();
         if (projectsRes.success) {
           dispatch({ type: 'SET_PROJECTS', payload: projectsRes.data.projects.map(mapApiProject) });
@@ -118,6 +127,8 @@ export default function TrelloImportPage() {
     switch (status) {
       case 'imported':
         return <CheckCircle2 className="h-4 w-4 text-green-500" />;
+      case 'updated':
+        return <RefreshCw className="h-4 w-4 text-blue-500" />;
       case 'skipped':
         return <SkipForward className="h-4 w-4 text-yellow-500" />;
       case 'failed':
@@ -230,15 +241,42 @@ export default function TrelloImportPage() {
               <p className="text-2xl font-bold text-green-500">{result.imported}</p>
               <p className="text-xs text-fg-3 mt-1">Imported</p>
             </div>
-            <div className="rounded-lg bg-yellow-500/10 border border-yellow-500/20 p-4 text-center">
-              <p className="text-2xl font-bold text-yellow-500">{result.skipped}</p>
-              <p className="text-xs text-fg-3 mt-1">Skipped</p>
+            <div className="rounded-lg bg-blue-500/10 border border-blue-500/20 p-4 text-center">
+              <p className="text-2xl font-bold text-blue-500">{result.updated}</p>
+              <p className="text-xs text-fg-3 mt-1">Updated</p>
             </div>
             <div className="rounded-lg bg-red-500/10 border border-red-500/20 p-4 text-center">
               <p className="text-2xl font-bold text-red-500">{result.failed}</p>
               <p className="text-xs text-fg-3 mt-1">Failed</p>
             </div>
           </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="rounded-lg bg-surface border border-border p-3 flex items-center gap-3">
+              <MessageSquare className="h-4 w-4 text-fg-3" />
+              <div>
+                <p className="text-sm font-semibold text-foreground">{result.commentsImported}</p>
+                <p className="text-xs text-fg-3">Comments imported</p>
+              </div>
+            </div>
+            <div className="rounded-lg bg-surface border border-border p-3 flex items-center gap-3">
+              <Paperclip className="h-4 w-4 text-fg-3" />
+              <div>
+                <p className="text-sm font-semibold text-foreground">{result.attachmentsImported}</p>
+                <p className="text-xs text-fg-3">Attachments imported</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Failure warnings */}
+          {(result.commentsFailed > 0 || result.attachmentsFailed > 0) && (
+            <div className="rounded-md bg-yellow-500/10 border border-yellow-500/30 px-4 py-3 text-sm text-yellow-600 dark:text-yellow-400 flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4 flex-shrink-0" />
+              <span>
+                {result.commentsFailed > 0 && `${result.commentsFailed} comment(s) failed to import. `}
+                {result.attachmentsFailed > 0 && `${result.attachmentsFailed} attachment(s) failed to import.`}
+              </span>
+            </div>
+          )}
 
           {/* New boards created */}
           {result.newBoards && result.newBoards.length > 0 && (

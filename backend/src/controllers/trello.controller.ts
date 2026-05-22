@@ -1,7 +1,35 @@
 import { Request, Response } from 'express';
+import { randomUUID } from 'crypto';
+import path from 'path';
 import prisma from '../lib/prisma';
+import { uploadToR2, getPublicUrl, deleteFromR2 } from '../utils/r2';
 
 const AUTHORIZED_USERNAME = 'prod.tahiranwar';
+const MAX_ATTACHMENT_SIZE = 25 * 1024 * 1024; // 25 MB
+
+function delay(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function fetchWithRetry(url: string, retries = 1): Promise<globalThis.Response> {
+  const res = await fetch(url);
+  if (res.status === 429 && retries > 0) {
+    console.warn(`Trello rate limit hit, retrying in 2s...`);
+    await delay(2000);
+    return fetchWithRetry(url, retries - 1);
+  }
+  return res;
+}
+
+async function downloadTrelloFile(url: string, apiKey: string, token: string): Promise<Buffer> {
+  let res = await fetch(url);
+  if (res.status === 401 || res.status === 403) {
+    const sep = url.includes('?') ? '&' : '?';
+    res = await fetch(`${url}${sep}key=${apiKey}&token=${token}`);
+  }
+  if (!res.ok) throw new Error(`Download failed: ${res.status} ${res.statusText}`);
+  return Buffer.from(await res.arrayBuffer());
+}
 
 /**
  * Check if the requesting user is authorized for Trello operations.
@@ -186,8 +214,13 @@ export const importFromTrello = async (req: Request, res: Response): Promise<voi
 
     const summary = {
       imported: 0,
+      updated: 0,
       skipped: 0,
       failed: 0,
+      commentsImported: 0,
+      commentsFailed: 0,
+      attachmentsImported: 0,
+      attachmentsFailed: 0,
       newBoards: [] as string[],
       details: [] as { cardName: string; status: string; reason?: string }[],
     };
@@ -197,13 +230,11 @@ export const importFromTrello = async (req: Request, res: Response): Promise<voi
       const trelloCardId: string = card.id;
 
       try {
-        // Check for duplicate
-        const existing = await prisma.project.findUnique({ where: { trelloCardId } });
-        if (existing) {
-          summary.skipped++;
-          summary.details.push({ cardName, status: 'skipped', reason: 'Already imported' });
-          continue;
-        }
+        // Check for existing project (update instead of skip)
+        const existing = await prisma.project.findUnique({
+          where: { trelloCardId },
+          include: { attachments: true },
+        });
 
         // Detect target board
         const listName = listMap.get(card.idList) || '';
@@ -212,7 +243,6 @@ export const importFromTrello = async (req: Request, res: Response): Promise<voi
         // Get or create board
         let boardId = boardCache.get(boardSlug);
         if (!boardId) {
-          // Auto-create the board
           const boardDisplayName = boardSlug
             .split('-')
             .map((w: string) => w.charAt(0).toUpperCase() + w.slice(1))
@@ -247,36 +277,66 @@ export const importFromTrello = async (req: Request, res: Response): Promise<voi
         );
         const priority = hasUrgent ? 'HIGH' : 'MEDIUM';
 
-        // Get the first column of this board for default status
-        const firstColumn = await prisma.boardColumn.findFirst({
-          where: { boardId, deletedAt: null },
-          orderBy: { position: 'asc' },
-          select: { key: true },
-        });
+        let projectId: string;
+        let isUpdate = false;
 
-        // Create the project
-        const newProject = await prisma.project.create({
-          data: {
-            name: cardName,
-            description: card.desc || null,
-            status: firstColumn?.key || 'todo',
-            priority,
-            dueDate: card.due ? new Date(card.due) : null,
-            boardId,
-            teamId: firstTeam.id,
-            trelloCardId,
-          },
-        });
+        if (existing) {
+          // Update existing project
+          isUpdate = true;
+          projectId = existing.id;
 
-        // Fetch comments for this specific card from Trello
+          await prisma.project.update({
+            where: { id: existing.id },
+            data: {
+              name: cardName,
+              description: card.desc || null,
+              priority,
+              dueDate: card.due ? new Date(card.due) : null,
+            },
+          });
+
+          // Delete existing comments (will re-import from Trello)
+          await prisma.comment.deleteMany({ where: { projectId } });
+
+          // Delete existing attachments from R2 + DB
+          for (const att of existing.attachments) {
+            if (att.key) {
+              try { await deleteFromR2(att.key); } catch { /* ignore R2 delete errors */ }
+            }
+          }
+          await prisma.attachment.deleteMany({ where: { projectId } });
+        } else {
+          // Create new project
+          const firstColumn = await prisma.boardColumn.findFirst({
+            where: { boardId, deletedAt: null },
+            orderBy: { position: 'asc' },
+            select: { key: true },
+          });
+
+          const newProject = await prisma.project.create({
+            data: {
+              name: cardName,
+              description: card.desc || null,
+              status: firstColumn?.key || 'todo',
+              priority,
+              dueDate: card.due ? new Date(card.due) : null,
+              boardId,
+              teamId: firstTeam.id,
+              trelloCardId,
+            },
+          });
+          projectId = newProject.id;
+        }
+
+        // --- Import comments from Trello ---
         if (importingUserId) {
           try {
-            const cardCommentsRes = await fetch(
+            await delay(100); // rate-limit protection
+            const cardCommentsRes = await fetchWithRetry(
               `https://api.trello.com/1/cards/${trelloCardId}/actions?filter=commentCard&limit=1000&key=${apiKey}&token=${token}`
             );
             if (cardCommentsRes.ok) {
               const cardActions = (await cardCommentsRes.json()) as any[];
-              // Sort oldest first so they appear in chronological order
               cardActions.sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime());
               for (const action of cardActions) {
                 const text = action.data?.text || '';
@@ -285,20 +345,80 @@ export const importFromTrello = async (req: Request, res: Response): Promise<voi
                 await prisma.comment.create({
                   data: {
                     content: commentContent,
-                    projectId: newProject.id,
+                    projectId,
                     userId: importingUserId,
                     createdAt: new Date(action.date),
                   },
                 });
+                summary.commentsImported++;
               }
+            } else {
+              console.error(`Comments API failed for "${cardName}": HTTP ${cardCommentsRes.status}`);
+              summary.commentsFailed++;
             }
           } catch (commentError) {
             console.error(`Error fetching comments for card "${cardName}":`, commentError);
+            summary.commentsFailed++;
           }
         }
 
-        summary.imported++;
-        summary.details.push({ cardName, status: 'imported' });
+        // --- Import attachments from Trello ---
+        try {
+          await delay(100);
+          const attachRes = await fetchWithRetry(
+            `https://api.trello.com/1/cards/${trelloCardId}/attachments?key=${apiKey}&token=${token}`
+          );
+          if (attachRes.ok) {
+            const attachments = (await attachRes.json()) as any[];
+            for (const att of attachments) {
+              try {
+                const fileUrl: string = att.url;
+                const fileSize: number = att.bytes || 0;
+                const fileName: string = att.name || 'attachment';
+                const mimeType: string = att.mimeType || 'application/octet-stream';
+
+                // Skip non-file attachments (e.g. link-only) and oversized files
+                if (!fileUrl || fileSize === 0 || fileSize > MAX_ATTACHMENT_SIZE) continue;
+
+                await delay(100);
+                const fileBuffer = await downloadTrelloFile(fileUrl, apiKey, token);
+
+                const ext = path.extname(fileName) || '.bin';
+                const r2Key = `trello-imports/${randomUUID()}${ext}`;
+
+                await uploadToR2(r2Key, fileBuffer, mimeType);
+                const publicUrl = getPublicUrl(r2Key);
+
+                await prisma.attachment.create({
+                  data: {
+                    filename: fileName,
+                    url: publicUrl,
+                    key: r2Key,
+                    type: mimeType.split('/')[0] || 'file',
+                    size: fileSize,
+                    projectId,
+                  },
+                });
+                summary.attachmentsImported++;
+              } catch (attError) {
+                console.error(`Error importing attachment "${att.name}" for "${cardName}":`, attError);
+                summary.attachmentsFailed++;
+              }
+            }
+          } else {
+            console.error(`Attachments API failed for "${cardName}": HTTP ${attachRes.status}`);
+          }
+        } catch (attachError) {
+          console.error(`Error fetching attachments for card "${cardName}":`, attachError);
+        }
+
+        if (isUpdate) {
+          summary.updated++;
+          summary.details.push({ cardName, status: 'updated' });
+        } else {
+          summary.imported++;
+          summary.details.push({ cardName, status: 'imported' });
+        }
       } catch (cardError) {
         console.error(`Error importing card "${cardName}":`, cardError);
         summary.failed++;
@@ -312,7 +432,7 @@ export const importFromTrello = async (req: Request, res: Response): Promise<voi
 
     res.status(200).json({
       success: true,
-      message: `Import complete: ${summary.imported} imported, ${summary.skipped} skipped, ${summary.failed} failed`,
+      message: `Import complete: ${summary.imported} imported, ${summary.updated} updated, ${summary.skipped} skipped, ${summary.failed} failed`,
       data: summary,
     });
   } catch (error) {
