@@ -22,11 +22,10 @@ async function fetchWithRetry(url: string, retries = 1): Promise<globalThis.Resp
 }
 
 async function downloadTrelloFile(url: string, apiKey: string, token: string): Promise<Buffer> {
-  let res = await fetch(url);
-  if (res.status === 401 || res.status === 403) {
-    const sep = url.includes('?') ? '&' : '?';
-    res = await fetch(`${url}${sep}key=${apiKey}&token=${token}`);
-  }
+  // Always append auth — Trello attachment URLs for private boards require it
+  const sep = url.includes('?') ? '&' : '?';
+  const authUrl = `${url}${sep}key=${apiKey}&token=${token}`;
+  const res = await fetch(authUrl);
   if (!res.ok) throw new Error(`Download failed: ${res.status} ${res.statusText}`);
   return Buffer.from(await res.arrayBuffer());
 }
