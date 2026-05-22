@@ -28,9 +28,13 @@ async function downloadTrelloFile(
   apiKey: string,
   token: string,
 ): Promise<Buffer> {
-  // Use Trello's REST API download endpoint — CDN URLs don't accept key/token
-  const apiUrl = `https://api.trello.com/1/cards/${cardId}/attachments/${attachmentId}/download/${encodeURIComponent(fileName)}?key=${apiKey}&token=${token}`;
-  const res = await fetch(apiUrl);
+  // Trello attachment downloads require OAuth header — query params don't work
+  const apiUrl = `https://api.trello.com/1/cards/${cardId}/attachments/${attachmentId}/download/${encodeURIComponent(fileName)}`;
+  const res = await fetch(apiUrl, {
+    headers: {
+      'Authorization': `OAuth oauth_consumer_key="${apiKey}", oauth_token="${token}"`,
+    },
+  });
   if (!res.ok) throw new Error(`Download failed: ${res.status} ${res.statusText}`);
   return Buffer.from(await res.arrayBuffer());
 }

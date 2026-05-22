@@ -72,7 +72,9 @@
       "Bash(cp \"C:\\\\Users\\\\Tayyab Anwar\\\\Downloads\\\\final-logo \\(2\\).png\" \"F:\\\\downloads-new\\\\MANAGEMENT-main\\\\MANAGEMENT-main\\\\frontend\\\\public\\\\logo-dark.png\")",
       "Bash(cp \"C:\\\\Users\\\\Tayyab Anwar\\\\Downloads\\\\final-logo-\\(in-white\\) \\(1\\).png\" \"F:\\\\downloads-new\\\\MANAGEMENT-main\\\\MANAGEMENT-main\\\\frontend\\\\public\\\\logo-light.png\")",
       "Bash(find F:/downloads-new/MANAGEMENT-main/MANAGEMENT-main/frontend -name *trello* -type f)",
-      "Bash(grep -r \"trelloCardId\\\\|trello\" ./backend/src/controllers/*.ts)"
+      "Bash(grep -r \"trelloCardId\\\\|trello\" ./backend/src/controllers/*.ts)",
+      "Bash(python3 -c \"import json,sys; data=json.load\\(sys.stdin\\); [print\\(json.dumps\\({''''id'''':a[''''id''''],''''name'''':a[''''name''''],''''url'''':a[''''url''''],''''isUpload'''':a.get\\(''''isUpload''''\\)},indent=2\\)\\) for a in data[:2]]\")",
+      "Bash(node -e \"const d=JSON.parse\\(require\\(''''fs''''\\).readFileSync\\(''''/dev/stdin'''',''''utf8''''\\)\\); d.slice\\(0,3\\).forEach\\(a=>console.log\\(JSON.stringify\\({id:a.id,name:a.name,url:a.url,isUpload:a.isUpload},null,2\\)\\)\\)\")"
     ]
   }
 }
