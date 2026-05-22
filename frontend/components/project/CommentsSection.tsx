@@ -156,13 +156,29 @@ export function CommentsSection({ project }: CommentsSectionProps) {
       if (imgMatch.index > lastIdx) {
         segments.push(...renderTextWithMentions(text.slice(lastIdx, imgMatch.index), lastIdx));
       }
-      // Render as a file reference badge (Trello image URLs require auth, can't embed directly)
+      // Match to project attachment by filename and link to R2 URL
       const fileName = imgMatch[1].replace(/\\_/g, '_');
+      const attachment = project.attachments?.find(a => a.filename === fileName);
+      const href = attachment?.url;
       segments.push(
-        <span key={`img-${imgMatch.index}`} className="inline-flex items-center gap-1 text-accent text-xs bg-accent/10 px-2 py-0.5 rounded my-0.5">
-          <Paperclip className="w-3 h-3" />
-          {fileName}
-        </span>
+        href ? (
+          <a
+            key={`img-${imgMatch.index}`}
+            href={href}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 text-accent hover:underline text-xs bg-accent/10 px-2 py-0.5 rounded my-0.5 cursor-pointer"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <Paperclip className="w-3 h-3" />
+            {fileName}
+          </a>
+        ) : (
+          <span key={`img-${imgMatch.index}`} className="inline-flex items-center gap-1 text-fg-3 text-xs bg-surface-2 px-2 py-0.5 rounded my-0.5">
+            <Paperclip className="w-3 h-3" />
+            {fileName}
+          </span>
+        )
       );
       lastIdx = imgMatch.index + imgMatch[0].length;
     }
