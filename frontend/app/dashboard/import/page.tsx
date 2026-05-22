@@ -53,6 +53,7 @@ export default function TrelloImportPage() {
   const [error, setError] = useState('');
   const [fetchingBoards, setFetchingBoards] = useState(false);
   const [importing, setImporting] = useState(false);
+  const [progress, setProgress] = useState<{ message: string; current: number; total: number } | null>(null);
 
   useEffect(() => {
     if (state.currentUser && state.currentUser.username !== 'prod.tahiranwar') {
@@ -92,7 +93,7 @@ export default function TrelloImportPage() {
     }
   };
 
-  const handleImport = async () => {
+  const handleImport = () => {
     if (!selectedBoardId) {
       setError('Please select a board to import.');
       return;
@@ -100,27 +101,41 @@ export default function TrelloImportPage() {
     setError('');
     setImporting(true);
     setResult(null);
+    setProgress(null);
 
-    try {
-      const res = await trelloAPI.import(apiKey.trim(), token.trim(), selectedBoardId);
-      if (!res.success) {
-        setError(res.message || 'Import failed.');
-        return;
-      }
-      setResult(res.data);
+    trelloAPI.importStream(
+      apiKey.trim(),
+      token.trim(),
+      selectedBoardId,
+      // onProgress
+      (data) => {
+        setProgress({
+          message: data.message || '',
+          current: data.current || 0,
+          total: data.total || 0,
+        });
+      },
+      // onComplete
+      async (data) => {
+        setResult(data.data);
+        setProgress(null);
+        setImporting(false);
 
-      // Refresh projects in global state so workspaces show imported/updated projects
-      if (res.data.imported > 0 || res.data.updated > 0) {
-        const projectsRes = await projectAPI.getAll();
-        if (projectsRes.success) {
-          dispatch({ type: 'SET_PROJECTS', payload: projectsRes.data.projects.map(mapApiProject) });
+        // Refresh projects in global state
+        if (data.data.imported > 0 || data.data.updated > 0) {
+          const projectsRes = await projectAPI.getAll();
+          if (projectsRes.success) {
+            dispatch({ type: 'SET_PROJECTS', payload: projectsRes.data.projects.map(mapApiProject) });
+          }
         }
-      }
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Import failed.');
-    } finally {
-      setImporting(false);
-    }
+      },
+      // onError
+      (message) => {
+        setError(message);
+        setProgress(null);
+        setImporting(false);
+      },
+    );
   };
 
   const statusIcon = (status: ImportDetail['status']) => {
@@ -229,6 +244,26 @@ export default function TrelloImportPage() {
               )}
             </button>
           </div>
+        </div>
+      )}
+
+      {/* Progress indicator */}
+      {importing && progress && (
+        <div className="rounded-lg bg-surface border border-border p-5 space-y-3">
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-fg-2 truncate max-w-[70%]">{progress.message}</span>
+            {progress.total > 0 && (
+              <span className="text-fg-3 text-xs flex-shrink-0">{progress.current} / {progress.total}</span>
+            )}
+          </div>
+          {progress.total > 0 && (
+            <div className="w-full bg-surface-2 rounded-full h-2 overflow-hidden">
+              <div
+                className="bg-accent h-2 rounded-full transition-all duration-300"
+                style={{ width: `${Math.round((progress.current / progress.total) * 100)}%` }}
+              />
+            </div>
+          )}
         </div>
       )}
 

@@ -141,72 +141,87 @@ const DEFAULT_COLUMNS = [
 ];
 
 /**
- * Import cards from a Trello board into XRM.
+ * Import cards from a Trello board into XRM (SSE streaming).
  * POST /api/trello/import
+ *
+ * Streams progress events to the client:
+ *   event: progress  — per-card status update
+ *   event: complete  — final summary
+ *   event: error     — fatal error
  */
 export const importFromTrello = async (req: Request, res: Response): Promise<void> => {
+  // --- Auth & validation (JSON errors before switching to SSE) ---
+  const authorized = await checkTrelloAuth(req, res);
+  if (!authorized) return;
+
+  const { apiKey, token, trelloBoardId } = req.body as {
+    apiKey?: string;
+    token?: string;
+    trelloBoardId?: string;
+  };
+
+  if (!apiKey || !token || !trelloBoardId) {
+    res.status(400).json({ success: false, message: 'apiKey, token, and trelloBoardId are required' });
+    return;
+  }
+
+  // --- Switch to SSE ---
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no'); // disable nginx buffering
+  res.flushHeaders();
+
+  const sendEvent = (event: string, data: any) => {
+    res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+  };
+
   try {
-    const authorized = await checkTrelloAuth(req, res);
-    if (!authorized) return;
-
-    const { apiKey, token, trelloBoardId } = req.body as {
-      apiKey?: string;
-      token?: string;
-      trelloBoardId?: string;
-    };
-
-    if (!apiKey || !token || !trelloBoardId) {
-      res.status(400).json({ success: false, message: 'apiKey, token, and trelloBoardId are required' });
-      return;
-    }
-
     // Fetch board data from Trello
+    sendEvent('progress', { message: 'Fetching board data from Trello...' });
+
     const response = await fetch(
       `https://api.trello.com/1/boards/${trelloBoardId}?lists=all&cards=all&card_fields=name,desc,labels,due,idList,closed&key=${apiKey}&token=${token}`
     );
 
     if (!response.ok) {
       const errorText = await response.text();
-      res.status(400).json({
-        success: false,
-        message: `Trello API error: ${errorText}`,
-      });
+      sendEvent('error', { message: `Trello API error: ${errorText}` });
+      res.end();
       return;
     }
 
     const boardData: any = await response.json();
 
-    // Build list ID → list name map
     const listMap = new Map<string, string>();
     for (const list of boardData.lists || []) {
       listMap.set(list.id, list.name);
     }
 
-    // Filter out closed cards
     const openCards = (boardData.cards || []).filter((card: any) => !card.closed);
+    const totalCards = openCards.length;
 
-    // Get the first team for assignment
+    sendEvent('progress', { message: `Found ${totalCards} cards to process`, total: totalCards, current: 0 });
+
     const firstTeam = await prisma.team.findFirst({ orderBy: { createdAt: 'asc' } });
     if (!firstTeam) {
-      res.status(500).json({ success: false, message: 'No teams found in the system' });
+      sendEvent('error', { message: 'No teams found in the system' });
+      res.end();
       return;
     }
 
-    // Get the first organization for board creation
     const firstOrg = await prisma.organization.findFirst({ orderBy: { createdAt: 'asc' } });
     if (!firstOrg) {
-      res.status(500).json({ success: false, message: 'No organization found in the system' });
+      sendEvent('error', { message: 'No organization found in the system' });
+      res.end();
       return;
     }
 
-    // Get the importing user's ID for comment attribution
     const importingUserId = (req as any).user?.id;
 
-    // Cache for board lookups / creations
-    const boardCache = new Map<string, string>(); // slug → boardId
+    const boardCache = new Map<string, string>();
     const newBoardsCreated: string[] = [];
 
-    // Pre-load existing boards
     const existingBoards = await prisma.board.findMany({ where: { deletedAt: null } });
     for (const board of existingBoards) {
       boardCache.set(board.slug, board.id);
@@ -225,22 +240,27 @@ export const importFromTrello = async (req: Request, res: Response): Promise<voi
       details: [] as { cardName: string; status: string; reason?: string }[],
     };
 
-    for (const card of openCards) {
+    for (let i = 0; i < openCards.length; i++) {
+      const card = openCards[i];
       const cardName: string = card.name || 'Untitled';
       const trelloCardId: string = card.id;
 
+      sendEvent('progress', {
+        message: `Processing: ${cardName}`,
+        current: i + 1,
+        total: totalCards,
+        cardName,
+      });
+
       try {
-        // Check for existing project (update instead of skip)
         const existing = await prisma.project.findUnique({
           where: { trelloCardId },
           include: { attachments: true },
         });
 
-        // Detect target board
         const listName = listMap.get(card.idList) || '';
         const boardSlug = detectBoardSlug(listName, cardName);
 
-        // Get or create board
         let boardId = boardCache.get(boardSlug);
         if (!boardId) {
           const boardDisplayName = boardSlug
@@ -270,7 +290,6 @@ export const importFromTrello = async (req: Request, res: Response): Promise<voi
           summary.newBoards.push(boardDisplayName);
         }
 
-        // Determine priority from labels
         const labels: any[] = card.labels || [];
         const hasUrgent = labels.some(
           (l: any) => l.name && l.name.toLowerCase().includes('urgent')
@@ -281,7 +300,6 @@ export const importFromTrello = async (req: Request, res: Response): Promise<voi
         let isUpdate = false;
 
         if (existing) {
-          // Update existing project
           isUpdate = true;
           projectId = existing.id;
 
@@ -295,18 +313,15 @@ export const importFromTrello = async (req: Request, res: Response): Promise<voi
             },
           });
 
-          // Delete existing comments (will re-import from Trello)
           await prisma.comment.deleteMany({ where: { projectId } });
 
-          // Delete existing attachments from R2 + DB
           for (const att of existing.attachments) {
             if (att.key) {
-              try { await deleteFromR2(att.key); } catch { /* ignore R2 delete errors */ }
+              try { await deleteFromR2(att.key); } catch { /* ignore */ }
             }
           }
           await prisma.attachment.deleteMany({ where: { projectId } });
         } else {
-          // Create new project
           const firstColumn = await prisma.boardColumn.findFirst({
             where: { boardId, deletedAt: null },
             orderBy: { position: 'asc' },
@@ -328,10 +343,10 @@ export const importFromTrello = async (req: Request, res: Response): Promise<voi
           projectId = newProject.id;
         }
 
-        // --- Import comments from Trello ---
+        // --- Import comments ---
         if (importingUserId) {
           try {
-            await delay(100); // rate-limit protection
+            await delay(100);
             const cardCommentsRes = await fetchWithRetry(
               `https://api.trello.com/1/cards/${trelloCardId}/actions?filter=commentCard&limit=1000&key=${apiKey}&token=${token}`
             );
@@ -362,7 +377,7 @@ export const importFromTrello = async (req: Request, res: Response): Promise<voi
           }
         }
 
-        // --- Import attachments from Trello ---
+        // --- Import attachments ---
         try {
           await delay(100);
           const attachRes = await fetchWithRetry(
@@ -377,7 +392,6 @@ export const importFromTrello = async (req: Request, res: Response): Promise<voi
                 const fileName: string = att.name || 'attachment';
                 const mimeType: string = att.mimeType || 'application/octet-stream';
 
-                // Skip non-file attachments (e.g. link-only) and oversized files
                 if (!fileUrl || fileSize === 0 || fileSize > MAX_ATTACHMENT_SIZE) continue;
 
                 await delay(100);
@@ -430,13 +444,15 @@ export const importFromTrello = async (req: Request, res: Response): Promise<voi
       }
     }
 
-    res.status(200).json({
+    sendEvent('complete', {
       success: true,
       message: `Import complete: ${summary.imported} imported, ${summary.updated} updated, ${summary.skipped} skipped, ${summary.failed} failed`,
       data: summary,
     });
   } catch (error) {
     console.error('Error importing from Trello:', error);
-    res.status(500).json({ success: false, message: 'Internal server error' });
+    sendEvent('error', { message: 'Internal server error' });
+  } finally {
+    res.end();
   }
 };
