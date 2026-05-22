@@ -21,11 +21,16 @@ async function fetchWithRetry(url: string, retries = 1): Promise<globalThis.Resp
   return res;
 }
 
-async function downloadTrelloFile(url: string, apiKey: string, token: string): Promise<Buffer> {
-  // Always append auth — Trello attachment URLs for private boards require it
-  const sep = url.includes('?') ? '&' : '?';
-  const authUrl = `${url}${sep}key=${apiKey}&token=${token}`;
-  const res = await fetch(authUrl);
+async function downloadTrelloFile(
+  cardId: string,
+  attachmentId: string,
+  fileName: string,
+  apiKey: string,
+  token: string,
+): Promise<Buffer> {
+  // Use Trello's REST API download endpoint — CDN URLs don't accept key/token
+  const apiUrl = `https://api.trello.com/1/cards/${cardId}/attachments/${attachmentId}/download/${encodeURIComponent(fileName)}?key=${apiKey}&token=${token}`;
+  const res = await fetch(apiUrl);
   if (!res.ok) throw new Error(`Download failed: ${res.status} ${res.statusText}`);
   return Buffer.from(await res.arrayBuffer());
 }
@@ -345,7 +350,6 @@ export const importFromTrello = async (req: Request, res: Response): Promise<voi
         // --- Import comments ---
         if (importingUserId) {
           try {
-            await delay(100);
             const cardCommentsRes = await fetchWithRetry(
               `https://api.trello.com/1/cards/${trelloCardId}/actions?filter=commentCard&limit=1000&key=${apiKey}&token=${token}`
             );
@@ -378,23 +382,32 @@ export const importFromTrello = async (req: Request, res: Response): Promise<voi
 
         // --- Import attachments ---
         try {
-          await delay(100);
           const attachRes = await fetchWithRetry(
             `https://api.trello.com/1/cards/${trelloCardId}/attachments?key=${apiKey}&token=${token}`
           );
           if (attachRes.ok) {
             const attachments = (await attachRes.json()) as any[];
-            for (const att of attachments) {
+            const uploadable = attachments.filter((a: any) =>
+              a.isUpload !== false && a.bytes > 0 && a.bytes <= MAX_ATTACHMENT_SIZE
+            );
+
+            for (let ai = 0; ai < uploadable.length; ai++) {
+              const att = uploadable[ai];
               try {
-                const fileUrl: string = att.url;
+                const attachmentId: string = att.id;
                 const fileSize: number = att.bytes || 0;
                 const fileName: string = att.name || 'attachment';
                 const mimeType: string = att.mimeType || 'application/octet-stream';
 
-                if (!fileUrl || fileSize === 0 || fileSize > MAX_ATTACHMENT_SIZE) continue;
+                // Send per-attachment event to keep connection alive
+                sendEvent('progress', {
+                  message: `${cardName} — downloading ${fileName} (${ai + 1}/${uploadable.length})`,
+                  current: i + 1,
+                  total: totalCards,
+                  cardName,
+                });
 
-                await delay(100);
-                const fileBuffer = await downloadTrelloFile(fileUrl, apiKey, token);
+                const fileBuffer = await downloadTrelloFile(trelloCardId, attachmentId, fileName, apiKey, token);
 
                 const ext = path.extname(fileName) || '.bin';
                 const r2Key = `trello-imports/${randomUUID()}${ext}`;
