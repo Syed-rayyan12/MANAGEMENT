@@ -93,7 +93,7 @@ export default function TrelloImportPage() {
     }
   };
 
-  const handleImport = () => {
+  const handleImport = async () => {
     if (!selectedBoardId) {
       setError('Please select a board to import.');
       return;
@@ -101,41 +101,81 @@ export default function TrelloImportPage() {
     setError('');
     setImporting(true);
     setResult(null);
-    setProgress(null);
+    setProgress({ message: 'Fetching board data...', current: 0, total: 0 });
 
-    trelloAPI.importStream(
-      apiKey.trim(),
-      token.trim(),
-      selectedBoardId,
-      // onProgress
-      (data) => {
-        setProgress({
-          message: data.message || '',
-          current: data.current || 0,
-          total: data.total || 0,
-        });
-      },
-      // onComplete
-      async (data) => {
-        setResult(data.data);
-        setProgress(null);
+    try {
+      // Step 1: Prepare — fetch all card data from Trello
+      const prepRes = await trelloAPI.prepare(apiKey.trim(), token.trim(), selectedBoardId);
+      if (!prepRes.success) {
+        setError(prepRes.message || 'Failed to fetch board data.');
         setImporting(false);
+        setProgress(null);
+        return;
+      }
 
-        // Refresh projects in global state
-        if (data.data.imported > 0 || data.data.updated > 0) {
-          const projectsRes = await projectAPI.getAll();
-          if (projectsRes.success) {
-            dispatch({ type: 'SET_PROJECTS', payload: projectsRes.data.projects.map(mapApiProject) });
+      const { cards, lists, totalCards, batchSize } = prepRes.data;
+      const totalBatches = Math.ceil(totalCards / batchSize);
+
+      // Accumulate results across batches
+      const totals: ImportResult = {
+        imported: 0, updated: 0, skipped: 0, failed: 0,
+        commentsImported: 0, commentsFailed: 0,
+        attachmentsImported: 0, attachmentsFailed: 0,
+        details: [], newBoards: [],
+      };
+
+      // Step 2: Process in batches
+      for (let b = 0; b < totalBatches; b++) {
+        const batchCards = cards.slice(b * batchSize, (b + 1) * batchSize);
+        const processedSoFar = b * batchSize + batchCards.length;
+
+        setProgress({
+          message: `Batch ${b + 1}/${totalBatches} — processing ${batchCards.length} cards...`,
+          current: processedSoFar,
+          total: totalCards,
+        });
+
+        const batchRes = await trelloAPI.importBatch(apiKey.trim(), token.trim(), batchCards, lists);
+        if (!batchRes.success) {
+          setError(`Batch ${b + 1} failed: ${batchRes.message}`);
+          break;
+        }
+
+        const d = batchRes.data;
+        totals.imported += d.imported;
+        totals.updated += d.updated;
+        totals.skipped += d.skipped;
+        totals.failed += d.failed;
+        totals.commentsImported += d.commentsImported;
+        totals.commentsFailed += d.commentsFailed;
+        totals.attachmentsImported += d.attachmentsImported;
+        totals.attachmentsFailed += d.attachmentsFailed;
+        totals.details.push(...d.details);
+        if (d.newBoards?.length) {
+          for (const nb of d.newBoards) {
+            if (!totals.newBoards!.includes(nb)) totals.newBoards!.push(nb);
           }
         }
-      },
-      // onError
-      (message) => {
-        setError(message);
-        setProgress(null);
-        setImporting(false);
-      },
-    );
+
+        // Update result progressively so user sees cards appearing
+        setResult({ ...totals });
+      }
+
+      setResult({ ...totals });
+
+      // Refresh projects in global state
+      if (totals.imported > 0 || totals.updated > 0) {
+        const projectsRes = await projectAPI.getAll();
+        if (projectsRes.success) {
+          dispatch({ type: 'SET_PROJECTS', payload: projectsRes.data.projects.map(mapApiProject) });
+        }
+      }
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Import failed.');
+    } finally {
+      setImporting(false);
+      setProgress(null);
+    }
   };
 
   const statusIcon = (status: ImportDetail['status']) => {

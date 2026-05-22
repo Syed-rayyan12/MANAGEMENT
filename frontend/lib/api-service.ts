@@ -599,68 +599,19 @@ export const trelloAPI = {
     return await response.json();
   },
 
-  importStream: (
-    apiKey: string,
-    token: string,
-    trelloBoardId: string,
-    onProgress: (data: any) => void,
-    onComplete: (data: any) => void,
-    onError: (message: string) => void,
-  ) => {
-    const authToken = getToken();
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-    };
-    if (authToken) headers['Authorization'] = `Bearer ${authToken}`;
-
-    fetch(`${API_BASE_URL}/trello/import`, {
+  prepare: async (apiKey: string, token: string, trelloBoardId: string) => {
+    const response = await apiFetch(`${API_BASE_URL}/trello/prepare`, {
       method: 'POST',
-      headers,
       body: JSON.stringify({ apiKey, token, trelloBoardId }),
-    }).then(async (response) => {
-      if (!response.ok) {
-        const err = await response.json().catch(() => ({ message: 'Import request failed' }));
-        onError(err.message || 'Import request failed');
-        return;
-      }
-
-      const reader = response.body?.getReader();
-      if (!reader) {
-        onError('Streaming not supported');
-        return;
-      }
-
-      const decoder = new TextDecoder();
-      let buffer = '';
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-
-        // Parse SSE events from buffer
-        const lines = buffer.split('\n');
-        buffer = lines.pop() || ''; // keep incomplete line in buffer
-
-        let currentEvent = '';
-        for (const line of lines) {
-          if (line.startsWith('event: ')) {
-            currentEvent = line.slice(7).trim();
-          } else if (line.startsWith('data: ')) {
-            const jsonStr = line.slice(6);
-            try {
-              const data = JSON.parse(jsonStr);
-              if (currentEvent === 'progress') onProgress(data);
-              else if (currentEvent === 'complete') onComplete(data);
-              else if (currentEvent === 'error') onError(data.message || 'Import failed');
-            } catch { /* skip malformed JSON */ }
-            currentEvent = '';
-          }
-        }
-      }
-    }).catch(() => {
-      onError('Network error — please check your connection');
     });
+    return await response.json();
+  },
+
+  importBatch: async (apiKey: string, token: string, cards: any[], lists: any[]) => {
+    const response = await apiFetch(`${API_BASE_URL}/trello/import-batch`, {
+      method: 'POST',
+      body: JSON.stringify({ apiKey, token, cards, lists }),
+    });
+    return await response.json();
   },
 };

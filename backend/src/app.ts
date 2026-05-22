@@ -44,13 +44,7 @@ app.use(helmet());
 // ───────────────────────────────────────────────────
 // Compression
 // ───────────────────────────────────────────────────
-app.use(compression({
-  filter: (req, res) => {
-    // Disable compression for SSE streams
-    if (res.getHeader('Content-Type') === 'text/event-stream') return false;
-    return compression.filter(req, res);
-  },
-}));
+app.use(compression());
 
 // ───────────────────────────────────────────────────
 // Rate limiting

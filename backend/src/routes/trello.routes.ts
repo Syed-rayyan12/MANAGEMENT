@@ -1,10 +1,11 @@
 import { Router } from 'express';
 import { authenticate } from '../middlewares/auth.middleware';
-import { getTrelloBoards, importFromTrello } from '../controllers/trello.controller';
+import { getTrelloBoards, prepareTrelloImport, importBatch } from '../controllers/trello.controller';
 
 const router = Router();
 
 router.get('/boards', authenticate, getTrelloBoards);
-router.post('/import', authenticate, importFromTrello);
+router.post('/prepare', authenticate, prepareTrelloImport);
+router.post('/import-batch', authenticate, importBatch);
 
 export default router;
