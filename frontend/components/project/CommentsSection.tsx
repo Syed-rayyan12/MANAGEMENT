@@ -7,7 +7,7 @@ import { toast } from 'sonner';
 import { useApp } from '@/contexts/useApp';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { MessageSquare, Edit, AtSign } from 'lucide-react';
+import { MessageSquare, Edit, AtSign, Paperclip } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { linkifyText } from '@/lib/utils';
 
@@ -144,20 +144,60 @@ export function CommentsSection({ project }: CommentsSectionProps) {
 
   const renderCommentWithMentions = (text: string) => {
     if (!text) return null;
-    const parts = text.split(/(@[a-zA-Z0-9_]+)/g);
+
+    // Split on Trello inline images: !filename ( url )
+    const imageRegex = /!([^\s(]+)\s*\(\s*(https?:\/\/[^\s)]+)\s*\)/g;
+    const segments: React.ReactNode[] = [];
+    let lastIdx = 0;
+    let imgMatch: RegExpExecArray | null;
+
+    while ((imgMatch = imageRegex.exec(text)) !== null) {
+      // Process text before this image
+      if (imgMatch.index > lastIdx) {
+        segments.push(...renderTextWithMentions(text.slice(lastIdx, imgMatch.index), lastIdx));
+      }
+      // Render as a file reference badge (Trello image URLs require auth, can't embed directly)
+      const fileName = imgMatch[1].replace(/\\_/g, '_');
+      segments.push(
+        <span key={`img-${imgMatch.index}`} className="inline-flex items-center gap-1 text-accent text-xs bg-accent/10 px-2 py-0.5 rounded my-0.5">
+          <Paperclip className="w-3 h-3" />
+          {fileName}
+        </span>
+      );
+      lastIdx = imgMatch.index + imgMatch[0].length;
+    }
+
+    // Remaining text after last image
+    if (lastIdx < text.length) {
+      segments.push(...renderTextWithMentions(text.slice(lastIdx), lastIdx));
+    }
+
+    return segments.length > 0 ? segments : renderTextWithMentions(text, 0);
+  };
+
+  const renderTextWithMentions = (text: string, keyOffset: number): React.ReactNode[] => {
+    // Handle **bold** markdown, @mentions, and linkify
+    const parts = text.split(/(\*\*[^*]+\*\*|@[a-zA-Z0-9_]+)/g);
     return parts.map((part, index) => {
+      if (part.startsWith('**') && part.endsWith('**')) {
+        return (
+          <span key={`${keyOffset}-${index}`} className="font-semibold text-foreground">
+            {part.slice(2, -2)}
+          </span>
+        );
+      }
       if (part.startsWith('@')) {
         const username = part.substring(1);
         const user = allUsers.find(u => u.name.toLowerCase().replace(/\s+/g, '') === username.toLowerCase());
         if (user) {
           return (
-            <span key={index} className="text-accent font-semibold bg-accent-soft px-1 rounded">
+            <span key={`${keyOffset}-${index}`} className="text-accent font-semibold bg-accent-soft px-1 rounded">
               @{user.name}
             </span>
           );
         }
       }
-      return <span key={index}>{linkifyText(part)}</span>;
+      return <span key={`${keyOffset}-${index}`}>{linkifyText(part)}</span>;
     });
   };
 
@@ -232,7 +272,7 @@ export function CommentsSection({ project }: CommentsSectionProps) {
                   </div>
                 ) : (
                   <>
-                    <p className="text-sm text-fg-2">{renderCommentWithMentions(comment.content)}</p>
+                    <div className="text-sm text-fg-2 break-words overflow-hidden whitespace-pre-wrap">{renderCommentWithMentions(comment.content)}</div>
                     {state.currentUser?.id === comment.userId && (
                       <Button
                         variant="ghost"
