@@ -259,7 +259,7 @@ export function CommentsSection({ project }: CommentsSectionProps) {
               <span className="w-8 h-8 rounded-full bg-accent-soft text-accent text-[11px] font-bold flex items-center justify-center flex-shrink-0">
                 {getUserName(comment.userId)[0]}
               </span>
-              <div className="flex-1">
+              <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1">
                   <span className="font-semibold text-sm text-foreground">{getUserName(comment.userId)}</span>
                   <span className="text-xs text-fg-4">
@@ -288,7 +288,7 @@ export function CommentsSection({ project }: CommentsSectionProps) {
                   </div>
                 ) : (
                   <>
-                    <div className="text-sm text-fg-2 break-words overflow-hidden whitespace-pre-wrap">{renderCommentWithMentions(comment.content)}</div>
+                    <div className="text-sm text-fg-2 whitespace-pre-wrap [overflow-wrap:anywhere]">{renderCommentWithMentions(comment.content)}</div>
                     {state.currentUser?.id === comment.userId && (
                       <Button
                         variant="ghost"
