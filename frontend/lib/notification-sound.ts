@@ -75,17 +75,15 @@ export async function requestNotificationPermission(): Promise<boolean> {
 }
 
 /**
- * Show a native browser notification (only when tab is not focused).
+ * Show a native browser/OS notification.
  */
 export function showBrowserNotification(title: string, body: string, onClick?: () => void) {
   if (typeof window === 'undefined' || !('Notification' in window)) return;
   if (Notification.permission !== 'granted') return;
-  if (document.hasFocus()) return; // Only show when tab is in background
 
   const notification = new Notification(title, {
     body,
     icon: '/logo-dark.png',
-    tag: 'xrm-notification', // Collapses multiple into one if rapid-fire
   });
 
   if (onClick) {
