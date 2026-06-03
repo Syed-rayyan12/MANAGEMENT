@@ -3,6 +3,11 @@
 import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { useApp } from '@/contexts/useApp';
+import {
+  playNotificationSound,
+  requestNotificationPermission,
+  showBrowserNotification,
+} from '@/lib/notification-sound';
 
 interface SocketContextValue {
   socket: Socket | null;
@@ -27,6 +32,11 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
   const socketRef = useRef<Socket | null>(null);
 
   useEffect(() => {
+    // Request browser notification permission once user is logged in
+    if (state.currentUser) {
+      requestNotificationPermission();
+    }
+
     // Only connect when user is logged in
     if (!state.currentUser) {
       if (socketRef.current) {
@@ -77,6 +87,14 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
           timestamp: new Date(notification.timestamp),
           message: notification.message,
         },
+      });
+
+      // Play sound for every incoming notification
+      playNotificationSound();
+
+      // Show native browser notification when tab is in background
+      showBrowserNotification('XRM', notification.message, () => {
+        // Focus window and navigate handled by onclick
       });
     });
 
