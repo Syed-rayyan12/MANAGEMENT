@@ -536,7 +536,7 @@ export function ProjectModal({ project, onClose, boardColumns = [] }: ProjectMod
     <Sheet open={true} onOpenChange={onClose}>
       <SheetContent
         side="right"
-        className={`${isMobile ? 'w-full !max-w-full h-full' : '!w-[80vw] !max-w-[1200px] !h-[calc(100vh-24px)] !top-3 !right-3 !bottom-3 rounded-xl'} overflow-hidden p-0 gap-0 flex flex-col bg-background border border-border shadow-[0_25px_60px_-12px_rgba(0,0,0,0.4)]`}
+        className={`${isMobile ? 'w-full !max-w-full h-full' : '!fixed !inset-0 !m-auto !w-[calc(100vw-48px)] !max-w-[1400px] !h-[calc(100vh-48px)] rounded-xl [--tw-enter-translate-x:0%] [--tw-exit-translate-x:0%]'} overflow-hidden p-0 gap-0 flex flex-col bg-background border border-border shadow-[0_25px_60px_-12px_rgba(0,0,0,0.4)]`}
         onDragEnter={handleDragEnter}
         onDragLeave={handleDragLeave}
         onDragOver={handleDragOver}
