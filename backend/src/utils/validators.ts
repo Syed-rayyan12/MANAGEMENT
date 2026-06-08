@@ -19,7 +19,7 @@ const optionalUrl = z.string()
 
 export const createProjectSchema = z.object({
   name: z.string().min(1, 'Project name is required').max(200),
-  description: z.string().max(5000).optional().default(''),
+  description: z.string().max(50000).optional().default(''),
   boardId: z.string().min(1, 'Board ID is required'),
   status: z.string().max(50).optional(),
   priority: z.enum(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']).optional(),
@@ -31,7 +31,7 @@ export const createProjectSchema = z.object({
 
 export const updateProjectSchema = z.object({
   name: z.string().min(1).max(200).optional(),
-  description: z.string().max(5000).optional(),
+  description: z.string().max(50000).optional(),
   status: z.string().max(50).optional(),
   priority: z.enum(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']).optional(),
   dueDate: z.string().optional().nullable(),
