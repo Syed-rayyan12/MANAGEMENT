@@ -63,6 +63,8 @@ export default function TrelloImportPage() {
   const [fetchingBoards, setFetchingBoards] = useState(false);
   const [starting, setStarting] = useState(false);
   const [run, setRun] = useState<ImportRun | null>(null);
+  const [serverCreds, setServerCreds] = useState(false);
+  const [configLoaded, setConfigLoaded] = useState(false);
 
   const isAuthorized = state.currentUser?.username === 'prod.tahiranwar';
   const isRunning = run?.status === 'RUNNING';
@@ -92,6 +94,31 @@ export default function TrelloImportPage() {
     return () => {
       cancelled = true;
     };
+  }, [isAuthorized]);
+
+  // Check whether the server has Trello credentials configured; when it does,
+  // skip the credential form and load boards right away
+  useEffect(() => {
+    if (!isAuthorized) return;
+    let cancelled = false;
+    trelloAPI
+      .getConfig()
+      .then((res) => {
+        if (cancelled) return;
+        const has = Boolean(res.success && res.data?.hasServerCredentials);
+        setServerCreds(has);
+        setConfigLoaded(true);
+        if (has) {
+          fetchBoards();
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setConfigLoaded(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthorized]);
 
   // Poll while a run is in progress
@@ -132,18 +159,14 @@ export default function TrelloImportPage() {
     return null;
   }
 
-  const handleFetchBoards = async () => {
-    if (!apiKey.trim() || !token.trim()) {
-      setError('Please enter both API Key and Token.');
-      return;
-    }
+  const fetchBoards = async (key?: string, tok?: string) => {
     setError('');
     setFetchingBoards(true);
     setBoards([]);
     setSelectedBoardId('');
 
     try {
-      const res = await trelloAPI.getBoards(apiKey.trim(), token.trim());
+      const res = await trelloAPI.getBoards(key, tok);
       if (!res.success) {
         setError(res.message || 'Failed to fetch boards.');
         return;
@@ -159,6 +182,14 @@ export default function TrelloImportPage() {
     }
   };
 
+  const handleFetchBoards = () => {
+    if (!apiKey.trim() || !token.trim()) {
+      setError('Please enter both API Key and Token.');
+      return;
+    }
+    fetchBoards(apiKey.trim(), token.trim());
+  };
+
   const handleImport = async () => {
     if (!selectedBoardId) {
       setError('Please select a board to import.');
@@ -168,7 +199,11 @@ export default function TrelloImportPage() {
     setStarting(true);
 
     try {
-      const res = await trelloAPI.startImport(apiKey.trim(), token.trim(), selectedBoardId);
+      const res = await trelloAPI.startImport(
+        selectedBoardId,
+        serverCreds ? undefined : apiKey.trim(),
+        serverCreds ? undefined : token.trim(),
+      );
       if (!res.success) {
         setError(res.message || 'Failed to start import.');
         return;
@@ -211,7 +246,16 @@ export default function TrelloImportPage() {
         </div>
       )}
 
-      {/* Section 1: Connect to Trello */}
+      {/* Server credentials note */}
+      {configLoaded && serverCreds && (
+        <div className="rounded-lg bg-surface border border-border px-4 py-3 text-sm text-fg-2 flex items-center gap-2">
+          <Server className="h-4 w-4 text-fg-3 flex-shrink-0" />
+          Using Trello credentials configured on the server.
+        </div>
+      )}
+
+      {/* Section 1: Connect to Trello (only when the server has no credentials) */}
+      {configLoaded && !serverCreds && (
       <div className="rounded-lg bg-surface border border-border p-5 space-y-4">
         <h2 className="text-sm font-medium text-foreground">Connect to Trello</h2>
         <div className="space-y-3">
@@ -251,6 +295,15 @@ export default function TrelloImportPage() {
           </button>
         </div>
       </div>
+      )}
+
+      {/* Boards loading (server credentials path) */}
+      {serverCreds && fetchingBoards && (
+        <div className="rounded-lg bg-surface border border-border p-5 flex items-center gap-2 text-sm text-fg-2">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          Loading your Trello boards...
+        </div>
+      )}
 
       {/* Section 2: Select Board & Import */}
       {boards.length > 0 && (

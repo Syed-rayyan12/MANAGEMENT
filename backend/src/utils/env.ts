@@ -41,5 +41,15 @@ export function validateEnv(): void {
     console.log('📊 Google Sheets sync enabled');
   }
 
+  // Warn if Trello credentials are partially configured
+  const TRELLO_VARS = ['TRELLO_API_KEY', 'TRELLO_TOKEN'];
+  const presentTrello = TRELLO_VARS.filter((k) => process.env[k]);
+  if (presentTrello.length === 1) {
+    const missingTrello = TRELLO_VARS.filter((k) => !process.env[k]);
+    console.warn(`⚠️  Partial Trello config — server credentials disabled. Missing: ${missingTrello.join(', ')}`);
+  } else if (presentTrello.length === TRELLO_VARS.length) {
+    console.log('📋 Trello server credentials configured');
+  }
+
   console.log('✅ Environment variables validated');
 }

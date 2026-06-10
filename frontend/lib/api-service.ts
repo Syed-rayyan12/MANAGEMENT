@@ -592,17 +592,25 @@ export const attendanceAPI = {
 
 // Trello Import APIs
 export const trelloAPI = {
-  getBoards: async (apiKey: string, token: string) => {
-    const response = await apiFetch(
-      `${API_BASE_URL}/trello/boards?apiKey=${encodeURIComponent(apiKey)}&token=${encodeURIComponent(token)}`
-    );
+  getConfig: async () => {
+    const response = await apiFetch(`${API_BASE_URL}/trello/config`);
     return await response.json();
   },
 
-  startImport: async (apiKey: string, token: string, trelloBoardId: string) => {
+  // apiKey/token are optional — the backend uses its own credentials when configured
+  getBoards: async (apiKey?: string, token?: string) => {
+    const params = new URLSearchParams();
+    if (apiKey) params.set('apiKey', apiKey);
+    if (token) params.set('token', token);
+    const query = params.toString();
+    const response = await apiFetch(`${API_BASE_URL}/trello/boards${query ? `?${query}` : ''}`);
+    return await response.json();
+  },
+
+  startImport: async (trelloBoardId: string, apiKey?: string, token?: string) => {
     const response = await apiFetch(`${API_BASE_URL}/trello/import`, {
       method: 'POST',
-      body: JSON.stringify({ apiKey, token, trelloBoardId }),
+      body: JSON.stringify({ apiKey: apiKey || undefined, token: token || undefined, trelloBoardId }),
     });
     return await response.json();
   },

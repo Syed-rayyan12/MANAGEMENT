@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { authenticate } from '../middlewares/auth.middleware';
 import {
+  getTrelloConfig,
   getTrelloBoards,
   startImport,
   getLatestImportRun,
@@ -9,6 +10,7 @@ import {
 
 const router = Router();
 
+router.get('/config', authenticate, getTrelloConfig);
 router.get('/boards', authenticate, getTrelloBoards);
 router.post('/import', authenticate, startImport);
 // /import/latest must be registered before /import/:runId
