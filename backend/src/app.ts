@@ -23,6 +23,7 @@ import trelloRoutes from './routes/trello.routes';
 import attendanceRoutes from './routes/attendance.routes';
 
 import { purgeExpiredTrash } from './controllers/trash.controller';
+import { failInterruptedRuns } from './services/trelloImport.service';
 
 // ───────────────────────────────────────────────────
 // Load environment variables
@@ -52,6 +53,20 @@ app.use(compression());
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 200,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    success: false,
+    message: 'Too many requests, please try again later.',
+  },
+});
+
+// Trello import status polling (every few seconds during a run) would exhaust
+// the shared limiter and break the rest of the app — give it its own budget.
+// The route is authenticated and restricted to a single user.
+const trelloLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 600,
   standardHeaders: true,
   legacyHeaders: false,
   message: {
@@ -154,13 +169,18 @@ app.use('/api/admin', apiLimiter, adminRoutes);
 app.use('/api/clients', apiLimiter, clientRoutes);
 app.use('/api/trash', apiLimiter, trashRoutes);
 app.use('/api/performance', apiLimiter, performanceRoutes);
-app.use('/api/trello', apiLimiter, trelloRoutes);
+app.use('/api/trello', trelloLimiter, trelloRoutes);
 app.use('/api/attendance', apiLimiter, attendanceRoutes);
 
 // ───────────────────────────────────────────────────
 // Auto purge expired trash
 // ───────────────────────────────────────────────────
 purgeExpiredTrash();
+
+// ───────────────────────────────────────────────────
+// Fail Trello import runs interrupted by a restart
+// ───────────────────────────────────────────────────
+failInterruptedRuns();
 
 // ───────────────────────────────────────────────────
 // 404 handler

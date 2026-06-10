@@ -1,11 +1,18 @@
 import { Router } from 'express';
 import { authenticate } from '../middlewares/auth.middleware';
-import { getTrelloBoards, prepareTrelloImport, importBatch } from '../controllers/trello.controller';
+import {
+  getTrelloBoards,
+  startImport,
+  getLatestImportRun,
+  getImportRun,
+} from '../controllers/trello.controller';
 
 const router = Router();
 
 router.get('/boards', authenticate, getTrelloBoards);
-router.post('/prepare', authenticate, prepareTrelloImport);
-router.post('/import-batch', authenticate, importBatch);
+router.post('/import', authenticate, startImport);
+// /import/latest must be registered before /import/:runId
+router.get('/import/latest', authenticate, getLatestImportRun);
+router.get('/import/:runId', authenticate, getImportRun);
 
 export default router;

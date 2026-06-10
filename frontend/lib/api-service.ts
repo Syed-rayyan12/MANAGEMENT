@@ -599,19 +599,21 @@ export const trelloAPI = {
     return await response.json();
   },
 
-  prepare: async (apiKey: string, token: string, trelloBoardId: string) => {
-    const response = await apiFetch(`${API_BASE_URL}/trello/prepare`, {
+  startImport: async (apiKey: string, token: string, trelloBoardId: string) => {
+    const response = await apiFetch(`${API_BASE_URL}/trello/import`, {
       method: 'POST',
       body: JSON.stringify({ apiKey, token, trelloBoardId }),
     });
     return await response.json();
   },
 
-  importBatch: async (apiKey: string, token: string, cards: any[], lists: any[]) => {
-    const response = await apiFetch(`${API_BASE_URL}/trello/import-batch`, {
-      method: 'POST',
-      body: JSON.stringify({ apiKey, token, cards, lists }),
-    });
+  getRun: async (runId: string) => {
+    const response = await apiFetch(`${API_BASE_URL}/trello/import/${runId}`);
+    return await response.json();
+  },
+
+  getLatestRun: async () => {
+    const response = await apiFetch(`${API_BASE_URL}/trello/import/latest`);
     return await response.json();
   },
 };
