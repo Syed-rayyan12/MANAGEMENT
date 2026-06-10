@@ -367,6 +367,9 @@ export function CreateProjectModal({ onClose, initialStatus, initialBoard, board
                   .map((user) => (
                     <SelectItem key={user.id} value={user.id}>
                       {user.name}
+                      {user.username && (
+                        <span className="ml-1.5 text-xs text-fg-4">({user.username})</span>
+                      )}
                     </SelectItem>
                   ))}
               </SelectContent>

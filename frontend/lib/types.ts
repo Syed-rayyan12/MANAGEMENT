@@ -48,6 +48,7 @@ export interface KanbanColumn {
 export interface ProjectManager {
   id: string;
   name: string;
+  username?: string;
   email: string;
   avatar?: string;
   role?: string;

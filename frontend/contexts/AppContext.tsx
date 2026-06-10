@@ -620,6 +620,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
             result.data.users.map((u: any) => ({
               id: u.id,
               name: u.name,
+              username: u.username,
               email: u.email,
               avatar: u.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${u.name}`,
               role: u.role,

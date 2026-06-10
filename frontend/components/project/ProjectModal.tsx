@@ -122,6 +122,7 @@ export function ProjectModal({ project, onClose, boardColumns = [] }: ProjectMod
 
   const filteredUsers = allUsers.filter((user: any) =>
     user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    user.username?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     user.email?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
@@ -1048,7 +1049,7 @@ export function ProjectModal({ project, onClose, boardColumns = [] }: ProjectMod
           </DialogHeader>
           <div className="space-y-4 pt-2">
             <Input
-              placeholder="Search by name or email..."
+              placeholder="Search by name or username..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full"
@@ -1095,7 +1096,7 @@ export function ProjectModal({ project, onClose, boardColumns = [] }: ProjectMod
                           <span className="text-[10px] px-1.5 py-0.5 rounded bg-green-500/20 text-green-500 font-medium">Added</span>
                         )}
                       </div>
-                      <p className="text-xs text-fg-3">{user.email}</p>
+                      <p className="text-xs text-fg-3">{user.username || user.email}</p>
                     </div>
                     {!isAlreadyMember && (
                       <div className="flex gap-1 flex-shrink-0">
