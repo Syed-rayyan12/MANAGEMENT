@@ -1061,9 +1061,12 @@ export function ProjectModal({ project, onClose, boardColumns = [] }: ProjectMod
                 <div className="flex flex-wrap gap-2">
                   {project.assignments.map((assignment: ProjectAssignment) => (
                     <div key={assignment.id} className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-accent-soft border border-accent-line">
-                      <span className="w-5 h-5 rounded-full bg-accent text-white text-[8px] font-bold flex items-center justify-center">
-                        {assignment.user?.name?.[0]}
-                      </span>
+                      <Avatar className="w-5 h-5">
+                        <AvatarImage src={assignment.user?.avatar || undefined} alt={assignment.user?.name} />
+                        <AvatarFallback className="bg-accent text-white text-[8px] font-bold">
+                          {assignment.user?.name?.[0]}
+                        </AvatarFallback>
+                      </Avatar>
                       <span className="text-xs text-accent font-medium">{assignment.user?.name}</span>
                       <span className="text-[10px] text-fg-3">({assignment.role === 'PRIMARY' ? 'Lead' : 'Collab'})</span>
                       <button onClick={() => handleRemoveAssignment(assignment.id)} className="text-fg-4 hover:text-red-400">
@@ -1086,9 +1089,12 @@ export function ProjectModal({ project, onClose, boardColumns = [] }: ProjectMod
                         : 'border-border hover:bg-surface-2 hover:border-line-strong'
                     }`}
                   >
-                    <span className="w-8 h-8 rounded-full bg-accent-soft text-accent text-[12px] font-bold flex items-center justify-center flex-shrink-0">
-                      {user.name[0]}
-                    </span>
+                    <Avatar className="w-8 h-8 flex-shrink-0">
+                      <AvatarImage src={user.avatar} alt={user.name} />
+                      <AvatarFallback className="bg-accent-soft text-accent text-[12px] font-bold">
+                        {user.name[0]}
+                      </AvatarFallback>
+                    </Avatar>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <p className="text-sm font-medium text-foreground">{user.name}</p>

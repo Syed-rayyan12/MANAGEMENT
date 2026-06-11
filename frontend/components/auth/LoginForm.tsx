@@ -52,6 +52,8 @@ export function LoginForm() {
           name: data.data.user.name,
           email: data.data.user.email,
           role: data.data.user.role,
+          avatar: data.data.user.avatar || undefined,
+          specialization: data.data.user.specialization || undefined,
           teams: data.data.user.teams || [],
         },
       });

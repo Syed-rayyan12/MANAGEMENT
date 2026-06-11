@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import { useApp } from '@/contexts/useApp';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { MessageSquare, Edit, AtSign, Paperclip } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { linkifyText } from '@/lib/utils';
@@ -229,9 +230,12 @@ export function CommentsSection({ project }: CommentsSectionProps) {
                 onClick={() => handleSelectMention(user, isNewComment)}
                 className="w-full flex items-center gap-2 p-2 hover:bg-surface-2 transition-colors text-left"
               >
-                <span className="w-6 h-6 rounded-full bg-accent-soft text-accent text-[9px] font-bold flex items-center justify-center flex-shrink-0">
-                  {user.name[0]}
-                </span>
+                <Avatar className="w-6 h-6 flex-shrink-0">
+                  <AvatarImage src={user.avatar} alt={user.name} />
+                  <AvatarFallback className="bg-accent-soft text-accent text-[9px] font-bold">
+                    {user.name[0]}
+                  </AvatarFallback>
+                </Avatar>
                 <div>
                   <p className="text-sm font-medium text-foreground">{user.name}</p>
                   <p className="text-xs text-fg-4">{user.email}</p>
