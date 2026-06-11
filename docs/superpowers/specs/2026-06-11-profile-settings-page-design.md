@@ -75,7 +75,7 @@ No existing behavior may change:
 - New endpoints only — no modification to existing route handlers, middleware, or response shapes.
 - No Prisma schema changes, no migration, no seed changes.
 - The dropdown's theme toggle and logout behavior are untouched.
-- `GET /api/auth/me` response shape unchanged; the PATCH endpoint returns the same shape.
+- `GET /api/auth/me` and login responses gain `avatar`, `specialization`, and `username` fields **additively** (the page needs the current avatar/specialization, and the topbar needs them to survive re-login). No existing fields change; existing consumers ignore the extras.
 - Username-based login and normalization are unaffected (username is not editable).
 
 ## Error Handling
