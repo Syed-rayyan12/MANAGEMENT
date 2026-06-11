@@ -127,13 +127,13 @@ export function Navbar({ searchQuery, onSearchChange, onMenuToggle }: NavbarProp
                 <span className="text-xs text-zinc-500 dark:text-zinc-400">{state.currentUser.email}</span>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="gap-2 opacity-50 cursor-not-allowed" disabled>
+              <DropdownMenuItem onClick={() => router.push('/dashboard/profile')} className="gap-2">
                 <User className="w-4 h-4 text-[#e05c29]" />
-                <span className="text-zinc-700 dark:text-zinc-300 text-[12px]">Profile <span className="text-[10px] text-zinc-400">(Coming soon)</span></span>
+                <span className="text-zinc-700 dark:text-zinc-300 text-[12px]">Profile</span>
               </DropdownMenuItem>
-              <DropdownMenuItem className="gap-2 opacity-50 cursor-not-allowed" disabled>
+              <DropdownMenuItem onClick={() => router.push('/dashboard/profile?tab=preferences')} className="gap-2">
                 <Settings className="w-4 h-4 text-[#e05c29]" />
-                <span className="text-zinc-700 dark:text-zinc-300 text-[12px]">Settings <span className="text-[10px] text-zinc-400">(Coming soon)</span></span>
+                <span className="text-zinc-700 dark:text-zinc-300 text-[12px]">Settings</span>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={handleLogout} className="gap-2 text-red-600">

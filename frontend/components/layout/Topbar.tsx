@@ -139,13 +139,13 @@ export function Topbar({ onMenuToggle }: TopbarProps) {
               <span className="text-[11px] text-fg-3">{state.currentUser.email}</span>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="gap-2 opacity-50 cursor-not-allowed" disabled>
+            <DropdownMenuItem onClick={() => router.push('/dashboard/profile')} className="gap-2">
               <User className="w-3.5 h-3.5" />
-              <span className="text-[12px]">Profile <span className="text-[10px] text-fg-4">(Coming soon)</span></span>
+              <span className="text-[12px]">Profile</span>
             </DropdownMenuItem>
-            <DropdownMenuItem className="gap-2 opacity-50 cursor-not-allowed" disabled>
+            <DropdownMenuItem onClick={() => router.push('/dashboard/profile?tab=preferences')} className="gap-2">
               <Settings className="w-3.5 h-3.5" />
-              <span className="text-[12px]">Settings <span className="text-[10px] text-fg-4">(Coming soon)</span></span>
+              <span className="text-[12px]">Settings</span>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={handleLogout} className="gap-2 text-destructive">
