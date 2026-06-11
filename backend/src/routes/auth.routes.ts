@@ -1,7 +1,7 @@
 import { Router } from 'express';
-import { login, getMe, verifyPassword } from '../controllers/auth.controller';
+import { login, getMe, verifyPassword, updateMe, changePassword } from '../controllers/auth.controller';
 import { authenticate } from '../middlewares/auth.middleware';
-import { validate, loginSchema } from '../utils/validators';
+import { validate, loginSchema, updateProfileSchema, changePasswordSchema } from '../utils/validators';
 
 const router = Router();
 
@@ -18,6 +18,20 @@ router.post('/login', validate(loginSchema), login);
  * @access  Private (requires authentication)
  */
 router.get('/me', authenticate, getMe);
+
+/**
+ * @route   PATCH /api/auth/me
+ * @desc    Update current user's own profile (name, email, specialization, avatar)
+ * @access  Private (requires authentication)
+ */
+router.patch('/me', authenticate, validate(updateProfileSchema), updateMe);
+
+/**
+ * @route   POST /api/auth/change-password
+ * @desc    Change current user's password (requires current password)
+ * @access  Private (requires authentication)
+ */
+router.post('/change-password', authenticate, validate(changePasswordSchema), changePassword);
 
 /**
  * @route   POST /api/auth/verify-password
