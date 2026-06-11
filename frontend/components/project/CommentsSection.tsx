@@ -17,7 +17,7 @@ interface CommentsSectionProps {
 }
 
 export function CommentsSection({ project }: CommentsSectionProps) {
-  const { state, dispatch, getUserName, getAllUsers } = useApp();
+  const { state, dispatch, getUserName, getUserAvatar, getAllUsers } = useApp();
   const isMobile = useIsMobile();
   const [newComment, setNewComment] = useState('');
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
@@ -258,11 +258,16 @@ export function CommentsSection({ project }: CommentsSectionProps) {
             <p className="text-xs mt-1">Start a conversation about this project</p>
           </div>
         ) : (
-          project.comments.map((comment) => (
+          [...project.comments]
+            .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+            .map((comment) => (
             <div key={comment.id} className="flex gap-3 p-3 border border-border rounded-xl bg-surface-2">
-              <span className="w-8 h-8 rounded-full bg-accent-soft text-accent text-[11px] font-bold flex items-center justify-center flex-shrink-0">
-                {getUserName(comment.userId)[0]}
-              </span>
+              <Avatar className="w-8 h-8 flex-shrink-0">
+                <AvatarImage src={getUserAvatar(comment.userId)} alt={getUserName(comment.userId)} />
+                <AvatarFallback className="bg-accent-soft text-accent text-[11px] font-bold">
+                  {getUserName(comment.userId)[0]}
+                </AvatarFallback>
+              </Avatar>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1">
                   <span className="font-semibold text-sm text-foreground">{getUserName(comment.userId)}</span>
