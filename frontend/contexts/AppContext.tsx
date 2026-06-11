@@ -622,7 +622,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
               name: u.name,
               username: u.username,
               email: u.email,
-              avatar: u.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${u.name}`,
+              avatar: u.avatar || undefined,
               role: u.role,
               teams: u.teams || [],
             }))
