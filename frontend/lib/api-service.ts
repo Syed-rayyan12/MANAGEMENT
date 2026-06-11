@@ -96,6 +96,27 @@ export const authAPI = {
     });
     return await response.json();
   },
+
+  updateMe: async (data: {
+    name?: string;
+    email?: string;
+    specialization?: string | null;
+    avatar?: string | null;
+  }) => {
+    const response = await apiFetch(`${API_BASE_URL}/auth/me`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+    return await response.json();
+  },
+
+  changePassword: async (currentPassword: string, newPassword: string) => {
+    const response = await apiFetch(`${API_BASE_URL}/auth/change-password`, {
+      method: 'POST',
+      body: JSON.stringify({ currentPassword, newPassword }),
+    });
+    return await response.json();
+  },
 };
 
 // Project APIs
