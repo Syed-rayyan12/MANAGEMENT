@@ -27,6 +27,8 @@ export interface AuthResponse {
       email: string;
       role: string;
       name: string;
+      avatar: string | null;
+      specialization: string | null;
       teams: { id: string; slug: string; name: string }[];
     };
     token: string;
