@@ -1,1 +1,5 @@
 .worktrees/
+frontend/next-env.d.ts
+.claude/settings.local.json
+frontend/tsconfig.tsbuildinfo
+backend/prisma/seed.ts
